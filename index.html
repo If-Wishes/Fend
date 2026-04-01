@@ -67,26 +67,13 @@
     
     function adminLogin(username, password) {
         if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
-            // Store session - this will only work on the current device
             localStorage.setItem('mima_admin_session', JSON.stringify({ username: 'admin', role: 'admin' }));
             return { success: true };
         }
         return { success: false };
     }
     
-    function userLoginCheck(username, password) {
-        const users = JSON.parse(localStorage.getItem('mima_users') || '[]');
-        const user = users.find(u => u.username === username && u.password === password);
-        if (user) {
-            localStorage.setItem('mima_user_session', JSON.stringify({ userId: user.id, username: user.username }));
-            return { success: true };
-        }
-        return { success: false };
-    }
-    
-    // REMOVED auto-login redirect - always show login page
-    // This ensures every device sees the login page
-    
+    // Role selection toggles
     document.getElementById('adminRoleCard').onclick = () => {
         document.getElementById('adminRoleCard').classList.add('active');
         document.getElementById('userRoleCard').classList.remove('active');
@@ -100,13 +87,18 @@
         document.getElementById('adminLoginForm').classList.add('hidden-panel');
     };
     
+    // Admin login handler
     document.getElementById('adminLogin').onsubmit = (e) => {
         e.preventDefault();
         const result = adminLogin(document.getElementById('adminUsername').value, document.getElementById('adminPassword').value);
-        if (result.success) window.location.href = 'admin/dashboard.html';
-        else alert('Invalid admin credentials');
+        if (result.success) {
+            window.location.href = 'admin/dashboard.html';
+        } else {
+            alert('Invalid admin credentials');
+        }
     };
     
+    // User login handler
     document.getElementById('userLogin').onsubmit = (e) => {
         e.preventDefault();
         const username = document.getElementById('userUsername').value;
@@ -116,11 +108,14 @@
         if (user) {
             localStorage.setItem('mima_user_session', JSON.stringify({ userId: user.id, username: user.username }));
             window.location.href = 'user/dashboard.html';
-        } else alert('Invalid user credentials');
+        } else {
+            alert('Invalid user credentials');
+        }
     };
     
-    // Removed auto-redirect - now every device shows login page
-    // Users must login each time on new devices
+    // REMOVED auto-login redirect for both Admin and User
+    // Now every device always shows the login page
+    // Users must enter credentials on each new device
 </script>
 </body>
 </html>
