@@ -11,10 +11,12 @@
         .page.active-page { display: block; }
         .hidden-dropdown { display: none; }
         .otp-row:hover { background: #fef3c7; }
+        .nav-btn-active { background-color: #eef2ff; color: #4f46e5; }
     </style>
 </head>
 <body class="bg-gray-50">
 
+<!-- Top Navigation Bar -->
 <nav class="bg-white shadow-sm border-b sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
@@ -49,6 +51,7 @@
     </div>
 </nav>
 
+<!-- Navigation Buttons - SINGLE BAR (no duplicates) -->
 <div class="bg-white shadow-sm border-b sticky top-16 z-40">
     <div class="flex overflow-x-auto px-2 py-2 gap-1 max-w-7xl mx-auto">
         <button data-nav="allocation" class="nav-quick flex-1 px-3 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition">📌 Allocation</button>
@@ -59,22 +62,33 @@
 </div>
 
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Allocation Page -->
     <div id="allocationPage" class="page">
         <h1 class="text-2xl font-bold text-gray-900">📌 Number Allocation</h1>
         <p class="text-gray-500 mt-1 mb-4">Select a country to view numbers assigned to you</p>
         <select id="countrySelect" class="w-full md:w-64 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 mb-4">
             <option value="">-- Select Country --</option>
         </select>
-        <div id="numbersDisplay" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center text-gray-400">Select a country to view numbers</div>
+        <div id="numbersDisplay" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center text-gray-400">
+            Select a country to view numbers
+        </div>
     </div>
 
+    <!-- Today's Stat Page -->
     <div id="todayPage" class="page">
         <h1 class="text-2xl font-bold text-gray-900">📊 Today's OTP Statistics</h1>
         <p class="text-gray-500 mt-1 mb-4">OTP received today from your numbers</p>
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left">Number</th><th class="px-6 py-3 text-left">Sender</th><th class="px-6 py-3 text-left">Code</th><th class="px-6 py-3 text-left">Time</th></tr></thead>
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left">Number</th>
+                            <th class="px-6 py-3 text-left">Sender</th>
+                            <th class="px-6 py-3 text-left">Code</th>
+                            <th class="px-6 py-3 text-left">Time</th>
+                        </tr>
+                    </thead>
                     <tbody id="todayOtpTable" class="divide-y divide-gray-100"></tbody>
                 </table>
             </div>
@@ -82,6 +96,7 @@
         </div>
     </div>
 
+    <!-- Total OTP Page -->
     <div id="totalPage" class="page">
         <h1 class="text-2xl font-bold text-gray-900">💰 Total OTP Earnings</h1>
         <p class="text-gray-500 mt-1 mb-4">Today's OTP summary and earnings</p>
@@ -98,24 +113,42 @@
         </div>
     </div>
 
+    <!-- Past Records Page -->
     <div id="pastPage" class="page">
         <h1 class="text-2xl font-bold text-gray-900">📅 Past OTP Records</h1>
         <p class="text-gray-500 mt-1 mb-4">View OTP history by date range</p>
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label><input type="date" id="startDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5"></div>
-                <div><label class="block text-sm font-medium text-gray-700 mb-2">End Date</label><input type="date" id="endDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5"></div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                    <input type="date" id="startDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <input type="date" id="endDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
+                </div>
             </div>
             <button id="fetchBtn" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl transition">Fetch Records</button>
         </div>
         <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
             <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                 <h3 class="font-semibold text-gray-800">OTP Records</h3>
-                <div class="text-sm"><span class="font-bold text-emerald-600" id="pastTotalEarnings">$0.00</span><span class="text-gray-500 ml-2">total earnings</span></div>
+                <div class="text-sm">
+                    <span class="font-bold text-emerald-600" id="pastTotalEarnings">$0.00</span>
+                    <span class="text-gray-500 ml-2">total earnings</span>
+                </div>
             </div>
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
-                    <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left">Date</th><th class="px-6 py-3 text-left">Number</th><th class="px-6 py-3 text-left">Sender</th><th class="px-6 py-3 text-left">Code</th><th class="px-6 py-3 text-left">Time</th></tr></thead>
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left">Date</th>
+                            <th class="px-6 py-3 text-left">Number</th>
+                            <th class="px-6 py-3 text-left">Sender</th>
+                            <th class="px-6 py-3 text-left">Code</th>
+                            <th class="px-6 py-3 text-left">Time</th>
+                        </tr>
+                    </thead>
                     <tbody id="pastOtpTable" class="divide-y divide-gray-100"></tbody>
                 </table>
             </div>
@@ -176,6 +209,281 @@
             var options = '<option value="">-- Select Country --</option>';
             for (var j = 0; j < countries.length; j++) {
                 options += '<option value="' + countries[j] + '">' + getCountryFlag(countries[j]) + ' ' + countries[j] + '</option>';
+            }
+            sel.innerHTML = options;
+        }
+    }
+    
+    function displayNumbers(country) {
+        var data = null;
+        for (var i = 0; i < userNumbers.length; i++) {
+            if (userNumbers[i].country === country) {
+                data = userNumbers[i];
+                break;
+            }
+        }
+        var div = document.getElementById('numbersDisplay');
+        if (!data || !data.numbers || data.numbers.length === 0) {
+            div.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers for this country</div>';
+            return;
+        }
+        var html = '<div class="border rounded-xl overflow-hidden">';
+        html += '<div class="bg-gray-50 px-4 py-2 font-semibold">' + getCountryFlag(country) + ' ' + country + '</div>';
+        html += '<div class="divide-y">';
+        for (var j = 0; j < data.numbers.length; j++) {
+            html += '<div class="px-4 py-2 font-mono">' + escapeHtml(data.numbers[j]) + '</div>';
+        }
+        html += '</div></div>';
+        div.innerHTML = html;
+    }
+    
+    function getUserPhoneLast4s() {
+        var last4s = [];
+        for (var i = 0; i < userNumbers.length; i++) {
+            var entry = userNumbers[i];
+            if (entry.numbers) {
+                for (var j = 0; j < entry.numbers.length; j++) {
+                    var num = entry.numbers[j];
+                    var clean = num.replace(/\D/g, '');
+                    if (clean.length >= 4) {
+                        last4s.push(clean.slice(-4));
+                    }
+                }
+            }
+        }
+        return last4s;
+    }
+    
+    async function loadOtps() {
+        try {
+            var response = await fetch('../data/otp_logs.json');
+            if (response.ok) {
+                allOtps = await response.json();
+                localStorage.setItem('mima_all_otps', JSON.stringify(allOtps));
+            } else {
+                allOtps = JSON.parse(localStorage.getItem('mima_all_otps') || '[]');
+            }
+        } catch (error) {
+            allOtps = JSON.parse(localStorage.getItem('mima_all_otps') || '[]');
+        }
+        
+        var last4s = getUserPhoneLast4s();
+        userOtps = [];
+        for (var i = 0; i < allOtps.length; i++) {
+            var otp = allOtps[i];
+            if (last4s.indexOf(otp.phone_last4) !== -1) {
+                userOtps.push(otp);
+            }
+        }
+        userOtps.sort(function(a, b) { return b.timestamp - a.timestamp; });
+        
+        localStorage.setItem('mima_otp_' + currentUser.userId, JSON.stringify(userOtps));
+        return userOtps;
+    }
+    
+    function renderTodayOtps() {
+        var today = getTodayStr();
+        var todayOtps = [];
+        for (var i = 0; i < userOtps.length; i++) {
+            if (userOtps[i].date === today) {
+                todayOtps.push(userOtps[i]);
+            }
+        }
+        var tbody = document.getElementById('todayOtpTable');
+        var emptyMsg = document.getElementById('todayEmptyMsg');
+        
+        if (!tbody) return;
+        if (todayOtps.length === 0) {
+            tbody.innerHTML = '';
+            if (emptyMsg) emptyMsg.classList.remove('hidden');
+            return;
+        }
+        if (emptyMsg) emptyMsg.classList.add('hidden');
+        
+        var html = '';
+        for (var i = 0; i < todayOtps.length; i++) {
+            var o = todayOtps[i];
+            html += '<tr class="otp-row border-b border-gray-100 hover:bg-amber-50">';
+            html += '<td class="px-6 py-3 font-mono">***' + escapeHtml(o.phone_last4 || '????') + '</td>';
+            html += '<td class="px-6 py-3">' + escapeHtml(o.sender || 'Bot') + '</td>';
+            html += '<td class="px-6 py-3 font-bold text-emerald-600">' + escapeHtml(o.otp) + '</td>';
+            html += '<td class="px-6 py-3 text-gray-500">' + (o.time || '') + '</td>';
+            html += '</tr>';
+        }
+        tbody.innerHTML = html;
+    }
+    
+    function updateTotalStats() {
+        var today = getTodayStr();
+        var todayCount = 0;
+        for (var i = 0; i < userOtps.length; i++) {
+            if (userOtps[i].date === today) {
+                todayCount++;
+            }
+        }
+        var todayEarnings = todayCount * 0.005;
+        document.getElementById('totalOtpCount').textContent = todayCount;
+        document.getElementById('totalEarnings').textContent = '$' + todayEarnings.toFixed(2);
+    }
+    
+    function fetchPastOtps() {
+        var start = document.getElementById('startDate').value;
+        var end = document.getElementById('endDate').value;
+        if (!start || !end) return;
+        
+        var filtered = [];
+        for (var i = 0; i < userOtps.length; i++) {
+            var o = userOtps[i];
+            if (o.date >= start && o.date <= end) {
+                filtered.push(o);
+            }
+        }
+        
+        var tbody = document.getElementById('pastOtpTable');
+        var emptyMsg = document.getElementById('pastEmptyMsg');
+        var totalEarningsSpan = document.getElementById('pastTotalEarnings');
+        
+        if (!tbody) return;
+        if (filtered.length === 0) {
+            tbody.innerHTML = '';
+            if (emptyMsg) emptyMsg.classList.remove('hidden');
+            if (totalEarningsSpan) totalEarningsSpan.textContent = '$0.00';
+            return;
+        }
+        if (emptyMsg) emptyMsg.classList.add('hidden');
+        var totalEarnings = filtered.length * 0.005;
+        if (totalEarningsSpan) totalEarningsSpan.textContent = '$' + totalEarnings.toFixed(2);
+        
+        var html = '';
+        for (var i = 0; i < filtered.length; i++) {
+            var o = filtered[i];
+            html += '<tr class="hover:bg-gray-50 border-b">';
+            html += '<td class="px-6 py-3 text-gray-600 text-xs">' + o.date + '</td>';
+            html += '<td class="px-6 py-3 font-mono">***' + escapeHtml(o.phone_last4 || '????') + '</td>';
+            html += '<td class="px-6 py-3">' + escapeHtml(o.sender || 'Bot') + '</td>';
+            html += '<td class="px-6 py-3 font-bold text-emerald-600">' + escapeHtml(o.otp) + '</td>';
+            html += '<td class="px-6 py-3 text-gray-500 text-xs">' + (o.time || '') + '</td>';
+            html += '</tr>';
+        }
+        tbody.innerHTML = html;
+    }
+    
+    function addTestOtp() {
+        var last4 = prompt("Enter last 4 digits:", "4567");
+        var code = prompt("Enter OTP code:", "123456");
+        var sender = prompt("Enter sender name:", "Test");
+        
+        if (last4 && code) {
+            var now = new Date();
+            var newOtp = {
+                id: Date.now().toString(),
+                otp: code,
+                phone_last4: last4,
+                sender: sender,
+                timestamp: now.getTime(),
+                date: now.toISOString().slice(0, 10),
+                time: now.toLocaleTimeString()
+            };
+            
+            var allOtps = JSON.parse(localStorage.getItem('mima_all_otps') || '[]');
+            allOtps.push(newOtp);
+            localStorage.setItem('mima_all_otps', JSON.stringify(allOtps));
+            
+            loadOtps().then(function() {
+                renderTodayOtps();
+                updateTotalStats();
+                fetchPastOtps();
+            });
+            alert('✅ Test OTP added! Phone: ***' + last4 + ' OTP: ' + code + ' Earned: $0.005');
+        }
+    }
+    
+    function switchToPage(pageName) {
+        var pages = ['allocation', 'today', 'total', 'past'];
+        for (var i = 0; i < pages.length; i++) {
+            var page = document.getElementById(pages[i] + 'Page');
+            if (page) page.classList.remove('active-page');
+        }
+        var selectedPage = document.getElementById(pageName + 'Page');
+        if (selectedPage) selectedPage.classList.add('active-page');
+        
+        var dropdown = document.getElementById('dropdown');
+        if (dropdown) dropdown.classList.add('hidden-dropdown');
+        
+        if (pageName === 'allocation') loadUserNumbers();
+        if (pageName === 'today') renderTodayOtps();
+        if (pageName === 'total') updateTotalStats();
+        if (pageName === 'past') fetchPastOtps();
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        initData();
+        
+        document.getElementById('userNameDisplay').innerText = currentUser.username;
+        document.getElementById('userEmailDisplay').innerText = currentUser.email;
+        
+        loadUserNumbers();
+        loadOtps().then(function() {
+            var end = new Date();
+            var start = new Date();
+            start.setDate(end.getDate() - 6);
+            document.getElementById('startDate').value = start.toISOString().slice(0, 10);
+            document.getElementById('endDate').value = end.toISOString().slice(0, 10);
+            
+            renderTodayOtps();
+            updateTotalStats();
+            fetchPastOtps();
+        });
+        
+        document.getElementById('countrySelect').onchange = function(e) {
+            if (e.target.value) displayNumbers(e.target.value);
+        };
+        document.getElementById('fetchBtn').onclick = fetchPastOtps;
+        document.getElementById('addOtpBtn').onclick = addTestOtp;
+        
+        var dropdownItems = document.querySelectorAll('.dropdown-item');
+        for (var i = 0; i < dropdownItems.length; i++) {
+            dropdownItems[i].onclick = function(e) {
+                e.preventDefault();
+                var page = this.getAttribute('data-page');
+                if (page) switchToPage(page);
+            };
+        }
+        
+        var navButtons = document.querySelectorAll('.nav-quick');
+        for (var i = 0; i < navButtons.length; i++) {
+            navButtons[i].onclick = function(e) {
+                e.preventDefault();
+                var page = this.getAttribute('data-nav');
+                if (page) switchToPage(page);
+            };
+        }
+        
+        switchToPage('allocation');
+        
+        var menuBtn = document.getElementById('menuBtn');
+        var dropdown = document.getElementById('dropdown');
+        if (menuBtn) {
+            menuBtn.onclick = function(e) {
+                e.stopPropagation();
+                dropdown.classList.toggle('hidden-dropdown');
+            };
+            document.addEventListener('click', function(e) {
+                if (!menuBtn.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.add('hidden-dropdown');
+                }
+            });
+        }
+        
+        document.getElementById('logoutBtn').onclick = function(e) {
+            e.preventDefault();
+            userLogout();
+        };
+    });
+})();
+</script>
+</body>
+</html>]) + ' ' + countries[j] + '</option>';
             }
             sel.innerHTML = options;
         }
