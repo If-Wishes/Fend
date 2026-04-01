@@ -11,11 +11,11 @@
         .page.active-page { display: block; }
         .hidden-dropdown { display: none; }
         .otp-row:hover { background: #fef3c7; }
+        .nav-btn-active { background-color: #eef2ff; color: #4f46e5; }
     </style>
 </head>
 <body class="bg-gray-50">
 
-<!-- Top Navigation Bar -->
 <nav class="bg-white shadow-sm border-b sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
@@ -50,6 +50,16 @@
     </div>
 </nav>
 
+<!-- Quick Navigation Buttons -->
+<div class="bg-white shadow-sm border-b sticky top-16 z-40">
+    <div class="flex overflow-x-auto px-2 py-2 gap-1 max-w-7xl mx-auto">
+        <button data-nav="allocation" class="nav-quick flex-1 px-3 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition">📌 Allocation</button>
+        <button data-nav="today" class="nav-quick flex-1 px-3 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition">📊 Today</button>
+        <button data-nav="total" class="nav-quick flex-1 px-3 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition">💰 Total</button>
+        <button data-nav="past" class="nav-quick flex-1 px-3 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition">📅 Past</button>
+    </div>
+</div>
+
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Allocation Page -->
     <div id="allocationPage" class="page">
@@ -71,9 +81,15 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50">
-                        <tr><th class="px-6 py-3 text-left">Number</th><th class="px-6 py-3 text-left">Sender</th><th class="px-6 py-3 text-left">Code</th><th class="px-6 py-3 text-left">Time</th> </thead>
+                        <tr>
+                            <th class="px-6 py-3 text-left">Number</th>
+                            <th class="px-6 py-3 text-left">Sender</th>
+                            <th class="px-6 py-3 text-left">Code</th>
+                            <th class="px-6 py-3 text-left">Time</th>
+                        </tr>
+                    </thead>
                     <tbody id="todayOtpTable" class="divide-y divide-gray-100"></tbody>
-                追赶
+                </table>
             </div>
             <div id="todayEmptyMsg" class="text-center py-8 text-gray-400 hidden">No OTP received today</div>
         </div>
@@ -84,8 +100,15 @@
         <h1 class="text-2xl font-bold text-gray-900">💰 Total OTP Earnings</h1>
         <p class="text-gray-500 mt-1 mb-4">Today's OTP summary and earnings</p>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6"><p class="text-emerald-100">Total OTP Today</p><p class="text-white text-4xl font-bold" id="totalOtpCount">0</p></div>
-            <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-6"><p class="text-amber-100">Total Earnings</p><p class="text-white text-4xl font-bold" id="totalEarnings">$0.00</p><p class="text-amber-100 text-sm">($0.005/OTP)</p></div>
+            <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg p-6">
+                <p class="text-emerald-100 text-sm">Total OTP Today</p>
+                <p class="text-white text-4xl font-bold mt-1" id="totalOtpCount">0</p>
+            </div>
+            <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl shadow-lg p-6">
+                <p class="text-amber-100 text-sm">Total Earnings</p>
+                <p class="text-white text-4xl font-bold mt-1" id="totalEarnings">$0.00</p>
+                <p class="text-amber-100 text-sm mt-1">($0.005 per OTP)</p>
+            </div>
         </div>
     </div>
 
@@ -93,193 +116,372 @@
     <div id="pastPage" class="page">
         <h1 class="text-2xl font-bold text-gray-900">📅 Past OTP Records</h1>
         <p class="text-gray-500 mt-1 mb-4">View OTP history by date range</p>
-        <div class="bg-white rounded-2xl border p-6 mb-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><label class="block text-sm font-medium mb-2">Start Date</label><input type="date" id="startDate" class="w-full border rounded-xl px-4 py-2.5"></div>
-                <div><label class="block text-sm font-medium mb-2">End Date</label><input type="date" id="endDate" class="w-full border rounded-xl px-4 py-2.5"></div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                    <input type="date" id="startDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <input type="date" id="endDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
+                </div>
             </div>
-            <button id="fetchBtn" class="mt-4 bg-indigo-600 text-white px-6 py-2.5 rounded-xl">Fetch Records</button>
+            <button id="fetchBtn" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl transition">Fetch Records</button>
         </div>
-        <div class="bg-white rounded-2xl border overflow-hidden">
-            <div class="p-4 border-b bg-gray-50 flex justify-between"><span class="font-semibold">OTP Records</span><span id="pastTotalEarnings" class="font-bold text-emerald-600">$0.00</span></div>
-            <table class="w-full text-sm"><thead class="bg-gray-50"><tr><th class="px-6 py-3">Date</th><th class="px-6 py-3">Number</th><th class="px-6 py-3">Sender</th><th class="px-6 py-3">Code</th><th class="px-6 py-3">Time</th> </thead><tbody id="pastOtpTable"></tbody>追赶
-            <div id="pastEmptyMsg" class="text-center py-8 text-gray-400 hidden">No records</div>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                <h3 class="font-semibold text-gray-800">OTP Records</h3>
+                <div class="text-sm">
+                    <span class="font-bold text-emerald-600" id="pastTotalEarnings">$0.00</span>
+                    <span class="text-gray-500 ml-2">total earnings</span>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left">Date</th>
+                            <th class="px-6 py-3 text-left">Number</th>
+                            <th class="px-6 py-3 text-left">Sender</th>
+                            <th class="px-6 py-3 text-left">Code</th>
+                            <th class="px-6 py-3 text-left">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pastOtpTable" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            <div id="pastEmptyMsg" class="text-center py-8 text-gray-400 hidden">No OTP records in this date range</div>
         </div>
     </div>
 </main>
 
-<button id="addOtpBtn" class="fixed bottom-6 right-6 bg-emerald-600 text-white p-4 rounded-full shadow-lg"><i class="fas fa-plus"></i></button>
+<button id="addOtpBtn" class="fixed bottom-6 right-6 bg-emerald-600 text-white p-4 rounded-full shadow-lg hover:bg-emerald-700 transition z-20">
+    <i class="fas fa-plus text-xl"></i>
+</button>
 
 <script src="../js/data.js"></script>
 <script src="../js/auth.js"></script>
 <script>
-(function() {
-    if (!requireUserAuth()) return;
-    
-    var currentUser = getCurrentUser();
-    var userNumbers = [];
-    var userOtps = [];
-    var allOtps = [];
-    
-    // Storage key for current page
-    var PAGE_STORAGE_KEY = 'mima_user_current_page';
-    
-    function getTodayStr() { return new Date().toISOString().slice(0, 10); }
-    
-    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m) { return m === '&' ? '&amp;' : (m === '<' ? '&lt;' : (m === '>' ? '&gt;' : m)); }); }
-    
-    function getCountryFlag(c) { var f = {Jordan:'🇯🇴',Tajikistan:'🇹🇯',Nigeria:'🇳🇬',Myanmar:'🇲🇲',Hungary:'🇭🇺',Slovenia:'🇸🇮',Venezuela:'🇻🇪',Uzbekistan:'🇺🇿'}; return f[c] || '🌍'; }
-    
-    // Create sample data if empty
-    function createSampleData() {
-        var existing = localStorage.getItem('mima_all_otps');
-        if (!existing || JSON.parse(existing).length === 0) {
-            var sampleOtps = [];
-            var today = getTodayStr();
-            var yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); yesterday = yesterday.toISOString().slice(0,10);
-            var twoDaysAgo = new Date(); twoDaysAgo.setDate(twoDaysAgo.getDate() - 2); twoDaysAgo = twoDaysAgo.toISOString().slice(0,10);
-            
-            sampleOtps.push({id:'1', otp:'123456', phone_last4:'4567', sender:'Google', timestamp:Date.now(), date:today, time:'10:30:25'});
-            sampleOtps.push({id:'2', otp:'789012', phone_last4:'4567', sender:'Facebook', timestamp:Date.now()-3600000, date:today, time:'09:15:30'});
-            sampleOtps.push({id:'3', otp:'345678', phone_last4:'4567', sender:'WhatsApp', timestamp:Date.now()-86400000, date:yesterday, time:'14:20:10'});
-            sampleOtps.push({id:'4', otp:'901234', phone_last4:'4567', sender:'Telegram', timestamp:Date.now()-172800000, date:twoDaysAgo, time:'11:45:00'});
-            
-            localStorage.setItem('mima_all_otps', JSON.stringify(sampleOtps));
-        }
-    }
-    
-    function loadUserNumbers() {
-        var a = JSON.parse(localStorage.getItem('mima_analytics_numbers') || '[]');
-        userNumbers = a.filter(function(n) { return n.userId === currentUser.userId; });
-        
-        // If no numbers allocated, create sample numbers for demo
-        if (userNumbers.length === 0) {
-            userNumbers = [{
-                userId: currentUser.userId,
-                country: 'Nigeria',
-                numbers: ['+234 812 345 6789', '+234 802 345 6789', '+234 902 345 6789']
-            }];
-            localStorage.setItem('mima_analytics_numbers', JSON.stringify(userNumbers));
-        }
-        
-        var c = []; for (var i=0;i<userNumbers.length;i++) { if(c.indexOf(userNumbers[i].country)===-1) c.push(userNumbers[i].country); }
-        var sel = document.getElementById('countrySelect');
-        if(sel) { var o = '<option value="">-- Select Country --</option>'; for(var j=0;j<c.length;j++) o+='<option value="'+c[j]+'">'+getCountryFlag(c[j])+' '+c[j]+'</option>'; sel.innerHTML=o; }
-    }
-    
-    function displayNumbers(country) {
-        var data = null; for(var i=0;i<userNumbers.length;i++) { if(userNumbers[i].country===country) { data=userNumbers[i]; break; } }
-        var div = document.getElementById('numbersDisplay');
-        if(!data || !data.numbers || data.numbers.length===0) { div.innerHTML='<div class="text-center py-8 text-gray-400">No numbers for this country</div>'; return; }
-        var h = '<div class="border rounded-xl"><div class="bg-gray-50 px-4 py-2">'+getCountryFlag(country)+' '+country+'</div><div class="divide-y">';
-        for(var j=0;j<data.numbers.length;j++) h+='<div class="px-4 py-2 font-mono">'+escapeHtml(data.numbers[j])+'</div>';
-        h+='</div></div>'; div.innerHTML=h;
-    }
-    
-    function getUserPhoneLast4s() {
-        var l=[]; for(var i=0;i<userNumbers.length;i++) { var e=userNumbers[i]; if(e.numbers) { for(var j=0;j<e.numbers.length;j++) { var n=e.numbers[j]; var c=n.replace(/\D/g,''); if(c.length>=4) l.push(c.slice(-4)); } } } return l;
-    }
-    
-    async function loadOtps() {
-        createSampleData();
-        try { var r=await fetch('../data/otp_logs.json'); if(r.ok) { allOtps=await r.json(); localStorage.setItem('mima_all_otps',JSON.stringify(allOtps)); } else { allOtps=JSON.parse(localStorage.getItem('mima_all_otps')||'[]'); } } catch(e) { allOtps=JSON.parse(localStorage.getItem('mima_all_otps')||'[]'); }
-        var l=getUserPhoneLast4s(); userOtps=[]; for(var i=0;i<allOtps.length;i++) { if(l.indexOf(allOtps[i].phone_last4)!==-1) userOtps.push(allOtps[i]); } userOtps.sort(function(a,b){return b.timestamp-a.timestamp;});
-        localStorage.setItem('mima_otp_'+currentUser.userId,JSON.stringify(userOtps)); return userOtps;
-    }
-    
-    function renderTodayOtps() {
-        var t=getTodayStr(); var to=[]; for(var i=0;i<userOtps.length;i++) { if(userOtps[i].date===t) to.push(userOtps[i]); }
-        var tb=document.getElementById('todayOtpTable'); var em=document.getElementById('todayEmptyMsg');
-        if(!tb) return; if(to.length===0) { tb.innerHTML=''; if(em) em.classList.remove('hidden'); return; } if(em) em.classList.add('hidden');
-        var h=''; for(var i=0;i<to.length;i++) { var o=to[i]; h+='<tr class="border-b"><td class="px-6 py-3 font-mono">***'+escapeHtml(o.phone_last4||'????')+'Js<td class="px-6 py-3">'+escapeHtml(o.sender||'Bot')+'Js<td class="px-6 py-3 font-bold text-emerald-600">'+escapeHtml(o.otp)+'Js<td class="px-6 py-3 text-gray-500">'+(o.time||'')+'Js</tr>'; }
-        tb.innerHTML=h;
-    }
-    
-    function updateTotalStats() {
-        var t=getTodayStr(); var c=0; for(var i=0;i<userOtps.length;i++) { if(userOtps[i].date===t) c++; }
-        document.getElementById('totalOtpCount').textContent=c; document.getElementById('totalEarnings').textContent='$'+(c*0.005).toFixed(2);
-    }
-    
-    function fetchPastOtps() {
-        var s=document.getElementById('startDate').value; var e=document.getElementById('endDate').value; if(!s||!e) return;
-        var f=[]; for(var i=0;i<userOtps.length;i++) { var o=userOtps[i]; if(o.date>=s&&o.date<=e) f.push(o); }
-        var tb=document.getElementById('pastOtpTable'); var em=document.getElementById('pastEmptyMsg'); var ts=document.getElementById('pastTotalEarnings');
-        if(!tb) return; if(f.length===0) { tb.innerHTML=''; if(em) em.classList.remove('hidden'); if(ts) ts.textContent='$0.00'; return; } if(em) em.classList.add('hidden');
-        if(ts) ts.textContent='$'+(f.length*0.005).toFixed(2);
-        var h=''; for(var i=0;i<f.length;i++) { var o=f[i]; h+='<tr class="border-b"><td class="px-6 py-3 text-xs">'+o.date+'Js<td class="font-mono">***'+escapeHtml(o.phone_last4||'????')+'Js<td>'+escapeHtml(o.sender||'Bot')+'Js<td class="font-bold text-emerald-600">'+escapeHtml(o.otp)+'Js<td class="text-xs">'+(o.time||'')+'Js</tr>'; }
-        tb.innerHTML=h;
-    }
-    
-    function addTestOtp() {
-        var l=prompt("Last 4 digits:","4567"); var c=prompt("OTP code:","123456"); var s=prompt("Sender:","Test");
-        if(l&&c) { var n=new Date(); var o={id:Date.now(),otp:c,phone_last4:l,sender:s,timestamp:n.getTime(),date:n.toISOString().slice(0,10),time:n.toLocaleTimeString()}; var a=JSON.parse(localStorage.getItem('mima_all_otps')||'[]'); a.push(o); localStorage.setItem('mima_all_otps',JSON.stringify(a)); loadOtps().then(function(){renderTodayOtps();updateTotalStats();fetchPastOtps();}); alert('✅ OTP '+c+' added for ***'+l); }
-    }
-    
-    // Save current page to localStorage
-    function saveCurrentPage(page) {
-        localStorage.setItem(PAGE_STORAGE_KEY, page);
-    }
-    
-    // Get saved page from localStorage
-    function getSavedPage() {
-        return localStorage.getItem(PAGE_STORAGE_KEY) || 'allocation';
-    }
-    
-    function switchPage(p) {
-        var pages=['allocation','today','total','past']; for(var i=0;i<pages.length;i++) { var pg=document.getElementById(pages[i]+'Page'); if(pg) pg.classList.remove('active-page'); }
-        var sp=document.getElementById(p+'Page'); if(sp) sp.classList.add('active-page');
-        var dd=document.getElementById('dropdown'); if(dd) dd.classList.add('hidden-dropdown');
-        
-        // Save current page
-        saveCurrentPage(p);
-        
-        if(p==='allocation') loadUserNumbers(); 
-        if(p==='today') renderTodayOtps(); 
-        if(p==='total') updateTotalStats(); 
-        if(p==='past') fetchPastOtps();
-    }
-    
-    document.addEventListener('DOMContentLoaded', function() {
-        initData();
-        document.getElementById('userNameDisplay').innerText=currentUser.username;
-        document.getElementById('userEmailDisplay').innerText=currentUser.email;
-        loadUserNumbers(); 
-        loadOtps().then(function(){ 
-            var e=new Date(); var s=new Date(); s.setDate(e.getDate()-6); 
-            document.getElementById('startDate').value=s.toISOString().slice(0,10); 
-            document.getElementById('endDate').value=e.toISOString().slice(0,10); 
-            renderTodayOtps(); 
-            updateTotalStats(); 
-            fetchPastOtps(); 
-            
-            // Load saved page after data is ready
-            var savedPage = getSavedPage();
-            switchPage(savedPage);
-        });
-        
-        document.getElementById('countrySelect').onchange=function(e){if(e.target.value)displayNumbers(e.target.value);};
-        document.getElementById('fetchBtn').onclick=fetchPastOtps; 
-        document.getElementById('addOtpBtn').onclick=addTestOtp;
-        
-        var items=document.querySelectorAll('.dropdown-item'); 
-        for(var i=0;i<items.length;i++){ 
-            items[i].onclick=function(e){ 
-                e.preventDefault(); 
-                var p=this.getAttribute('data-page'); 
-                if(p) switchPage(p); 
-            }; 
-        }
-        
-        var menu=document.getElementById('menuBtn'); 
-        var drop=document.getElementById('dropdown'); 
-        if(menu){ 
-            menu.onclick=function(e){ e.stopPropagation(); drop.classList.toggle('hidden-dropdown'); }; 
-            document.addEventListener('click',function(e){ if(!menu.contains(e.target)&&!drop.contains(e.target)) drop.classList.add('hidden-dropdown'); }); 
-        }
-        
-        document.getElementById('logoutBtn').onclick=function(e){ e.preventDefault(); userLogout(); };
+// Check authentication
+if (!requireUserAuth()) {}
+
+let currentUser = getCurrentUser();
+let userNumbers = [];
+let userOtps = [];
+let allOtps = [];
+
+// Helper functions
+function getTodayStr() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
     });
-})();
+}
+
+function getCountryFlag(country) {
+    const flags = {
+        'Jordan': '🇯🇴', 'Tajikistan': '🇹🇯', 'Nigeria': '🇳🇬',
+        'Myanmar': '🇲🇲', 'Hungary': '🇭🇺', 'Slovenia': '🇸🇮',
+        'Venezuela': '🇻🇪', 'Uzbekistan': '🇺🇿'
+    };
+    return flags[country] || '🌍';
+}
+
+function loadUserNumbers() {
+    const analytics = JSON.parse(localStorage.getItem('mima_analytics_numbers') || '[]');
+    userNumbers = analytics.filter(n => n.userId === currentUser.userId);
+    const countries = [...new Set(userNumbers.map(n => n.country))];
+    const sel = document.getElementById('countrySelect');
+    if (sel) {
+        sel.innerHTML = '<option value="">-- Select Country --</option>' +
+            countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
+    }
+}
+
+function displayNumbers(country) {
+    const data = userNumbers.find(n => n.country === country);
+    const div = document.getElementById('numbersDisplay');
+    if (!data || !data.numbers || data.numbers.length === 0) {
+        div.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers for this country</div>';
+        return;
+    }
+    div.innerHTML = '<div class="border rounded-xl overflow-hidden">' +
+        '<div class="bg-gray-50 px-4 py-2 font-semibold">' + getCountryFlag(country) + ' ' + country + '</div>' +
+        '<div class="divide-y">' +
+        data.numbers.map(function(num) { return '<div class="px-4 py-2 font-mono">' + escapeHtml(num) + '</div>'; }).join('') +
+        '</div></div>';
+}
+
+function getUserPhoneLast4s() {
+    var last4s = [];
+    for (var i = 0; i < userNumbers.length; i++) {
+        var entry = userNumbers[i];
+        if (entry.numbers) {
+            for (var j = 0; j < entry.numbers.length; j++) {
+                var num = entry.numbers[j];
+                var clean = num.replace(/\D/g, '');
+                if (clean.length >= 4) {
+                    last4s.push(clean.slice(-4));
+                }
+            }
+        }
+    }
+    return last4s;
+}
+
+async function loadOtps() {
+    try {
+        var response = await fetch('../data/otp_logs.json');
+        if (response.ok) {
+            allOtps = await response.json();
+            localStorage.setItem('mima_all_otps', JSON.stringify(allOtps));
+        } else {
+            allOtps = JSON.parse(localStorage.getItem('mima_all_otps') || '[]');
+        }
+    } catch (error) {
+        allOtps = JSON.parse(localStorage.getItem('mima_all_otps') || '[]');
+    }
+    
+    var last4s = getUserPhoneLast4s();
+    userOtps = allOtps.filter(function(otp) { return last4s.includes(otp.phone_last4); });
+    userOtps.sort(function(a, b) { return b.timestamp - a.timestamp; });
+    
+    localStorage.setItem('mima_otp_' + currentUser.userId, JSON.stringify(userOtps));
+    return userOtps;
+}
+
+function renderTodayOtps() {
+    var today = getTodayStr();
+    var todayOtps = userOtps.filter(function(o) { return o.date === today; });
+    var tbody = document.getElementById('todayOtpTable');
+    var emptyMsg = document.getElementById('todayEmptyMsg');
+    
+    if (!tbody) return;
+    if (todayOtps.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
+        return;
+    }
+    if (emptyMsg) emptyMsg.classList.add('hidden');
+    
+    var html = '';
+    for (var i = 0; i < todayOtps.length; i++) {
+        var o = todayOtps[i];
+        html += '<tr class="otp-row border-b border-gray-100 hover:bg-amber-50">' +
+            '<td class="px-6 py-3 font-mono">***' + escapeHtml(o.phone_last4 || '????') + '</td>' +
+            '<td class="px-6 py-3">' + escapeHtml(o.sender || 'Bot') + '</td>' +
+            '<td class="px-6 py-3 font-bold text-emerald-600">' + escapeHtml(o.otp) + '</td>' +
+            '<td class="px-6 py-3 text-gray-500">' + (o.time || '') + '</td>' +
+            '</tr>';
+    }
+    tbody.innerHTML = html;
+}
+
+function updateTotalStats() {
+    var today = getTodayStr();
+    var todayCount = userOtps.filter(function(o) { return o.date === today; }).length;
+    var todayEarnings = todayCount * 0.005;
+    
+    document.getElementById('totalOtpCount').textContent = todayCount;
+    document.getElementById('totalEarnings').textContent = '$' + todayEarnings.toFixed(2);
+}
+
+function fetchPastOtps() {
+    var start = document.getElementById('startDate').value;
+    var end = document.getElementById('endDate').value;
+    if (!start || !end) return;
+    
+    var filtered = userOtps.filter(function(o) { return o.date >= start && o.date <= end; });
+    var tbody = document.getElementById('pastOtpTable');
+    var emptyMsg = document.getElementById('pastEmptyMsg');
+    var totalEarningsSpan = document.getElementById('pastTotalEarnings');
+    
+    if (!tbody) return;
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
+        if (totalEarningsSpan) totalEarningsSpan.textContent = '$0.00';
+        return;
+    }
+    if (emptyMsg) emptyMsg.classList.add('hidden');
+    var totalEarnings = filtered.length * 0.005;
+    if (totalEarningsSpan) totalEarningsSpan.textContent = '$' + totalEarnings.toFixed(2);
+    
+    var html = '';
+    for (var i = 0; i < filtered.length; i++) {
+        var o = filtered[i];
+        html += '<tr class="hover:bg-gray-50 border-b">' +
+            '<td class="px-6 py-3 text-gray-600 text-xs">' + o.date + '</td>' +
+            '<td class="px-6 py-3 font-mono">***' + escapeHtml(o.phone_last4 || '????') + '</td>' +
+            '<td class="px-6 py-3">' + escapeHtml(o.sender || 'Bot') + '</td>' +
+            '<td class="px-6 py-3 font-bold text-emerald-600">' + escapeHtml(o.otp) + '</td>' +
+            '<td class="px-6 py-3 text-gray-500 text-xs">' + (o.time || '') + '</td>' +
+            '</tr>';
+    }
+    tbody.innerHTML = html;
+}
+
+async function refreshAll() {
+    await loadOtps();
+    renderTodayOtps();
+    updateTotalStats();
+    fetchPastOtps();
+}
+
+function addTestOtp() {
+    var last4 = prompt("Enter last 4 digits of phone number:", "4567");
+    var code = prompt("Enter OTP code:", "123456");
+    var sender = prompt("Enter sender name:", "Test");
+    
+    if (last4 && code) {
+        var now = new Date();
+        var newOtp = {
+            id: Date.now().toString(),
+            otp: code,
+            phone_last4: last4,
+            sender: sender,
+            timestamp: now.getTime(),
+            date: now.toISOString().slice(0, 10),
+            time: now.toLocaleTimeString()
+        };
+        
+        var allOtps = JSON.parse(localStorage.getItem('mima_all_otps') || '[]');
+        allOtps.push(newOtp);
+        localStorage.setItem('mima_all_otps', JSON.stringify(allOtps));
+        
+        refreshAll();
+        alert('✅ Test OTP added!\nPhone: ***' + last4 + '\nOTP: ' + code + '\nEarned: $0.005');
+    }
+}
+
+// Page navigation with persistent state
+var STORAGE_KEY = 'mima_current_page';
+
+function saveCurrentPage(pageName) {
+    localStorage.setItem(STORAGE_KEY, pageName);
+}
+
+function getSavedPage() {
+    return localStorage.getItem(STORAGE_KEY) || 'allocation';
+}
+
+function switchToPage(pageName) {
+    saveCurrentPage(pageName);
+    
+    document.querySelectorAll('.page').forEach(function(page) {
+        page.classList.remove('active-page');
+    });
+    
+    var selectedPage = document.getElementById(pageName + 'Page');
+    if (selectedPage) {
+        selectedPage.classList.add('active-page');
+    }
+    
+    document.querySelectorAll('.nav-quick').forEach(function(btn) {
+        btn.classList.remove('bg-indigo-50', 'text-indigo-600');
+        btn.classList.add('text-gray-600');
+    });
+    var activeNav = document.querySelector('.nav-quick[data-nav="' + pageName + '"]');
+    if (activeNav) {
+        activeNav.classList.add('bg-indigo-50', 'text-indigo-600');
+        activeNav.classList.remove('text-gray-600');
+    }
+    
+    var dropdown = document.getElementById('dropdown');
+    if (dropdown) {
+        dropdown.classList.add('hidden-dropdown');
+    }
+    
+    if (pageName === 'allocation') {
+        loadUserNumbers();
+    } else if (pageName === 'today') {
+        renderTodayOtps();
+    } else if (pageName === 'total') {
+        updateTotalStats();
+    } else if (pageName === 'past') {
+        fetchPastOtps();
+    }
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', async function() {
+    initData();
+    
+    document.getElementById('userNameDisplay').innerText = currentUser.username;
+    document.getElementById('userEmailDisplay').innerText = currentUser.email;
+    
+    loadUserNumbers();
+    await loadOtps();
+    
+    var end = new Date();
+    var start = new Date();
+    start.setDate(end.getDate() - 6);
+    document.getElementById('startDate').value = start.toISOString().slice(0, 10);
+    document.getElementById('endDate').value = end.toISOString().slice(0, 10);
+    
+    document.getElementById('countrySelect').onchange = function(e) { if (e.target.value) displayNumbers(e.target.value); };
+    document.getElementById('fetchBtn').onclick = fetchPastOtps;
+    document.getElementById('addOtpBtn').onclick = addTestOtp;
+    
+    renderTodayOtps();
+    updateTotalStats();
+    fetchPastOtps();
+    
+    // Setup quick navigation buttons
+    document.querySelectorAll('.nav-quick').forEach(function(btn) {
+        btn.onclick = function(e) {
+            e.preventDefault();
+            var page = btn.getAttribute('data-nav');
+            if (page) {
+                switchToPage(page);
+            }
+        };
+    });
+    
+    // Setup dropdown menu items
+    document.querySelectorAll('.dropdown-item').forEach(function(item) {
+        item.onclick = function(e) {
+            e.preventDefault();
+            var page = item.getAttribute('data-page');
+            if (page) {
+                switchToPage(page);
+            }
+        };
+    });
+    
+    // Load saved page
+    var savedPage = getSavedPage();
+    switchToPage(savedPage);
+    
+    // Dropdown menu toggle
+    var menuBtn = document.getElementById('menuBtn');
+    var dropdown = document.getElementById('dropdown');
+    if (menuBtn) {
+        menuBtn.onclick = function(e) {
+            e.stopPropagation();
+            dropdown.classList.toggle('hidden-dropdown');
+        };
+        document.addEventListener('click', function(e) {
+            if (!menuBtn.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden-dropdown');
+            }
+        });
+    }
+    
+    // Logout
+    document.getElementById('logoutBtn').onclick = function(e) {
+        e.preventDefault();
+        userLogout();
+    };
+});
 </script>
 </body>
-</html>
+                    </html>
