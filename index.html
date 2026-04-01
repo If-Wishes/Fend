@@ -48,7 +48,7 @@
         <form id="adminLogin">
             <div class="mb-4"><input type="text" id="adminUsername" placeholder="Username" class="w-full border rounded-xl px-4 py-3"></div>
             <div class="mb-6"><input type="password" id="adminPassword" placeholder="Password" class="w-full border rounded-xl px-4 py-3"></div>
-            <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl">Login as Admin</button>
+            <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl">Login</button>
         </form>
     </div>
 
@@ -62,7 +62,7 @@
     </div>
 
     <div class="mt-6 pt-4 border-t text-center text-xs text-gray-400">
-        Admin: admin / admin123
+    ....... 
     </div>
 </div>
 
@@ -72,40 +72,64 @@ const SUPABASE_URL = 'https://uizrpckqnproauqllono.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpenJwY2txbnByb2F1cWxsb25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNDc0NjQsImV4cCI6MjA5MDYyMzQ2NH0.qKVaCbH2NiksMuh85guJiRySQxykwSx-MkbWNuE-PdE';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Admin credentials (hardcoded)
-const ADMIN_USERNAME = 'admin';
-const ADMIN_PASSWORD = 'admin123';
-
-// Function to get users from Supabase
-async function getUsers() {
-    const { data, error } = await supabase.from('users').select('*');
-    if (error) {
-        console.error('Error fetching users:', error);
-        return [];
-    }
-    return data || [];
-}
-
-// Admin login
-async function adminLogin(username, password) {
-    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
-        localStorage.setItem('mima_admin_session', JSON.stringify({ username: 'admin', role: 'admin' }));
+// ============ ADMIN LOGIN (Hardcoded - Simple) ============
+function adminLogin(username, password) {
+    // Simple hardcoded check - no database needed
+    if (username === 'admin' && password === 'admin123') {
+        localStorage.setItem('mima_admin_session', JSON.stringify({ 
+            username: 'admin', 
+            role: 'admin',
+            loginTime: new Date().toISOString()
+        }));
         return { success: true };
     }
     return { success: false };
 }
 
-// User login - checks Supabase database
+// ============ USER LOGIN (Checks Supabase) ============
 async function userLogin(username, password) {
-    const users = await getUsers();
-    const user = users.find(u => u.username === username && u.password === password);
-    if (user) {
-        localStorage.setItem('mima_user_session', JSON.stringify({ userId: user.id, username: user.username }));
-        return { success: true };
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select('id, username, email')
+            .eq('username', username)
+            .eq('password', password)
+            .single();
+        
+        if (data) {
+            localStorage.setItem('mima_user_session', JSON.stringify({ 
+                userId: data.id, 
+                username: data.username,
+                email: data.email
+            }));
+            return { success: true };
+        }
+        
+        // Try by email as fallback
+        const { data: emailData, error: emailError } = await supabase
+            .from('users')
+            .select('id, username, email')
+            .eq('email', username)
+            .eq('password', password)
+            .single();
+        
+        if (emailData) {
+            localStorage.setItem('mima_user_session', JSON.stringify({ 
+                userId: emailData.id, 
+                username: emailData.username,
+                email: emailData.email
+            }));
+            return { success: true };
+        }
+        
+        return { success: false };
+    } catch (error) {
+        console.error('Login error:', error);
+        return { success: false };
     }
-    return { success: false };
 }
 
+// ============ UI HANDLERS ============
 // Role selection
 document.getElementById('adminRoleCard').onclick = () => {
     document.getElementById('adminRoleCard').classList.add('active');
@@ -121,7 +145,7 @@ document.getElementById('userRoleCard').onclick = () => {
 };
 
 // Admin login handler
-document.getElementById('adminLogin').onsubmit = async (e) => {
+document.getElementById('adminLogin').onsubmit = (e) => {
     e.preventDefault();
     const loading = document.getElementById('adminLoading');
     const form = document.getElementById('adminLogin');
@@ -130,7 +154,7 @@ document.getElementById('adminLogin').onsubmit = async (e) => {
     
     const username = document.getElementById('adminUsername').value;
     const password = document.getElementById('adminPassword').value;
-    const result = await adminLogin(username, password);
+    const result = adminLogin(username, password);
     
     loading.classList.remove('active');
     form.style.opacity = '1';
@@ -160,11 +184,11 @@ document.getElementById('userLogin').onsubmit = async (e) => {
     if (result.success) {
         window.location.href = 'user/dashboard.html';
     } else {
-        alert('Invalid user credentials. Please check username and password.');
+        alert('Invalid user credentials');
     }
 };
 
-// Check if already logged in
+// Check existing sessions
 if (localStorage.getItem('mima_admin_session')) {
     window.location.href = 'admin/dashboard.html';
 } else if (localStorage.getItem('mima_user_session')) {
