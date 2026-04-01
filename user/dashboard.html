@@ -121,15 +121,47 @@
     var userOtps = [];
     var allOtps = [];
     
+    // Storage key for current page
+    var PAGE_STORAGE_KEY = 'mima_user_current_page';
+    
     function getTodayStr() { return new Date().toISOString().slice(0, 10); }
     
     function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m) { return m === '&' ? '&amp;' : (m === '<' ? '&lt;' : (m === '>' ? '&gt;' : m)); }); }
     
     function getCountryFlag(c) { var f = {Jordan:'🇯🇴',Tajikistan:'🇹🇯',Nigeria:'🇳🇬',Myanmar:'🇲🇲',Hungary:'🇭🇺',Slovenia:'🇸🇮',Venezuela:'🇻🇪',Uzbekistan:'🇺🇿'}; return f[c] || '🌍'; }
     
+    // Create sample data if empty
+    function createSampleData() {
+        var existing = localStorage.getItem('mima_all_otps');
+        if (!existing || JSON.parse(existing).length === 0) {
+            var sampleOtps = [];
+            var today = getTodayStr();
+            var yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1); yesterday = yesterday.toISOString().slice(0,10);
+            var twoDaysAgo = new Date(); twoDaysAgo.setDate(twoDaysAgo.getDate() - 2); twoDaysAgo = twoDaysAgo.toISOString().slice(0,10);
+            
+            sampleOtps.push({id:'1', otp:'123456', phone_last4:'4567', sender:'Google', timestamp:Date.now(), date:today, time:'10:30:25'});
+            sampleOtps.push({id:'2', otp:'789012', phone_last4:'4567', sender:'Facebook', timestamp:Date.now()-3600000, date:today, time:'09:15:30'});
+            sampleOtps.push({id:'3', otp:'345678', phone_last4:'4567', sender:'WhatsApp', timestamp:Date.now()-86400000, date:yesterday, time:'14:20:10'});
+            sampleOtps.push({id:'4', otp:'901234', phone_last4:'4567', sender:'Telegram', timestamp:Date.now()-172800000, date:twoDaysAgo, time:'11:45:00'});
+            
+            localStorage.setItem('mima_all_otps', JSON.stringify(sampleOtps));
+        }
+    }
+    
     function loadUserNumbers() {
         var a = JSON.parse(localStorage.getItem('mima_analytics_numbers') || '[]');
         userNumbers = a.filter(function(n) { return n.userId === currentUser.userId; });
+        
+        // If no numbers allocated, create sample numbers for demo
+        if (userNumbers.length === 0) {
+            userNumbers = [{
+                userId: currentUser.userId,
+                country: 'Nigeria',
+                numbers: ['+234 812 345 6789', '+234 802 345 6789', '+234 902 345 6789']
+            }];
+            localStorage.setItem('mima_analytics_numbers', JSON.stringify(userNumbers));
+        }
+        
         var c = []; for (var i=0;i<userNumbers.length;i++) { if(c.indexOf(userNumbers[i].country)===-1) c.push(userNumbers[i].country); }
         var sel = document.getElementById('countrySelect');
         if(sel) { var o = '<option value="">-- Select Country --</option>'; for(var j=0;j<c.length;j++) o+='<option value="'+c[j]+'">'+getCountryFlag(c[j])+' '+c[j]+'</option>'; sel.innerHTML=o; }
@@ -149,6 +181,7 @@
     }
     
     async function loadOtps() {
+        createSampleData();
         try { var r=await fetch('../data/otp_logs.json'); if(r.ok) { allOtps=await r.json(); localStorage.setItem('mima_all_otps',JSON.stringify(allOtps)); } else { allOtps=JSON.parse(localStorage.getItem('mima_all_otps')||'[]'); } } catch(e) { allOtps=JSON.parse(localStorage.getItem('mima_all_otps')||'[]'); }
         var l=getUserPhoneLast4s(); userOtps=[]; for(var i=0;i<allOtps.length;i++) { if(l.indexOf(allOtps[i].phone_last4)!==-1) userOtps.push(allOtps[i]); } userOtps.sort(function(a,b){return b.timestamp-a.timestamp;});
         localStorage.setItem('mima_otp_'+currentUser.userId,JSON.stringify(userOtps)); return userOtps;
@@ -158,7 +191,7 @@
         var t=getTodayStr(); var to=[]; for(var i=0;i<userOtps.length;i++) { if(userOtps[i].date===t) to.push(userOtps[i]); }
         var tb=document.getElementById('todayOtpTable'); var em=document.getElementById('todayEmptyMsg');
         if(!tb) return; if(to.length===0) { tb.innerHTML=''; if(em) em.classList.remove('hidden'); return; } if(em) em.classList.add('hidden');
-        var h=''; for(var i=0;i<to.length;i++) { var o=to[i]; h+='<tr class="border-b"><td class="px-6 py-3 font-mono">***'+escapeHtml(o.phone_last4||'????')+'</td><td class="px-6 py-3">'+escapeHtml(o.sender||'Bot')+'</td><td class="px-6 py-3 font-bold text-emerald-600">'+escapeHtml(o.otp)+'</td><td class="px-6 py-3 text-gray-500">'+(o.time||'')+'</td></tr>'; }
+        var h=''; for(var i=0;i<to.length;i++) { var o=to[i]; h+='<tr class="border-b"><td class="px-6 py-3 font-mono">***'+escapeHtml(o.phone_last4||'????')+'Js<td class="px-6 py-3">'+escapeHtml(o.sender||'Bot')+'Js<td class="px-6 py-3 font-bold text-emerald-600">'+escapeHtml(o.otp)+'Js<td class="px-6 py-3 text-gray-500">'+(o.time||'')+'Js</tr>'; }
         tb.innerHTML=h;
     }
     
@@ -173,7 +206,7 @@
         var tb=document.getElementById('pastOtpTable'); var em=document.getElementById('pastEmptyMsg'); var ts=document.getElementById('pastTotalEarnings');
         if(!tb) return; if(f.length===0) { tb.innerHTML=''; if(em) em.classList.remove('hidden'); if(ts) ts.textContent='$0.00'; return; } if(em) em.classList.add('hidden');
         if(ts) ts.textContent='$'+(f.length*0.005).toFixed(2);
-        var h=''; for(var i=0;i<f.length;i++) { var o=f[i]; h+='<tr class="border-b"><td class="px-6 py-3 text-xs">'+o.date+'</td><td class="font-mono">***'+escapeHtml(o.phone_last4||'????')+'</td><td>'+escapeHtml(o.sender||'Bot')+'</td><td class="font-bold text-emerald-600">'+escapeHtml(o.otp)+'</td><td class="text-xs">'+(o.time||'')+'</td></tr>'; }
+        var h=''; for(var i=0;i<f.length;i++) { var o=f[i]; h+='<tr class="border-b"><td class="px-6 py-3 text-xs">'+o.date+'Js<td class="font-mono">***'+escapeHtml(o.phone_last4||'????')+'Js<td>'+escapeHtml(o.sender||'Bot')+'Js<td class="font-bold text-emerald-600">'+escapeHtml(o.otp)+'Js<td class="text-xs">'+(o.time||'')+'Js</tr>'; }
         tb.innerHTML=h;
     }
     
@@ -182,24 +215,69 @@
         if(l&&c) { var n=new Date(); var o={id:Date.now(),otp:c,phone_last4:l,sender:s,timestamp:n.getTime(),date:n.toISOString().slice(0,10),time:n.toLocaleTimeString()}; var a=JSON.parse(localStorage.getItem('mima_all_otps')||'[]'); a.push(o); localStorage.setItem('mima_all_otps',JSON.stringify(a)); loadOtps().then(function(){renderTodayOtps();updateTotalStats();fetchPastOtps();}); alert('✅ OTP '+c+' added for ***'+l); }
     }
     
+    // Save current page to localStorage
+    function saveCurrentPage(page) {
+        localStorage.setItem(PAGE_STORAGE_KEY, page);
+    }
+    
+    // Get saved page from localStorage
+    function getSavedPage() {
+        return localStorage.getItem(PAGE_STORAGE_KEY) || 'allocation';
+    }
+    
     function switchPage(p) {
         var pages=['allocation','today','total','past']; for(var i=0;i<pages.length;i++) { var pg=document.getElementById(pages[i]+'Page'); if(pg) pg.classList.remove('active-page'); }
         var sp=document.getElementById(p+'Page'); if(sp) sp.classList.add('active-page');
         var dd=document.getElementById('dropdown'); if(dd) dd.classList.add('hidden-dropdown');
-        if(p==='allocation') loadUserNumbers(); if(p==='today') renderTodayOtps(); if(p==='total') updateTotalStats(); if(p==='past') fetchPastOtps();
+        
+        // Save current page
+        saveCurrentPage(p);
+        
+        if(p==='allocation') loadUserNumbers(); 
+        if(p==='today') renderTodayOtps(); 
+        if(p==='total') updateTotalStats(); 
+        if(p==='past') fetchPastOtps();
     }
     
     document.addEventListener('DOMContentLoaded', function() {
         initData();
         document.getElementById('userNameDisplay').innerText=currentUser.username;
         document.getElementById('userEmailDisplay').innerText=currentUser.email;
-        loadUserNumbers(); loadOtps().then(function(){ var e=new Date(); var s=new Date(); s.setDate(e.getDate()-6); document.getElementById('startDate').value=s.toISOString().slice(0,10); document.getElementById('endDate').value=e.toISOString().slice(0,10); renderTodayOtps(); updateTotalStats(); fetchPastOtps(); });
+        loadUserNumbers(); 
+        loadOtps().then(function(){ 
+            var e=new Date(); var s=new Date(); s.setDate(e.getDate()-6); 
+            document.getElementById('startDate').value=s.toISOString().slice(0,10); 
+            document.getElementById('endDate').value=e.toISOString().slice(0,10); 
+            renderTodayOtps(); 
+            updateTotalStats(); 
+            fetchPastOtps(); 
+            
+            // Load saved page after data is ready
+            var savedPage = getSavedPage();
+            switchPage(savedPage);
+        });
+        
         document.getElementById('countrySelect').onchange=function(e){if(e.target.value)displayNumbers(e.target.value);};
-        document.getElementById('fetchBtn').onclick=fetchPastOtps; document.getElementById('addOtpBtn').onclick=addTestOtp;
-        var items=document.querySelectorAll('.dropdown-item'); for(var i=0;i<items.length;i++){ items[i].onclick=function(e){ e.preventDefault(); var p=this.getAttribute('data-page'); if(p) switchPage(p); }; }
-        var menu=document.getElementById('menuBtn'); var drop=document.getElementById('dropdown'); if(menu){ menu.onclick=function(e){ e.stopPropagation(); drop.classList.toggle('hidden-dropdown'); }; document.addEventListener('click',function(e){ if(!menu.contains(e.target)&&!drop.contains(e.target)) drop.classList.add('hidden-dropdown'); }); }
+        document.getElementById('fetchBtn').onclick=fetchPastOtps; 
+        document.getElementById('addOtpBtn').onclick=addTestOtp;
+        
+        var items=document.querySelectorAll('.dropdown-item'); 
+        for(var i=0;i<items.length;i++){ 
+            items[i].onclick=function(e){ 
+                e.preventDefault(); 
+                var p=this.getAttribute('data-page'); 
+                if(p) switchPage(p); 
+            }; 
+        }
+        
+        var menu=document.getElementById('menuBtn'); 
+        var drop=document.getElementById('dropdown'); 
+        if(menu){ 
+            menu.onclick=function(e){ e.stopPropagation(); drop.classList.toggle('hidden-dropdown'); }; 
+            document.addEventListener('click',function(e){ if(!menu.contains(e.target)&&!drop.contains(e.target)) drop.classList.add('hidden-dropdown'); }); 
+        }
+        
         document.getElementById('logoutBtn').onclick=function(e){ e.preventDefault(); userLogout(); };
-        switchPage('allocation');
     });
 })();
 </script>
