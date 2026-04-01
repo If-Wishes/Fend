@@ -3,91 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MIMA Panel | Users</title>
+    <title>MIMA Panel | Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        .hidden-dropdown { display: none; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 50; }
-        .modal.active { display: flex; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .login-container { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .role-card { transition: all 0.3s ease; cursor: pointer; }
+        .role-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -12px rgba(0,0,0,0.2); }
+        .role-card.active { border-color: #4f46e5; background: #eef2ff; }
+        .hidden-panel { display: none; }
+        .loading { display: none; text-align: center; padding: 10px; }
+        .loading.active { display: block; }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="login-container min-h-screen flex items-center justify-center p-4">
 
-<nav class="bg-white shadow-sm border-b sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-            <div class="flex items-center gap-4">
-                <a href="dashboard.html" class="text-gray-600 hover:text-gray-800"><i class="fas fa-arrow-left"></i></a>
-                <div class="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center"><i class="fas fa-chart-line text-white"></i></div>
-                <span class="text-xl font-bold">MIMA<span class="text-indigo-600">Panel</span></span>
-                <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">Admin</span>
-            </div>
-            <div class="flex items-center gap-4 relative">
-                <div class="text-right hidden sm:block">
-                    <p class="text-sm font-medium">Admin</p>
-                    <p class="text-xs text-gray-500">User Management</p>
-                </div>
-                <div class="relative">
-                    <button id="menuBtn" class="flex items-center gap-2 bg-gray-100 rounded-full px-3 py-2">
-                        <i class="fas fa-user-shield"></i>
-                        <i class="fas fa-chevron-down text-xs"></i>
-                    </button>
-                    <div id="dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border hidden-dropdown z-50">
-                        <a href="dashboard.html" class="block px-4 py-2">Dashboard</a>
-                        <a href="users.html" class="block px-4 py-2 bg-indigo-50 text-indigo-600">Users</a>
-                        <a href="analytics.html" class="block px-4 py-2">Number Allocation</a>
-                        <a href="activities.html" class="block px-4 py-2">User Activities</a>
-                        <div class="border-t"></div>
-                        <a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600">Logout</a>
-                    </div>
-                </div>
-            </div>
+<div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+    <div class="text-center mb-8">
+        <div class="h-14 w-14 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <i class="fas fa-chart-line text-white text-2xl"></i>
         </div>
-    </div>
-</nav>
-
-<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="flex justify-between items-center mb-6">
-        <div>
-            <h1 class="text-2xl font-bold text-gray-900">User Management</h1>
-            <p class="text-gray-500 mt-1">Users stored in Supabase cloud - accessible from any device</p>
-        </div>
-        <button id="createBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition">
-            <i class="fas fa-plus mr-2"></i>New User
-        </button>
+        <h1 class="text-2xl font-bold text-gray-800">MIMA<span class="text-indigo-600">Panel</span></h1>
+        <p class="text-gray-500 text-sm mt-1">Access your dashboard</p>
     </div>
 
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-        <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-                <thead class="bg-gray-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left">Username</th>
-                        <th class="px-6 py-3 text-left">Email</th>
-                        <th class="px-6 py-3 text-left">Created</th>
-                        <th class="px-6 py-3 text-center">Actions</th>
-                     </thead>
-                <tbody id="usersList" class="divide-y divide-gray-100"></tbody>
-             </table>
+    <div class="grid grid-cols-2 gap-4 mb-6">
+        <div id="adminRoleCard" class="role-card border-2 border-gray-200 rounded-xl p-4 text-center hover:border-indigo-400">
+            <i class="fas fa-shield-alt text-3xl text-gray-400"></i>
+            <p class="font-semibold mt-2 text-gray-700">Admin</p>
+            <p class="text-xs text-gray-400">System management</p>
+        </div>
+        <div id="userRoleCard" class="role-card border-2 border-gray-200 rounded-xl p-4 text-center hover:border-emerald-400">
+            <i class="fas fa-user-circle text-3xl text-gray-400"></i>
+            <p class="font-semibold mt-2 text-gray-700">User</p>
+            <p class="text-xs text-gray-400">Personal dashboard</p>
         </div>
     </div>
-</main>
 
-<!-- Modal -->
-<div id="userModal" class="modal">
-    <div class="bg-white rounded-2xl p-6 w-96 max-w-full mx-4">
-        <h3 id="modalTitle" class="text-xl font-bold text-gray-800 mb-4">Create New User</h3>
-        <div class="space-y-3">
-            <input type="text" id="username" placeholder="Username" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-300">
-            <input type="email" id="email" placeholder="Email" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-300">
-            <input type="password" id="password" placeholder="Password" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-300">
-        </div>
-        <div class="flex justify-end gap-3 mt-6">
-            <button id="closeModalBtn" class="px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition">Cancel</button>
-            <button id="saveUserBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition">Save User</button>
-        </div>
+    <div id="adminLoginForm" class="login-panel">
+        <div class="loading" id="adminLoading"><i class="fas fa-spinner fa-spin"></i> Logging in...</div>
+        <form id="adminLogin">
+            <div class="mb-4"><input type="text" id="adminUsername" placeholder="Username" class="w-full border rounded-xl px-4 py-3"></div>
+            <div class="mb-6"><input type="password" id="adminPassword" placeholder="Password" class="w-full border rounded-xl px-4 py-3"></div>
+            <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl">Login as Admin</button>
+        </form>
+    </div>
+
+    <div id="userLoginForm" class="login-panel hidden-panel">
+        <div class="loading" id="userLoading"><i class="fas fa-spinner fa-spin"></i> Logging in...</div>
+        <form id="userLogin">
+            <div class="mb-4"><input type="text" id="userUsername" placeholder="Username" class="w-full border rounded-xl px-4 py-3"></div>
+            <div class="mb-6"><input type="password" id="userPassword" placeholder="Password" class="w-full border rounded-xl px-4 py-3"></div>
+            <button type="submit" class="w-full bg-emerald-500 text-white py-3 rounded-xl">Login as User</button>
+        </form>
+    </div>
+
+    <div class="mt-6 pt-4 border-t text-center text-xs text-gray-400">
+        Admin: admin / admin123
     </div>
 </div>
 
@@ -97,186 +72,104 @@ const SUPABASE_URL = 'https://uizrpckqnproauqllono.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpenJwY2txbnByb2F1cWxsb25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNDc0NjQsImV4cCI6MjA5MDYyMzQ2NH0.qKVaCbH2NiksMuh85guJiRySQxykwSx-MkbWNuE-PdE';
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ============ USER FUNCTIONS ============
+// Admin credentials (hardcoded)
+const ADMIN_USERNAME = 'admin';
+const ADMIN_PASSWORD = 'admin123';
+
+// Function to get users from Supabase
 async function getUsers() {
-    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-    if (error) { console.error('Error:', error); return []; }
+    const { data, error } = await supabase.from('users').select('*');
+    if (error) {
+        console.error('Error fetching users:', error);
+        return [];
+    }
     return data || [];
 }
 
-async function createUser(username, email, password) {
-    const { data, error } = await supabase
-        .from('users')
-        .insert([{ username: username, email: email, password: password }])
-        .select();
-    
-    if (error) {
-        alert('Error: ' + error.message);
-        return null;
+// Admin login
+async function adminLogin(username, password) {
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
+        localStorage.setItem('mima_admin_session', JSON.stringify({ username: 'admin', role: 'admin' }));
+        return { success: true };
     }
-    return data ? data[0] : null;
+    return { success: false };
 }
 
-async function deleteUser(userId) {
-    const { error } = await supabase.from('users').delete().eq('id', userId);
-    if (error) {
-        alert('Error: ' + error.message);
-        return false;
-    }
-    return true;
-}
-
-// ============ UI FUNCTIONS ============
-async function loadUsers() {
+// User login - checks Supabase database
+async function userLogin(username, password) {
     const users = await getUsers();
-    const tbody = document.getElementById('usersList');
-    
-    if (!users || users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">No users found</td></tr>';
-        return;
+    const user = users.find(u => u.username === username && u.password === password);
+    if (user) {
+        localStorage.setItem('mima_user_session', JSON.stringify({ userId: user.id, username: user.username }));
+        return { success: true };
     }
-    
-    tbody.innerHTML = users.map(user => `
-        <tr class="border-b border-gray-100 hover:bg-gray-50">
-            <td class="px-6 py-3 font-medium">${escapeHtml(user.username)}</td>
-            <td class="px-6 py-3 text-gray-600">${escapeHtml(user.email)}</td>
-            <td class="px-6 py-3 text-xs text-gray-500">${user.created_at ? user.created_at.slice(0,10) : '—'}</td>
-            <td class="px-6 py-3 text-center">
-                <button onclick="deleteUserById('${user.id}')" class="text-red-500 hover:text-red-700">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    return { success: false };
 }
 
-function openModal() {
-    const modal = document.getElementById('userModal');
-    modal.classList.add('active');
-    document.getElementById('username').value = '';
-    document.getElementById('email').value = '';
-    document.getElementById('password').value = '';
-    document.getElementById('modalTitle').innerText = 'Create New User';
+// Role selection
+document.getElementById('adminRoleCard').onclick = () => {
+    document.getElementById('adminRoleCard').classList.add('active');
+    document.getElementById('userRoleCard').classList.remove('active');
+    document.getElementById('adminLoginForm').classList.remove('hidden-panel');
+    document.getElementById('userLoginForm').classList.add('hidden-panel');
+};
+document.getElementById('userRoleCard').onclick = () => {
+    document.getElementById('userRoleCard').classList.add('active');
+    document.getElementById('adminRoleCard').classList.remove('active');
+    document.getElementById('userLoginForm').classList.remove('hidden-panel');
+    document.getElementById('adminLoginForm').classList.add('hidden-panel');
+};
+
+// Admin login handler
+document.getElementById('adminLogin').onsubmit = async (e) => {
+    e.preventDefault();
+    const loading = document.getElementById('adminLoading');
+    const form = document.getElementById('adminLogin');
+    loading.classList.add('active');
+    form.style.opacity = '0.5';
+    
+    const username = document.getElementById('adminUsername').value;
+    const password = document.getElementById('adminPassword').value;
+    const result = await adminLogin(username, password);
+    
+    loading.classList.remove('active');
+    form.style.opacity = '1';
+    
+    if (result.success) {
+        window.location.href = 'admin/dashboard.html';
+    } else {
+        alert('Invalid admin credentials. Use: admin / admin123');
+    }
+};
+
+// User login handler
+document.getElementById('userLogin').onsubmit = async (e) => {
+    e.preventDefault();
+    const loading = document.getElementById('userLoading');
+    const form = document.getElementById('userLogin');
+    loading.classList.add('active');
+    form.style.opacity = '0.5';
+    
+    const username = document.getElementById('userUsername').value;
+    const password = document.getElementById('userPassword').value;
+    const result = await userLogin(username, password);
+    
+    loading.classList.remove('active');
+    form.style.opacity = '1';
+    
+    if (result.success) {
+        window.location.href = 'user/dashboard.html';
+    } else {
+        alert('Invalid user credentials. Please check username and password.');
+    }
+};
+
+// Check if already logged in
+if (localStorage.getItem('mima_admin_session')) {
+    window.location.href = 'admin/dashboard.html';
+} else if (localStorage.getItem('mima_user_session')) {
+    window.location.href = 'user/dashboard.html';
 }
-
-function closeModal() {
-    const modal = document.getElementById('userModal');
-    modal.classList.remove('active');
-}
-
-async function saveUser() {
-    const username = document.getElementById('username').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    
-    // Validation
-    if (!username) {
-        alert('Please enter a username');
-        return;
-    }
-    if (!email) {
-        alert('Please enter an email');
-        return;
-    }
-    if (!password) {
-        alert('Please enter a password');
-        return;
-    }
-    if (password.length < 4) {
-        alert('Password must be at least 4 characters');
-        return;
-    }
-    
-    // Show loading state on button
-    const saveBtn = document.getElementById('saveUserBtn');
-    const originalText = saveBtn.innerHTML;
-    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-    saveBtn.disabled = true;
-    
-    // Create user
-    const result = await createUser(username, email, password);
-    
-    // Reset button
-    saveBtn.innerHTML = originalText;
-    saveBtn.disabled = false;
-    
-    if (result) {
-        closeModal();
-        await loadUsers();
-        alert(`✅ User "${username}" created successfully!\nPassword: ${password}`);
-    }
-}
-
-async function deleteUserById(userId) {
-    if (confirm('Delete this user? This action cannot be undone.')) {
-        const success = await deleteUser(userId);
-        if (success) {
-            await loadUsers();
-            alert('User deleted successfully');
-        }
-    }
-}
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
-}
-
-function adminLogout() {
-    localStorage.removeItem('mima_admin_session');
-    window.location.href = '../index.html';
-}
-
-// ============ INITIALIZATION ============
-document.addEventListener('DOMContentLoaded', function() {
-    // Check admin session
-    if (!localStorage.getItem('mima_admin_session')) {
-        window.location.href = '../index.html';
-        return;
-    }
-    
-    // Load users
-    loadUsers();
-    
-    // Modal controls
-    document.getElementById('createBtn').onclick = openModal;
-    document.getElementById('closeModalBtn').onclick = closeModal;
-    document.getElementById('saveUserBtn').onclick = saveUser;
-    
-    // Close modal when clicking outside
-    document.getElementById('userModal').onclick = function(e) {
-        if (e.target === this) {
-            closeModal();
-        }
-    };
-    
-    // Dropdown menu
-    const menuBtn = document.getElementById('menuBtn');
-    const dropdown = document.getElementById('dropdown');
-    if (menuBtn) {
-        menuBtn.onclick = function(e) {
-            e.stopPropagation();
-            dropdown.classList.toggle('hidden-dropdown');
-        };
-        document.addEventListener('click', function() {
-            dropdown.classList.add('hidden-dropdown');
-        });
-    }
-    
-    // Logout
-    document.getElementById('logoutBtn').onclick = function(e) {
-        e.preventDefault();
-        adminLogout();
-    };
-});
-
-// Make delete function global for onclick
-window.deleteUserById = deleteUserById;
 </script>
 </body>
 </html>
