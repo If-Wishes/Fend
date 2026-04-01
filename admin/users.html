@@ -63,3 +63,220 @@
         <div class="overflow-x-auto">
             <table class="w-full text-sm">
                 <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left">Username</th>
+                        <th class="px-6 py-3 text-left">Email</th>
+                        <th class="px-6 py-3 text-left">Created</th>
+                        <th class="px-6 py-3 text-center">Actions</th>
+                     </thead>
+                <tbody id="usersList" class="divide-y divide-gray-100"></tbody>
+             </table>
+        </div>
+    </div>
+</main>
+
+<!-- Modal -->
+<div id="userModal" class="modal">
+    <div class="bg-white rounded-2xl p-6 w-96 max-w-full mx-4">
+        <h3 id="modalTitle" class="text-xl font-bold text-gray-800 mb-4">Create New User</h3>
+        <div class="space-y-3">
+            <input type="text" id="username" placeholder="Username" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-300">
+            <input type="email" id="email" placeholder="Email" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-300">
+            <input type="password" id="password" placeholder="Password" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-300">
+        </div>
+        <div class="flex justify-end gap-3 mt-6">
+            <button id="closeModalBtn" class="px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition">Cancel</button>
+            <button id="saveUserBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition">Save User</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Supabase Configuration
+const SUPABASE_URL = 'https://uizrpckqnproauqllono.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpenJwY2txbnByb2F1cWxsb25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNDc0NjQsImV4cCI6MjA5MDYyMzQ2NH0.qKVaCbH2NiksMuh85guJiRySQxykwSx-MkbWNuE-PdE';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ============ USER FUNCTIONS ============
+async function getUsers() {
+    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
+    if (error) { console.error('Error:', error); return []; }
+    return data || [];
+}
+
+async function createUser(username, email, password) {
+    const { data, error } = await supabase
+        .from('users')
+        .insert([{ username: username, email: email, password: password }])
+        .select();
+    
+    if (error) {
+        alert('Error: ' + error.message);
+        return null;
+    }
+    return data ? data[0] : null;
+}
+
+async function deleteUser(userId) {
+    const { error } = await supabase.from('users').delete().eq('id', userId);
+    if (error) {
+        alert('Error: ' + error.message);
+        return false;
+    }
+    return true;
+}
+
+// ============ UI FUNCTIONS ============
+async function loadUsers() {
+    const users = await getUsers();
+    const tbody = document.getElementById('usersList');
+    
+    if (!users || users.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">No users found</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = users.map(user => `
+        <tr class="border-b border-gray-100 hover:bg-gray-50">
+            <td class="px-6 py-3 font-medium">${escapeHtml(user.username)}</td>
+            <td class="px-6 py-3 text-gray-600">${escapeHtml(user.email)}</td>
+            <td class="px-6 py-3 text-xs text-gray-500">${user.created_at ? user.created_at.slice(0,10) : '—'}</td>
+            <td class="px-6 py-3 text-center">
+                <button onclick="deleteUserById('${user.id}')" class="text-red-500 hover:text-red-700">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function openModal() {
+    const modal = document.getElementById('userModal');
+    modal.classList.add('active');
+    document.getElementById('username').value = '';
+    document.getElementById('email').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('modalTitle').innerText = 'Create New User';
+}
+
+function closeModal() {
+    const modal = document.getElementById('userModal');
+    modal.classList.remove('active');
+}
+
+async function saveUser() {
+    const username = document.getElementById('username').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    
+    // Validation
+    if (!username) {
+        alert('Please enter a username');
+        return;
+    }
+    if (!email) {
+        alert('Please enter an email');
+        return;
+    }
+    if (!password) {
+        alert('Please enter a password');
+        return;
+    }
+    if (password.length < 4) {
+        alert('Password must be at least 4 characters');
+        return;
+    }
+    
+    // Show loading state on button
+    const saveBtn = document.getElementById('saveUserBtn');
+    const originalText = saveBtn.innerHTML;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    saveBtn.disabled = true;
+    
+    // Create user
+    const result = await createUser(username, email, password);
+    
+    // Reset button
+    saveBtn.innerHTML = originalText;
+    saveBtn.disabled = false;
+    
+    if (result) {
+        closeModal();
+        await loadUsers();
+        alert(`✅ User "${username}" created successfully!\nPassword: ${password}`);
+    }
+}
+
+async function deleteUserById(userId) {
+    if (confirm('Delete this user? This action cannot be undone.')) {
+        const success = await deleteUser(userId);
+        if (success) {
+            await loadUsers();
+            alert('User deleted successfully');
+        }
+    }
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+}
+
+function adminLogout() {
+    localStorage.removeItem('mima_admin_session');
+    window.location.href = '../index.html';
+}
+
+// ============ INITIALIZATION ============
+document.addEventListener('DOMContentLoaded', function() {
+    // Check admin session
+    if (!localStorage.getItem('mima_admin_session')) {
+        window.location.href = '../index.html';
+        return;
+    }
+    
+    // Load users
+    loadUsers();
+    
+    // Modal controls
+    document.getElementById('createBtn').onclick = openModal;
+    document.getElementById('closeModalBtn').onclick = closeModal;
+    document.getElementById('saveUserBtn').onclick = saveUser;
+    
+    // Close modal when clicking outside
+    document.getElementById('userModal').onclick = function(e) {
+        if (e.target === this) {
+            closeModal();
+        }
+    };
+    
+    // Dropdown menu
+    const menuBtn = document.getElementById('menuBtn');
+    const dropdown = document.getElementById('dropdown');
+    if (menuBtn) {
+        menuBtn.onclick = function(e) {
+            e.stopPropagation();
+            dropdown.classList.toggle('hidden-dropdown');
+        };
+        document.addEventListener('click', function() {
+            dropdown.classList.add('hidden-dropdown');
+        });
+    }
+    
+    // Logout
+    document.getElementById('logoutBtn').onclick = function(e) {
+        e.preventDefault();
+        adminLogout();
+    };
+});
+
+// Make delete function global for onclick
+window.deleteUserById = deleteUserById;
+</script>
+</body>
+</html>
