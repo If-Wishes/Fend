@@ -6,6 +6,8 @@
     <title>MIMA Panel | Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, sans-serif; }
@@ -14,6 +16,8 @@
         .role-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -12px rgba(0,0,0,0.2); }
         .role-card.active { border-color: #4f46e5; background: #eef2ff; }
         .hidden-panel { display: none; }
+        .loading { display: none; text-align: center; padding: 10px; }
+        .loading.active { display: block; }
     </style>
 </head>
 <body class="login-container min-h-screen flex items-center justify-center p-4">
@@ -41,41 +45,40 @@
     </div>
 
     <div id="adminLoginForm" class="login-panel">
+        <div class="loading" id="adminLoading"><i class="fas fa-spinner fa-spin"></i> Logging in...</div>
         <form id="adminLogin">
-            <div class="mb-4"><input type="text" id="adminUsername" placeholder="Username or Email" class="w-full border rounded-xl px-4 py-3"></div>
+            <div class="mb-4"><input type="text" id="adminUsername" placeholder="Username" class="w-full border rounded-xl px-4 py-3"></div>
             <div class="mb-6"><input type="password" id="adminPassword" placeholder="Password" class="w-full border rounded-xl px-4 py-3"></div>
-            <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl">Login</button>
+            <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl">Login as Admin</button>
         </form>
     </div>
 
     <div id="userLoginForm" class="login-panel hidden-panel">
+        <div class="loading" id="userLoading"><i class="fas fa-spinner fa-spin"></i> Logging in...</div>
         <form id="userLogin">
-            <div class="mb-4"><input type="text" id="userUsername" placeholder="Username or Email" class="w-full border rounded-xl px-4 py-3"></div>
+            <div class="mb-4"><input type="text" id="userUsername" placeholder="Username" class="w-full border rounded-xl px-4 py-3"></div>
             <div class="mb-6"><input type="password" id="userPassword" placeholder="Password" class="w-full border rounded-xl px-4 py-3"></div>
             <button type="submit" class="w-full bg-emerald-500 text-white py-3 rounded-xl">Login as User</button>
         </form>
     </div>
 
     <div class="mt-6 pt-4 border-t text-center text-xs text-gray-400">
-    .......... 
+        Admin: admin / admin123
     </div>
 </div>
 
-<script src="js/users.js"></script>
 <script>
-// Admin credentials
-const ADMIN_CREDENTIALS = { username: 'admin', password: 'admin123' };
-
-function adminLogin(username, password) {
-    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+async function adminLogin(username, password) {
+    if (username === 'admin' && password === 'admin123') {
         localStorage.setItem('mima_admin_session', JSON.stringify({ username: 'admin', role: 'admin' }));
         return { success: true };
     }
     return { success: false };
 }
 
-function userLogin(username, password) {
-    const user = USERS_DATABASE.find(u => u.username === username && u.password === password);
+async function userLogin(username, password) {
+    const users = await getUsers();
+    const user = users.find(u => u.username === username && u.password === password);
     if (user) {
         localStorage.setItem('mima_user_session', JSON.stringify({ userId: user.id, username: user.username }));
         return { success: true };
@@ -83,15 +86,6 @@ function userLogin(username, password) {
     return { success: false };
 }
 
-// Initialize users in localStorage
-function initUsers() {
-    if (!localStorage.getItem('mima_users')) {
-        localStorage.setItem('mima_users', JSON.stringify(USERS_DATABASE));
-        localStorage.setItem('mima_credentials', JSON.stringify(USERS_DATABASE));
-    }
-}
-
-// Role selection
 document.getElementById('adminRoleCard').onclick = () => {
     document.getElementById('adminRoleCard').classList.add('active');
     document.getElementById('userRoleCard').classList.remove('active');
@@ -105,30 +99,34 @@ document.getElementById('userRoleCard').onclick = () => {
     document.getElementById('adminLoginForm').classList.add('hidden-panel');
 };
 
-// Admin login handler
-document.getElementById('adminLogin').onsubmit = (e) => {
+document.getElementById('adminLogin').onsubmit = async (e) => {
     e.preventDefault();
-    const result = adminLogin(document.getElementById('adminUsername').value, document.getElementById('adminPassword').value);
-    if (result.success) {
-        window.location.href = 'admin/dashboard.html';
-    } else {
-        alert('Invalid admin credentials');
-    }
+    const loading = document.getElementById('adminLoading');
+    const form = document.getElementById('adminLogin');
+    loading.classList.add('active');
+    form.style.opacity = '0.5';
+    const result = await adminLogin(document.getElementById('adminUsername').value, document.getElementById('adminPassword').value);
+    loading.classList.remove('active');
+    form.style.opacity = '1';
+    if (result.success) window.location.href = 'admin/dashboard.html';
+    else alert('Invalid admin credentials');
 };
 
-// User login handler
-document.getElementById('userLogin').onsubmit = (e) => {
+document.getElementById('userLogin').onsubmit = async (e) => {
     e.preventDefault();
-    const result = userLogin(document.getElementById('userUsername').value, document.getElementById('userPassword').value);
-    if (result.success) {
-        window.location.href = 'user/dashboard.html';
-    } else {
-        alert('Invalid user credentials');
-    }
+    const loading = document.getElementById('userLoading');
+    const form = document.getElementById('userLogin');
+    loading.classList.add('active');
+    form.style.opacity = '0.5';
+    const result = await userLogin(document.getElementById('userUsername').value, document.getElementById('userPassword').value);
+    loading.classList.remove('active');
+    form.style.opacity = '1';
+    if (result.success) window.location.href = 'user/dashboard.html';
+    else alert('Invalid user credentials');
 };
 
-// Initialize
-initUsers();
+if (localStorage.getItem('mima_admin_session')) window.location.href = 'admin/dashboard.html';
+else if (localStorage.getItem('mima_user_session')) window.location.href = 'user/dashboard.html';
 </script>
 </body>
 </html>
