@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIMA Panel | Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body class="bg-gray-50">
+
+<nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center">
+                <div class="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+                    <i class="fas fa-chart-line text-white text-sm"></i>
+                </div>
+                <span class="ml-2 text-xl font-bold text-gray-800">MIMA<span class="text-indigo-600">Panel</span></span>
+                <span class="ml-3 text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">Admin</span>
+            </div>
+            <div class="flex items-center gap-4">
+                <div class="text-right hidden sm:block">
+                    <p class="text-sm font-medium text-gray-800">Admin</p>
+                    <p class="text-xs text-gray-500">Dashboard</p>
+                </div>
+                <button onclick="adminLogout()" class="text-gray-500 hover:text-red-600">
+                    <i class="fas fa-sign-out-alt text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+        <p class="text-gray-500 mt-1">Manage users, track earnings, and monitor activities</p>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl shadow-lg p-6">
+            <p class="text-indigo-100 text-sm">Total Users</p>
+            <p class="text-white text-3xl font-bold mt-1" id="statUsers">0</p>
+        </div>
+        <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg p-6">
+            <p class="text-emerald-100 text-sm">Total Numbers</p>
+            <p class="text-white text-3xl font-bold mt-1" id="statNumbers">0</p>
+        </div>
+        <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl shadow-lg p-6">
+            <p class="text-amber-100 text-sm">OTPs Today</p>
+            <p class="text-white text-3xl font-bold mt-1" id="statOtps">0</p>
+        </div>
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg p-6">
+            <p class="text-purple-100 text-sm">Total Earnings Today</p>
+            <p class="text-white text-3xl font-bold mt-1" id="statEarnings">$0</p>
+        </div>
+    </div>
+
+    <!-- Quick Links -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <a href="users.html" class="bg-white rounded-2xl shadow-sm border p-6 hover:shadow-md transition">
+            <div class="flex items-center gap-3"><i class="fas fa-users text-2xl text-indigo-500"></i><div><h3 class="font-semibold">User Management</h3><p class="text-sm text-gray-500">Create, edit, delete users</p></div></div>
+        </a>
+        <a href="analytics.html" class="bg-white rounded-2xl shadow-sm border p-6 hover:shadow-md transition">
+            <div class="flex items-center gap-3"><i class="fas fa-phone-alt text-2xl text-emerald-500"></i><div><h3 class="font-semibold">Number Allocation</h3><p class="text-sm text-gray-500">Assign numbers to users</p></div></div>
+        </a>
+        <a href="activities.html" class="bg-white rounded-2xl shadow-sm border p-6 hover:shadow-md transition">
+            <div class="flex items-center gap-3"><i class="fas fa-chart-line text-2xl text-purple-500"></i><div><h3 class="font-semibold">User Activities</h3><p class="text-sm text-gray-500">View earnings & OTPs per user</p></div></div>
+        </a>
+    </div>
+</main>
+
+<script src="../js/data.js"></script>
+<script src="../js/auth.js"></script>
+<script>
+    if (!requireAdminAuth()) {}
+
+    async function updateStats() {
+        const users = getUsers();
+        const userNumbers = JSON.parse(localStorage.getItem('mima_analytics_numbers') || '[]');
+        const otps = await loadOtps();
+        const today = getTodayStr();
+        const todayOtps = otps.filter(o => o.date === today);
+        
+        document.getElementById('statUsers').textContent = users.length;
+        document.getElementById('statNumbers').textContent = userNumbers.reduce((s,n) => s + (n.numbers?.length || 0), 0);
+        document.getElementById('statOtps').textContent = todayOtps.length;
+        document.getElementById('statEarnings').textContent = `$${(todayOtps.length * 0.005).toFixed(2)}`;
+    }
+    
+    updateStats();
+</script>
+</body>
+</html>

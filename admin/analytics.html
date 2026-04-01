@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIMA Panel | Number Allocation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+
+<nav class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4">
+        <div class="flex justify-between h-16">
+            <div class="flex items-center gap-4">
+                <a href="dashboard.html" class="text-gray-600"><i class="fas fa-arrow-left"></i></a>
+                <div class="h-8 w-8 rounded-lg bg-indigo-600"><i class="fas fa-chart-line text-white"></i></div>
+                <span class="text-xl font-bold">MIMA<span class="text-indigo-600">Panel</span></span>
+                <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">Admin</span>
+            </div>
+            <button onclick="adminLogout()" class="text-red-600"><i class="fas fa-sign-out-alt"></i></button>
+        </div>
+    </div>
+</nav>
+
+<main class="max-w-7xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold">Number Allocation</h1>
+    <p class="text-gray-500 mb-6">Assign phone numbers to users by country</p>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-2xl border p-6">
+            <h2 class="font-semibold mb-4">➕ Add Numbers</h2>
+            <select id="userSelect" class="w-full border rounded-xl px-4 py-2 mb-3"><option value="">-- Select User --</option></select>
+            <select id="countrySelect" class="w-full border rounded-xl px-4 py-2 mb-3">
+                <option value="">-- Country --</option>
+                <option value="Jordan">🇯🇴 Jordan</option><option value="Tajikistan">🇹🇯 Tajikistan</option>
+                <option value="Nigeria">🇳🇬 Nigeria</option><option value="Myanmar">🇲🇲 Myanmar</option>
+                <option value="Hungary">🇭🇺 Hungary</option><option value="Slovenia">🇸🇮 Slovenia</option>
+                <option value="Venezuela">🇻🇪 Venezuela</option><option value="Uzbekistan">🇺🇿 Uzbekistan</option>
+            </select>
+            <textarea id="numbersInput" rows="4" class="w-full border rounded-xl px-4 py-2 mb-3" placeholder="Enter numbers (one per line or comma separated)"></textarea>
+            <button id="addBtn" class="bg-indigo-600 text-white px-6 py-2 rounded-xl w-full">Add Numbers</button>
+        </div>
+        <div class="bg-white rounded-2xl border p-6">
+            <h2 class="font-semibold mb-4">📋 Allocated Numbers</h2>
+            <select id="filterSelect" class="w-full border rounded-xl px-4 py-2 mb-4"><option value="">-- All Users --</option></select>
+            <div id="allocations"></div>
+        </div>
+    </div>
+</main>
+
+<script src="../js/data.js"></script>
+<script>
+let userNumbers=[];
+function loadData(){userNumbers=JSON.parse(localStorage.getItem('mima_analytics_numbers')||'[]');populateSelects();renderAllocations();}
+function populateSelects(){const users=getUsers();const userSel=document.getElementById('userSelect');userSel.innerHTML='<option value="">-- Select User --</option>'+users.map(u=>`<option value="${u.id}">${u.username}</option>`).join('');const filterSel=document.getElementById('filterSelect');filterSel.innerHTML='<option value="">-- All Users --</option>'+users.map(u=>`<option value="${u.id}">${u.username}</option>`).join('');filterSel.onchange=()=>renderAllocations();}
+function renderAllocations(){const filter=document.getElementById('filterSelect').value;let filtered=userNumbers;if(filter)filtered=userNumbers.filter(n=>n.userId===filter);const container=document.getElementById('allocations');if(filtered.length===0){container.innerHTML='<div class="text-center py-8 text-gray-400">No numbers allocated</div>';return;}let html='';const users=getUsers();filtered.forEach(item=>{const user=users.find(u=>u.id===item.userId);html+=`<div class="border rounded-xl mb-3"><div class="bg-gray-50 px-4 py-2 flex justify-between"><span><strong>${user?.username}</strong> - ${item.country}</span><button onclick="deleteEntry('${item.userId}','${item.country}')" class="text-red-500 text-sm">Delete All</button></div><div class="flex flex-wrap gap-2 p-3">${item.numbers.map(num=>`<span class="bg-gray-100 px-3 py-1 rounded-full text-sm">${num} <button onclick="deleteNumber('${item.userId}','${item.country}','${num}')" class="text-red-400 ml-1">&times;</button></span>`).join('')}</div></div>`;});container.innerHTML=html;}
+function addNumbers(){const userId=document.getElementById('userSelect').value;const country=document.getElementById('countrySelect').value;const numbersInput=document.getElementById('numbersInput').value;if(!userId||!country||!numbersInput){alert('Fill all fields');return;}let numbers=numbersInput.split(/[,\n]/).map(n=>n.trim()).filter(n=>n);if(numbers.length===0){alert('No valid numbers');return;}const existing=userNumbers.find(n=>n.userId===userId&&n.country===country);if(existing){existing.numbers.push(...numbers.filter(n=>!existing.numbers.includes(n)));}else{userNumbers.push({userId,country,numbers,addedAt:new Date().toISOString()});}localStorage.setItem('mima_analytics_numbers',JSON.stringify(userNumbers));document.getElementById('numbersInput').value='';alert(`Added ${numbers.length} numbers`);renderAllocations();}
+window.deleteEntry=(userId,country)=>{if(confirm('Delete all numbers?')){userNumbers=userNumbers.filter(n=>!(n.userId===userId&&n.country===country));localStorage.setItem('mima_analytics_numbers',JSON.stringify(userNumbers));renderAllocations();}};
+window.deleteNumber=(userId,country,num)=>{const entry=userNumbers.find(n=>n.userId===userId&&n.country===country);if(entry){entry.numbers=entry.numbers.filter(n=>n!==num);if(entry.numbers.length===0){userNumbers=userNumbers.filter(n=>!(n.userId===userId&&n.country===country));}localStorage.setItem('mima_analytics_numbers',JSON.stringify(userNumbers));renderAllocations();}};
+document.addEventListener('DOMContentLoaded',()=>{initData();loadData();document.getElementById('addBtn').onclick=addNumbers;});</script>
+</body>
+</html>
