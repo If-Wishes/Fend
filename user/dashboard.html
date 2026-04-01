@@ -11,6 +11,7 @@
         .page.active-page { display: block; }
         .hidden-dropdown { display: none; }
         .otp-row:hover { background: #fef3c7; }
+        .nav-btn-active { background-color: #eef2ff; color: #4f46e5; }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -49,6 +50,16 @@
     </div>
 </nav>
 
+<!-- Quick Navigation Buttons -->
+<div class="bg-white shadow-sm border-b sticky top-16 z-40">
+    <div class="flex overflow-x-auto px-2 py-2 gap-1 max-w-7xl mx-auto">
+        <button data-nav="allocation" class="nav-quick flex-1 px-3 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition">📌 Allocation</button>
+        <button data-nav="today" class="nav-quick flex-1 px-3 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition">📊 Today</button>
+        <button data-nav="total" class="nav-quick flex-1 px-3 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition">💰 Total</button>
+        <button data-nav="past" class="nav-quick flex-1 px-3 py-2 rounded-xl text-sm font-medium text-gray-600 hover:bg-gray-100 transition">📅 Past</button>
+    </div>
+</div>
+
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
     <!-- Allocation Page -->
     <div id="allocationPage" class="page">
@@ -70,9 +81,15 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50">
-                        <tr><th class="px-6 py-3 text-left">Number</th><th class="px-6 py-3 text-left">Sender</th><th class="px-6 py-3 text-left">Code</th><th class="px-6 py-3 text-left">Time</th> </thead>
+                        <tr>
+                            <th class="px-6 py-3 text-left">Number</th>
+                            <th class="px-6 py-3 text-left">Sender</th>
+                            <th class="px-6 py-3 text-left">Code</th>
+                            <th class="px-6 py-3 text-left">Time</th>
+                        </tr>
+                    </thead>
                     <tbody id="todayOtpTable" class="divide-y divide-gray-100"></tbody>
-                追赶
+                </table>
             </div>
             <div id="todayEmptyMsg" class="text-center py-8 text-gray-400 hidden">No OTP received today</div>
         </div>
@@ -132,7 +149,7 @@
                         </tr>
                     </thead>
                     <tbody id="pastOtpTable" class="divide-y divide-gray-100"></tbody>
-                追赶
+                </table>
             </div>
             <div id="pastEmptyMsg" class="text-center py-8 text-gray-400 hidden">No OTP records in this date range</div>
         </div>
@@ -259,11 +276,11 @@ function renderTodayOtps() {
     for (var i = 0; i < todayOtps.length; i++) {
         var o = todayOtps[i];
         html += '<tr class="otp-row border-b border-gray-100 hover:bg-amber-50">' +
-            '<td class="px-6 py-3 font-mono">***' + escapeHtml(o.phone_last4 || '????') + 'Js' +
-            '<td class="px-6 py-3">' + escapeHtml(o.sender || 'Bot') + 'Js' +
-            '<td class="px-6 py-3 font-bold text-emerald-600">' + escapeHtml(o.otp) + 'Js' +
-            '<td class="px-6 py-3 text-gray-500">' + (o.time || '') + 'Js' +
-            '<\/tr>';
+            '<td class="px-6 py-3 font-mono">***' + escapeHtml(o.phone_last4 || '????') + '</td>' +
+            '<td class="px-6 py-3">' + escapeHtml(o.sender || 'Bot') + '</td>' +
+            '<td class="px-6 py-3 font-bold text-emerald-600">' + escapeHtml(o.otp) + '</td>' +
+            '<td class="px-6 py-3 text-gray-500">' + (o.time || '') + '</td>' +
+            '</tr>';
     }
     tbody.innerHTML = html;
 }
@@ -302,12 +319,12 @@ function fetchPastOtps() {
     for (var i = 0; i < filtered.length; i++) {
         var o = filtered[i];
         html += '<tr class="hover:bg-gray-50 border-b">' +
-            '<td class="px-6 py-3 text-gray-600 text-xs">' + o.date + 'Js' +
-            '<td class="px-6 py-3 font-mono">***' + escapeHtml(o.phone_last4 || '????') + 'Js' +
-            '<td class="px-6 py-3">' + escapeHtml(o.sender || 'Bot') + 'Js' +
-            '<td class="px-6 py-3 font-bold text-emerald-600">' + escapeHtml(o.otp) + 'Js' +
-            '<td class="px-6 py-3 text-gray-500 text-xs">' + (o.time || '') + 'Js' +
-            '<\/tr>';
+            '<td class="px-6 py-3 text-gray-600 text-xs">' + o.date + '</td>' +
+            '<td class="px-6 py-3 font-mono">***' + escapeHtml(o.phone_last4 || '????') + '</td>' +
+            '<td class="px-6 py-3">' + escapeHtml(o.sender || 'Bot') + '</td>' +
+            '<td class="px-6 py-3 font-bold text-emerald-600">' + escapeHtml(o.otp) + '</td>' +
+            '<td class="px-6 py-3 text-gray-500 text-xs">' + (o.time || '') + '</td>' +
+            '</tr>';
     }
     tbody.innerHTML = html;
 }
@@ -368,6 +385,16 @@ function switchToPage(pageName) {
         selectedPage.classList.add('active-page');
     }
     
+    document.querySelectorAll('.nav-quick').forEach(function(btn) {
+        btn.classList.remove('bg-indigo-50', 'text-indigo-600');
+        btn.classList.add('text-gray-600');
+    });
+    var activeNav = document.querySelector('.nav-quick[data-nav="' + pageName + '"]');
+    if (activeNav) {
+        activeNav.classList.add('bg-indigo-50', 'text-indigo-600');
+        activeNav.classList.remove('text-gray-600');
+    }
+    
     var dropdown = document.getElementById('dropdown');
     if (dropdown) {
         dropdown.classList.add('hidden-dropdown');
@@ -408,6 +435,17 @@ document.addEventListener('DOMContentLoaded', async function() {
     updateTotalStats();
     fetchPastOtps();
     
+    // Setup quick navigation buttons
+    document.querySelectorAll('.nav-quick').forEach(function(btn) {
+        btn.onclick = function(e) {
+            e.preventDefault();
+            var page = btn.getAttribute('data-nav');
+            if (page) {
+                switchToPage(page);
+            }
+        };
+    });
+    
     // Setup dropdown menu items
     document.querySelectorAll('.dropdown-item').forEach(function(item) {
         item.onclick = function(e) {
@@ -447,3 +485,5 @@ document.addEventListener('DOMContentLoaded', async function() {
 </script>
 </body>
 </html>
+
+
