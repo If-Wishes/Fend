@@ -36,10 +36,10 @@
                         <i class="fas fa-chevron-down text-gray-500 text-xs"></i>
                     </button>
                     <div id="dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 hidden-dropdown z-50">
-                        <a href="#" data-page="allocation" class="block px-4 py-2 hover:bg-gray-50">📌 Allocation</a>
-                        <a href="#" data-page="today" class="block px-4 py-2 hover:bg-gray-50">📊 Today's Stat</a>
-                        <a href="#" data-page="total" class="block px-4 py-2 hover:bg-gray-50">💰 Total OTP</a>
-                        <a href="#" data-page="past" class="block px-4 py-2 hover:bg-gray-50">📅 Past Records</a>
+                        <a href="#" data-page="allocation" class="dropdown-item block px-4 py-2 hover:bg-gray-50">📌 Allocation</a>
+                        <a href="#" data-page="today" class="dropdown-item block px-4 py-2 hover:bg-gray-50">📊 Today's Stat</a>
+                        <a href="#" data-page="total" class="dropdown-item block px-4 py-2 hover:bg-gray-50">💰 Total OTP</a>
+                        <a href="#" data-page="past" class="dropdown-item block px-4 py-2 hover:bg-gray-50">📅 Past Records</a>
                         <div class="border-t border-gray-100"></div>
                         <a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600 hover:bg-red-50">Logout</a>
                     </div>
@@ -196,6 +196,236 @@ function getUserPhoneLast4s() {
         if (entry.numbers) {
             entry.numbers.forEach(num => {
                 const clean = num.replace(/\D/g, '');
+                if (clean.length >= 4) {
+                    last4s.push(clean.slice(-4));
+                }
+            });
+        }
+    });
+    return last4s;
+}
+
+async function loadOtps() {
+    try {
+        const response = await fetch('../data/otp_logs.json');
+        if (response.ok) {
+            allOtps = await response.json();
+            localStorage.setItem('mima_all_otps', JSON.stringify(allOtps));
+        } else {
+            allOtps = JSON.parse(localStorage.getItem('mima_all_otps') || '[]');
+        }
+    } catch (error) {
+        allOtps = JSON.parse(localStorage.getItem('mima_all_otps') || '[]');
+    }
+    
+    // Filter OTPs for this user
+    const last4s = getUserPhoneLast4s();
+    userOtps = allOtps.filter(otp => last4s.includes(otp.phone_last4));
+    userOtps.sort((a, b) => b.timestamp - a.timestamp);
+    
+    // Save to localStorage for this user
+    localStorage.setItem(`mima_otp_${currentUser.userId}`, JSON.stringify(userOtps));
+    return userOtps;
+}
+
+function renderTodayOtps() {
+    const today = getTodayStr();
+    const todayOtps = userOtps.filter(o => o.date === today);
+    const tbody = document.getElementById('todayOtpTable');
+    const emptyMsg = document.getElementById('todayEmptyMsg');
+    
+    if (!tbody) return;
+    if (todayOtps.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
+        return;
+    }
+    if (emptyMsg) emptyMsg.classList.add('hidden');
+    
+    tbody.innerHTML = todayOtps.map(o => `
+        <tr class="otp-row border-b border-gray-100 hover:bg-amber-50">
+            <td class="px-6 py-3 font-mono">***${escapeHtml(o.phone_last4 || '????')}Js
+            <td class="px-6 py-3">${escapeHtml(o.sender || 'Bot')}Js
+            <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}Js
+            <td class="px-6 py-3 text-gray-500">${o.time || ''}Js
+           </tr>
+    `).join('');
+}
+
+function updateTotalStats() {
+    const today = getTodayStr();
+    const todayCount = userOtps.filter(o => o.date === today).length;
+    const todayEarnings = todayCount * 0.005;
+    
+    document.getElementById('totalOtpCount').textContent = todayCount;
+    document.getElementById('totalEarnings').textContent = `$${todayEarnings.toFixed(2)}`;
+}
+
+function fetchPastOtps() {
+    const start = document.getElementById('startDate').value;
+    const end = document.getElementById('endDate').value;
+    
+    if (!start || !end) return;
+    
+    const filtered = userOtps.filter(o => o.date >= start && o.date <= end);
+    const tbody = document.getElementById('pastOtpTable');
+    const emptyMsg = document.getElementById('pastEmptyMsg');
+    const totalEarningsSpan = document.getElementById('pastTotalEarnings');
+    
+    if (!tbody) return;
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
+        if (totalEarningsSpan) totalEarningsSpan.textContent = '$0.00';
+        return;
+    }
+    
+    if (emptyMsg) emptyMsg.classList.add('hidden');
+    const totalEarnings = filtered.length * 0.005;
+    if (totalEarningsSpan) totalEarningsSpan.textContent = `$${totalEarnings.toFixed(2)}`;
+    
+    tbody.innerHTML = filtered.map(o => `
+        <tr class="hover:bg-gray-50 border-b">
+            <td class="px-6 py-3 text-gray-600 text-xs">${o.date}Js
+            <td class="px-6 py-3 font-mono">***${escapeHtml(o.phone_last4 || '????')}Js
+            <td class="px-6 py-3">${escapeHtml(o.sender || 'Bot')}Js
+            <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}Js
+            <td class="px-6 py-3 text-gray-500 text-xs">${o.time || ''}Js
+           </tr>
+    `).join('');
+}
+
+async function refreshAll() {
+    await loadOtps();
+    renderTodayOtps();
+    updateTotalStats();
+    fetchPastOtps();
+}
+
+function addTestOtp() {
+    const last4 = prompt("Enter last 4 digits of phone number:", "4567");
+    const code = prompt("Enter OTP code:", "123456");
+    const sender = prompt("Enter sender name:", "Test");
+    
+    if (last4 && code) {
+        const now = new Date();
+        const newOtp = {
+            id: Date.now().toString(),
+            otp: code,
+            phone_last4: last4,
+            sender: sender,
+            timestamp: now.getTime(),
+            date: now.toISOString().slice(0, 10),
+            time: now.toLocaleTimeString()
+        };
+        
+        let allOtps = JSON.parse(localStorage.getItem('mima_all_otps') || '[]');
+        allOtps.push(newOtp);
+        localStorage.setItem('mima_all_otps', JSON.stringify(allOtps));
+        
+        refreshAll();
+        alert(`✅ Test OTP added!\nPhone: ***${last4}\nOTP: ${code}\nEarned: $0.005`);
+    }
+}
+
+// Function to switch pages - FIXED to ensure all pages work
+function switchToPage(pageName) {
+    // Hide all pages
+    document.querySelectorAll('.page').forEach(page => {
+        page.classList.remove('active-page');
+    });
+    
+    // Show selected page
+    const selectedPage = document.getElementById(pageName + 'Page');
+    if (selectedPage) {
+        selectedPage.classList.add('active-page');
+    }
+    
+    // Close dropdown
+    const dropdown = document.getElementById('dropdown');
+    if (dropdown) {
+        dropdown.classList.add('hidden-dropdown');
+    }
+    
+    // Load page-specific data
+    if (pageName === 'allocation') {
+        loadUserNumbers();
+    } else if (pageName === 'today') {
+        renderTodayOtps();
+    } else if (pageName === 'total') {
+        updateTotalStats();
+    } else if (pageName === 'past') {
+        fetchPastOtps();
+    }
+}
+
+// Initialize page
+document.addEventListener('DOMContentLoaded', async () => {
+    initData();
+    
+    // Set user info
+    document.getElementById('userNameDisplay').innerText = currentUser.username;
+    document.getElementById('userEmailDisplay').innerText = currentUser.email;
+    
+    loadUserNumbers();
+    await loadOtps();
+    
+    // Set default dates for past records (last 7 days)
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 6);
+    document.getElementById('startDate').value = start.toISOString().slice(0, 10);
+    document.getElementById('endDate').value = end.toISOString().slice(0, 10);
+    
+    // Event listeners
+    document.getElementById('countrySelect').onchange = (e) => { if (e.target.value) displayNumbers(e.target.value); };
+    document.getElementById('fetchBtn').onclick = fetchPastOtps;
+    document.getElementById('addOtpBtn').onclick = addTestOtp;
+    
+    renderTodayOtps();
+    updateTotalStats();
+    fetchPastOtps();
+    
+    // Setup dropdown menu items - FIXED to use switchToPage function
+    const dropdownItems = document.querySelectorAll('.dropdown-item');
+    dropdownItems.forEach(item => {
+        item.onclick = (e) => {
+            e.preventDefault();
+            const page = item.getAttribute('data-page');
+            if (page) {
+                switchToPage(page);
+            }
+        };
+    });
+    
+    // Start with allocation page
+    switchToPage('allocation');
+    
+    // Dropdown menu toggle
+    const menuBtn = document.getElementById('menuBtn');
+    const dropdown = document.getElementById('dropdown');
+    if (menuBtn) {
+        menuBtn.onclick = (e) => {
+            e.stopPropagation();
+            dropdown.classList.toggle('hidden-dropdown');
+        };
+        document.addEventListener('click', (e) => {
+            if (!menuBtn.contains(e.target) && !dropdown.contains(e.target)) {
+                dropdown.classList.add('hidden-dropdown');
+            }
+        });
+    }
+    
+    // Logout
+    document.getElementById('logoutBtn').onclick = (e) => {
+        e.preventDefault();
+        userLogout();
+    };
+});
+</script>
+</body>
+                </html>');
                 if (clean.length >= 4) {
                     last4s.push(clean.slice(-4));
                 }
