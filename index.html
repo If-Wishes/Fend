@@ -6,7 +6,6 @@
     <title>MIMA Panel | Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, sans-serif; }
@@ -15,8 +14,6 @@
         .role-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -12px rgba(0,0,0,0.2); }
         .role-card.active { border-color: #4f46e5; background: #eef2ff; }
         .hidden-panel { display: none; }
-        .loading { display: none; text-align: center; padding: 10px; }
-        .loading.active { display: block; }
     </style>
 </head>
 <body class="login-container min-h-screen flex items-center justify-center p-4">
@@ -44,92 +41,86 @@
     </div>
 
     <div id="adminLoginForm" class="login-panel">
-        <div class="loading" id="adminLoading"><i class="fas fa-spinner fa-spin"></i> Logging in...</div>
         <form id="adminLogin">
-            <div class="mb-4"><input type="text" id="adminUsername" placeholder="Username" class="w-full border rounded-xl px-4 py-3"></div>
+            <div class="mb-4"><input type="text" id="adminUsername" placeholder="Username or Email" class="w-full border rounded-xl px-4 py-3"></div>
             <div class="mb-6"><input type="password" id="adminPassword" placeholder="Password" class="w-full border rounded-xl px-4 py-3"></div>
-            <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl">Login</button>
+            <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl">Login as Admin</button>
         </form>
     </div>
 
     <div id="userLoginForm" class="login-panel hidden-panel">
-        <div class="loading" id="userLoading"><i class="fas fa-spinner fa-spin"></i> Logging in...</div>
         <form id="userLogin">
-            <div class="mb-4"><input type="text" id="userUsername" placeholder="Username" class="w-full border rounded-xl px-4 py-3"></div>
+            <div class="mb-4"><input type="text" id="userUsername" placeholder="Username or Email" class="w-full border rounded-xl px-4 py-3"></div>
             <div class="mb-6"><input type="password" id="userPassword" placeholder="Password" class="w-full border rounded-xl px-4 py-3"></div>
             <button type="submit" class="w-full bg-emerald-500 text-white py-3 rounded-xl">Login as User</button>
         </form>
     </div>
 
     <div class="mt-6 pt-4 border-t text-center text-xs text-gray-400">
-    ....... 
+        Admin: admin / admin123
     </div>
 </div>
 
 <script>
-// Supabase Configuration
-const SUPABASE_URL = 'https://uizrpckqnproauqllono.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpenJwY2txbnByb2F1cWxsb25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNDc0NjQsImV4cCI6MjA5MDYyMzQ2NH0.qKVaCbH2NiksMuh85guJiRySQxykwSx-MkbWNuE-PdE';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+// ============ MANUAL USER LIST - ADD NEW USERS HERE ============
+// To add a new user, copy this line and change username and password:
+// { id: 'u5', username: 'Mike', password: 'Mike123', email: 'mike@example.com', createdAt: getTodayStr() },
 
-// ============ ADMIN LOGIN (Hardcoded - Simple) ============
+const MANUAL_USERS = [
+    { id: 'u1', username: 'emily_chen', password: 'password123', email: 'emily@example.com', createdAt: getTodayStr() },
+    { id: 'u2', username: 'marcus_v', password: 'password123', email: 'marcus@example.com', createdAt: getTodayStr() },
+    { id: 'u3', username: 'sophia_laurent', password: 'password123', email: 'sophia@example.com', createdAt: getTodayStr() },
+    { id: 'u4', username: 'james_m', password: 'password123', email: 'james@example.com', createdAt: getTodayStr() },
+    // 👇 ADD NEW USERS BELOW THIS LINE
+    // { id: 'u5', username: 'Mike', password: 'Mike123', email: 'mike@example.com', createdAt: getTodayStr() },
+    // { id: 'u6', username: 'John', password: 'John123', email: 'john@example.com', createdAt: getTodayStr() },
+];
+
+// ============ DO NOT EDIT BELOW THIS LINE ============
+
+function getTodayStr() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+// Initialize users in localStorage if not exists
+function initUsers() {
+    const stored = localStorage.getItem('mima_users');
+    if (!stored) {
+        localStorage.setItem('mima_users', JSON.stringify(MANUAL_USERS));
+        localStorage.setItem('mima_credentials', JSON.stringify(MANUAL_USERS));
+    }
+}
+
+function getUsers() {
+    return JSON.parse(localStorage.getItem('mima_users') || '[]');
+}
+
+function saveUsers(users) {
+    localStorage.setItem('mima_users', JSON.stringify(users));
+    localStorage.setItem('mima_credentials', JSON.stringify(users));
+}
+
+// Admin credentials
+const ADMIN_CREDENTIALS = { username: 'admin', password: 'admin123' };
+
 function adminLogin(username, password) {
-    // Simple hardcoded check - no database needed
-    if (username === 'admin' && password === 'admin123') {
-        localStorage.setItem('mima_admin_session', JSON.stringify({ 
-            username: 'admin', 
-            role: 'admin',
-            loginTime: new Date().toISOString()
-        }));
+    if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+        localStorage.setItem('mima_admin_session', JSON.stringify({ username: 'admin', role: 'admin' }));
         return { success: true };
     }
     return { success: false };
 }
 
-// ============ USER LOGIN (Checks Supabase) ============
-async function userLogin(username, password) {
-    try {
-        const { data, error } = await supabase
-            .from('users')
-            .select('id, username, email')
-            .eq('username', username)
-            .eq('password', password)
-            .single();
-        
-        if (data) {
-            localStorage.setItem('mima_user_session', JSON.stringify({ 
-                userId: data.id, 
-                username: data.username,
-                email: data.email
-            }));
-            return { success: true };
-        }
-        
-        // Try by email as fallback
-        const { data: emailData, error: emailError } = await supabase
-            .from('users')
-            .select('id, username, email')
-            .eq('email', username)
-            .eq('password', password)
-            .single();
-        
-        if (emailData) {
-            localStorage.setItem('mima_user_session', JSON.stringify({ 
-                userId: emailData.id, 
-                username: emailData.username,
-                email: emailData.email
-            }));
-            return { success: true };
-        }
-        
-        return { success: false };
-    } catch (error) {
-        console.error('Login error:', error);
-        return { success: false };
+function userLogin(username, password) {
+    const users = getUsers();
+    const user = users.find(u => u.username === username && u.password === password);
+    if (user) {
+        localStorage.setItem('mima_user_session', JSON.stringify({ userId: user.id, username: user.username }));
+        return { success: true };
     }
+    return { success: false };
 }
 
-// ============ UI HANDLERS ============
 // Role selection
 document.getElementById('adminRoleCard').onclick = () => {
     document.getElementById('adminRoleCard').classList.add('active');
@@ -147,40 +138,18 @@ document.getElementById('userRoleCard').onclick = () => {
 // Admin login handler
 document.getElementById('adminLogin').onsubmit = (e) => {
     e.preventDefault();
-    const loading = document.getElementById('adminLoading');
-    const form = document.getElementById('adminLogin');
-    loading.classList.add('active');
-    form.style.opacity = '0.5';
-    
-    const username = document.getElementById('adminUsername').value;
-    const password = document.getElementById('adminPassword').value;
-    const result = adminLogin(username, password);
-    
-    loading.classList.remove('active');
-    form.style.opacity = '1';
-    
+    const result = adminLogin(document.getElementById('adminUsername').value, document.getElementById('adminPassword').value);
     if (result.success) {
         window.location.href = 'admin/dashboard.html';
     } else {
-        alert('Invalid admin credentials. Use: admin / admin123');
+        alert('Invalid admin credentials');
     }
 };
 
 // User login handler
-document.getElementById('userLogin').onsubmit = async (e) => {
+document.getElementById('userLogin').onsubmit = (e) => {
     e.preventDefault();
-    const loading = document.getElementById('userLoading');
-    const form = document.getElementById('userLogin');
-    loading.classList.add('active');
-    form.style.opacity = '0.5';
-    
-    const username = document.getElementById('userUsername').value;
-    const password = document.getElementById('userPassword').value;
-    const result = await userLogin(username, password);
-    
-    loading.classList.remove('active');
-    form.style.opacity = '1';
-    
+    const result = userLogin(document.getElementById('userUsername').value, document.getElementById('userPassword').value);
     if (result.success) {
         window.location.href = 'user/dashboard.html';
     } else {
@@ -188,12 +157,8 @@ document.getElementById('userLogin').onsubmit = async (e) => {
     }
 };
 
-// Check existing sessions
-if (localStorage.getItem('mima_admin_session')) {
-    window.location.href = 'admin/dashboard.html';
-} else if (localStorage.getItem('mima_user_session')) {
-    window.location.href = 'user/dashboard.html';
-}
+// Initialize users on page load
+initUsers();
 </script>
 </body>
 </html>
