@@ -169,3 +169,20 @@ function extractPhoneFromText(text) {
 
 // Auto-run processor every 10 seconds
 setInterval(processSmsMessages, 10000);
+
+// Add this to the END of your js/data.js file
+// This ensures all data functions are properly defined
+
+window.getTodayStr = function() {
+    return new Date().toISOString().slice(0, 10);
+};
+
+window.escapeHtml = function(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
+};
