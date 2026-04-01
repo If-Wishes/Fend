@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: mima-panel
+    runtime: static
+    buildCommand: echo "Static site ready"
+    staticPublishPath: ./
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: web
+    name: mima-bot
+    runtime: python
+    buildCommand: pip install -r bot/requirements.txt
+    startCommand: python bot/bot.py
+    envVars:
+      - key: BOT_TOKEN
+        value: 7941038643:AAFFM8jv2RkFyyxzgdzuyqy6UiCHNZhIlWo

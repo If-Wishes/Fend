@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIMA Panel | Login</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .login-container { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .role-card { transition: all 0.3s ease; cursor: pointer; }
+        .role-card:hover { transform: translateY(-5px); box-shadow: 0 20px 25px -12px rgba(0,0,0,0.2); }
+        .role-card.active { border-color: #4f46e5; background: #eef2ff; }
+        .hidden-panel { display: none; }
+    </style>
+</head>
+<body class="login-container min-h-screen flex items-center justify-center p-4">
+
+<div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+    <div class="text-center mb-8">
+        <div class="h-14 w-14 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <i class="fas fa-chart-line text-white text-2xl"></i>
+        </div>
+        <h1 class="text-2xl font-bold text-gray-800">MIMA<span class="text-indigo-600">Panel</span></h1>
+        <p class="text-gray-500 text-sm mt-1">Access your dashboard</p>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-6">
+        <div id="adminRoleCard" class="role-card border-2 border-gray-200 rounded-xl p-4 text-center hover:border-indigo-400">
+            <i class="fas fa-shield-alt text-3xl text-gray-400"></i>
+            <p class="font-semibold mt-2 text-gray-700">Admin</p>
+            <p class="text-xs text-gray-400">System management</p>
+        </div>
+        <div id="userRoleCard" class="role-card border-2 border-gray-200 rounded-xl p-4 text-center hover:border-emerald-400">
+            <i class="fas fa-user-circle text-3xl text-gray-400"></i>
+            <p class="font-semibold mt-2 text-gray-700">User</p>
+            <p class="text-xs text-gray-400">Personal dashboard</p>
+        </div>
+    </div>
+
+    <div id="adminLoginForm" class="login-panel">
+        <form id="adminLogin">
+            <div class="mb-4"><input type="text" id="adminUsername" placeholder="Username or Email" class="w-full border rounded-xl px-4 py-3"></div>
+            <div class="mb-6"><input type="password" id="adminPassword" placeholder="Password" class="w-full border rounded-xl px-4 py-3"></div>
+            <button type="submit" class="w-full bg-indigo-600 text-white py-3 rounded-xl">Login as Admin</button>
+        </form>
+    </div>
+
+    <div id="userLoginForm" class="login-panel hidden-panel">
+        <form id="userLogin">
+            <div class="mb-4"><input type="text" id="userUsername" placeholder="Username or Email" class="w-full border rounded-xl px-4 py-3"></div>
+            <div class="mb-6"><input type="password" id="userPassword" placeholder="Password" class="w-full border rounded-xl px-4 py-3"></div>
+            <button type="submit" class="w-full bg-emerald-500 text-white py-3 rounded-xl">Login as User</button>
+        </form>
+    </div>
+
+    <div class="mt-6 pt-4 border-t text-center text-xs text-gray-400">
+        Admin: admin / admin123 | User: emily_chen / password123
+    </div>
+</div>
+
+<script src="js/data.js"></script>
+<script>
+    const ADMIN_CREDENTIALS = { username: 'admin', password: 'admin123' };
+    
+    function adminLogin(username, password) {
+        if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+            localStorage.setItem('mima_admin_session', JSON.stringify({ username: 'admin', role: 'admin' }));
+            return { success: true };
+        }
+        return { success: false };
+    }
+    
+    function isAdminLoggedIn() { return localStorage.getItem('mima_admin_session') !== null; }
+    function isUserLoggedIn() { return localStorage.getItem('mima_user_session') !== null; }
+    
+    document.getElementById('adminRoleCard').onclick = () => {
+        document.getElementById('adminRoleCard').classList.add('active');
+        document.getElementById('userRoleCard').classList.remove('active');
+        document.getElementById('adminLoginForm').classList.remove('hidden-panel');
+        document.getElementById('userLoginForm').classList.add('hidden-panel');
+    };
+    document.getElementById('userRoleCard').onclick = () => {
+        document.getElementById('userRoleCard').classList.add('active');
+        document.getElementById('adminRoleCard').classList.remove('active');
+        document.getElementById('userLoginForm').classList.remove('hidden-panel');
+        document.getElementById('adminLoginForm').classList.add('hidden-panel');
+    };
+    
+    document.getElementById('adminLogin').onsubmit = (e) => {
+        e.preventDefault();
+        const result = adminLogin(document.getElementById('adminUsername').value, document.getElementById('adminPassword').value);
+        if (result.success) window.location.href = 'admin/dashboard.html';
+        else alert('Invalid admin credentials');
+    };
+    
+    document.getElementById('userLogin').onsubmit = (e) => {
+        e.preventDefault();
+        const username = document.getElementById('userUsername').value;
+        const password = document.getElementById('userPassword').value;
+        const users = JSON.parse(localStorage.getItem('mima_users') || '[]');
+        const user = users.find(u => u.username === username && u.password === password);
+        if (user) {
+            localStorage.setItem('mima_user_session', JSON.stringify({ userId: user.id, username: user.username }));
+            window.location.href = 'user/dashboard.html';
+        } else alert('Invalid user credentials');
+    };
+    
+    if (isAdminLoggedIn()) window.location.href = 'admin/dashboard.html';
+    else if (isUserLoggedIn()) window.location.href = 'user/dashboard.html';
+</script>
+</body>
+</html>
