@@ -70,8 +70,7 @@
             <div class="overflow-x-auto">
                 <table class="w-full text-sm">
                     <thead class="bg-gray-50">
-                        <tr><th class="px-6 py-3 text-left font-semibold text-gray-600">Number</th><th class="px-6 py-3 text-left font-semibold text-gray-600">Sender</th><th class="px-6 py-3 text-left font-semibold text-gray-600">Code</th><th class="px-6 py-3 text-left font-semibold text-gray-600">Time</th></tr>
-                    </thead>
+                        <tr><th class="px-6 py-3 text-left">Number</th><th class="px-6 py-3 text-left">Sender</th><th class="px-6 py-3 text-left">Code</th><th class="px-6 py-3 text-left">Time</th> </thead>
                     <tbody id="todayOtpTable" class="divide-y divide-gray-100"></tbody>
                 追赶
             </div>
@@ -136,6 +135,7 @@ if (!requireUserAuth()) {}
 let currentUser = getCurrentUser();
 let userNumbers = [];
 let userOtps = [];
+let allOtps = [];
 
 // Helper functions
 function getTodayStr() {
@@ -189,35 +189,42 @@ function displayNumbers(country) {
     `;
 }
 
+// Get user's phone last 4 digits from allocated numbers
+function getUserPhoneLast4s() {
+    const last4s = [];
+    userNumbers.forEach(entry => {
+        if (entry.numbers) {
+            entry.numbers.forEach(num => {
+                const clean = num.replace(/\D/g, '');
+                if (clean.length >= 4) {
+                    last4s.push(clean.slice(-4));
+                }
+            });
+        }
+    });
+    return last4s;
+}
+
 async function loadOtps() {
     try {
         const response = await fetch('../data/otp_logs.json');
         if (response.ok) {
-            const allOtps = await response.json();
+            allOtps = await response.json();
             localStorage.setItem('mima_all_otps', JSON.stringify(allOtps));
-            
-            const userNum = JSON.parse(localStorage.getItem('mima_analytics_numbers') || '[]');
-            const userEntries = userNum.filter(n => n.userId === currentUser.userId);
-            const last4s = [];
-            userEntries.forEach(entry => {
-                if (entry.numbers) {
-                    entry.numbers.forEach(num => {
-                        const clean = num.replace(/\D/g, '');
-                        if (clean.length >= 4) last4s.push(clean.slice(-4));
-                    });
-                }
-            });
-            
-            userOtps = allOtps.filter(otp => last4s.includes(otp.phone_last4));
-            userOtps.sort((a, b) => b.timestamp - a.timestamp);
-            localStorage.setItem(`mima_otp_${currentUser.userId}`, JSON.stringify(userOtps));
-            return userOtps;
+        } else {
+            allOtps = JSON.parse(localStorage.getItem('mima_all_otps') || '[]');
         }
     } catch (error) {
-        console.log('Using local storage fallback');
+        allOtps = JSON.parse(localStorage.getItem('mima_all_otps') || '[]');
     }
-    const stored = localStorage.getItem(`mima_otp_${currentUser.userId}`);
-    userOtps = stored ? JSON.parse(stored) : [];
+    
+    // Filter OTPs for this user
+    const last4s = getUserPhoneLast4s();
+    userOtps = allOtps.filter(otp => last4s.includes(otp.phone_last4));
+    userOtps.sort((a, b) => b.timestamp - a.timestamp);
+    
+    // Save to localStorage for this user
+    localStorage.setItem(`mima_otp_${currentUser.userId}`, JSON.stringify(userOtps));
     return userOtps;
 }
 
@@ -241,36 +248,52 @@ function renderTodayOtps() {
             <td class="px-6 py-3">${escapeHtml(o.sender || 'Bot')}Js
             <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}Js
             <td class="px-6 py-3 text-gray-500">${o.time || ''}Js
-         </tr>
+          </tr>
     `).join('');
 }
 
 function updateTotalStats() {
     const today = getTodayStr();
     const todayCount = userOtps.filter(o => o.date === today).length;
+    const todayEarnings = todayCount * 0.005;
+    
     document.getElementById('totalOtpCount').textContent = todayCount;
-    document.getElementById('totalEarnings').textContent = `$${(todayCount * 0.005).toFixed(2)}`;
+    document.getElementById('totalEarnings').textContent = `$${todayEarnings.toFixed(2)}`;
+    
+    console.log(`Total OTP Today: ${todayCount}, Earnings: $${todayEarnings.toFixed(2)}`);
 }
 
 function fetchPastOtps() {
     const start = document.getElementById('startDate').value;
     const end = document.getElementById('endDate').value;
-    if (!start || !end) return;
+    
+    console.log(`Fetching past OTPs from ${start} to ${end}`);
+    console.log(`Total user OTPs: ${userOtps.length}`);
+    
+    if (!start || !end) {
+        console.log("No dates selected");
+        return;
+    }
     
     const filtered = userOtps.filter(o => o.date >= start && o.date <= end);
+    console.log(`Filtered OTPs: ${filtered.length}`);
+    
     const tbody = document.getElementById('pastOtpTable');
     const emptyMsg = document.getElementById('pastEmptyMsg');
     const totalEarningsSpan = document.getElementById('pastTotalEarnings');
     
     if (!tbody) return;
+    
     if (filtered.length === 0) {
         tbody.innerHTML = '';
         if (emptyMsg) emptyMsg.classList.remove('hidden');
         if (totalEarningsSpan) totalEarningsSpan.textContent = '$0.00';
         return;
     }
+    
     if (emptyMsg) emptyMsg.classList.add('hidden');
-    if (totalEarningsSpan) totalEarningsSpan.textContent = `$${(filtered.length * 0.005).toFixed(2)}`;
+    const totalEarnings = filtered.length * 0.005;
+    if (totalEarningsSpan) totalEarningsSpan.textContent = `$${totalEarnings.toFixed(2)}`;
     
     tbody.innerHTML = filtered.map(o => `
         <tr class="hover:bg-gray-50 border-b">
@@ -279,7 +302,7 @@ function fetchPastOtps() {
             <td class="px-6 py-3">${escapeHtml(o.sender || 'Bot')}Js
             <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}Js
             <td class="px-6 py-3 text-gray-500 text-xs">${o.time || ''}Js
-         </tr>
+          </tr>
     `).join('');
 }
 
@@ -306,9 +329,11 @@ function addTestOtp() {
             date: now.toISOString().slice(0, 10),
             time: now.toLocaleTimeString()
         };
+        
         let allOtps = JSON.parse(localStorage.getItem('mima_all_otps') || '[]');
         allOtps.push(newOtp);
         localStorage.setItem('mima_all_otps', JSON.stringify(allOtps));
+        
         refreshAll();
         alert(`✅ Test OTP added!\nPhone: ***${last4}\nOTP: ${code}\nEarned: $0.005`);
     }
