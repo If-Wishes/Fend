@@ -67,14 +67,25 @@
     
     function adminLogin(username, password) {
         if (username === ADMIN_CREDENTIALS.username && password === ADMIN_CREDENTIALS.password) {
+            // Store session - this will only work on the current device
             localStorage.setItem('mima_admin_session', JSON.stringify({ username: 'admin', role: 'admin' }));
             return { success: true };
         }
         return { success: false };
     }
     
-    function isAdminLoggedIn() { return localStorage.getItem('mima_admin_session') !== null; }
-    function isUserLoggedIn() { return localStorage.getItem('mima_user_session') !== null; }
+    function userLoginCheck(username, password) {
+        const users = JSON.parse(localStorage.getItem('mima_users') || '[]');
+        const user = users.find(u => u.username === username && u.password === password);
+        if (user) {
+            localStorage.setItem('mima_user_session', JSON.stringify({ userId: user.id, username: user.username }));
+            return { success: true };
+        }
+        return { success: false };
+    }
+    
+    // REMOVED auto-login redirect - always show login page
+    // This ensures every device sees the login page
     
     document.getElementById('adminRoleCard').onclick = () => {
         document.getElementById('adminRoleCard').classList.add('active');
@@ -108,8 +119,8 @@
         } else alert('Invalid user credentials');
     };
     
-    if (isAdminLoggedIn()) window.location.href = 'admin/dashboard.html';
-    else if (isUserLoggedIn()) window.location.href = 'user/dashboard.html';
+    // Removed auto-redirect - now every device shows login page
+    // Users must login each time on new devices
 </script>
 </body>
 </html>
