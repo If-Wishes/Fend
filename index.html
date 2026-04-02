@@ -62,20 +62,14 @@
     </div>
 
     <div class="mt-6 pt-4 border-t text-center text-xs text-gray-400">
-        All accounts stored in Supabase cloud
+        Admin: admin / admin123 | Users stored in Supabase
     </div>
 </div>
 
+<script src="js/supabase.js"></script>
 <script>
-// Supabase Configuration
-const SUPABASE_URL = 'https://uizrpckqnproauqllono.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpenJwY2txbnByb2F1cWxsb25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNDc0NjQsImV4cCI6MjA5MDYyMzQ2NH0.qKVaCbH2NiksMuh85guJiRySQxykwSx-MkbWNuE-PdE';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// ============ LOGIN FUNCTION (Admin & User both from Supabase) ============
 async function login(username, password, role) {
     try {
-        // Query users table
         const { data, error } = await supabase
             .from('users')
             .select('id, username, email, role')
@@ -84,55 +78,23 @@ async function login(username, password, role) {
             .single();
         
         if (data) {
-            // Check if role matches
             if (data.role !== role) {
                 return { success: false, message: `This account is not a ${role}` };
             }
-            
-            // Store session
-            const session = {
+            localStorage.setItem('mima_session', JSON.stringify({
                 userId: data.id,
                 username: data.username,
                 email: data.email,
-                role: data.role,
-                loginTime: new Date().toISOString()
-            };
-            localStorage.setItem('mima_session', JSON.stringify(session));
-            return { success: true, session: session };
+                role: data.role
+            }));
+            return { success: true };
         }
-        
-        // Try by email
-        const { data: emailData, error: emailError } = await supabase
-            .from('users')
-            .select('id, username, email, role')
-            .eq('email', username)
-            .eq('password', password)
-            .single();
-        
-        if (emailData) {
-            if (emailData.role !== role) {
-                return { success: false, message: `This account is not a ${role}` };
-            }
-            
-            const session = {
-                userId: emailData.id,
-                username: emailData.username,
-                email: emailData.email,
-                role: emailData.role,
-                loginTime: new Date().toISOString()
-            };
-            localStorage.setItem('mima_session', JSON.stringify(session));
-            return { success: true, session: session };
-        }
-        
         return { success: false, message: 'Invalid credentials' };
     } catch (error) {
-        console.error('Login error:', error);
         return { success: false, message: 'Login failed' };
     }
 }
 
-// ============ ROLE SELECTION ============
 document.getElementById('adminRoleCard').onclick = () => {
     document.getElementById('adminRoleCard').classList.add('active');
     document.getElementById('userRoleCard').classList.remove('active');
@@ -146,7 +108,6 @@ document.getElementById('userRoleCard').onclick = () => {
     document.getElementById('adminLoginForm').classList.add('hidden-panel');
 };
 
-// ============ ADMIN LOGIN HANDLER ============
 document.getElementById('adminLogin').onsubmit = async (e) => {
     e.preventDefault();
     const loading = document.getElementById('adminLoading');
@@ -154,9 +115,7 @@ document.getElementById('adminLogin').onsubmit = async (e) => {
     loading.classList.add('active');
     form.style.opacity = '0.5';
     
-    const username = document.getElementById('adminUsername').value;
-    const password = document.getElementById('adminPassword').value;
-    const result = await login(username, password, 'admin');
+    const result = await login(document.getElementById('adminUsername').value, document.getElementById('adminPassword').value, 'admin');
     
     loading.classList.remove('active');
     form.style.opacity = '1';
@@ -168,7 +127,6 @@ document.getElementById('adminLogin').onsubmit = async (e) => {
     }
 };
 
-// ============ USER LOGIN HANDLER ============
 document.getElementById('userLogin').onsubmit = async (e) => {
     e.preventDefault();
     const loading = document.getElementById('userLoading');
@@ -176,9 +134,7 @@ document.getElementById('userLogin').onsubmit = async (e) => {
     loading.classList.add('active');
     form.style.opacity = '0.5';
     
-    const username = document.getElementById('userUsername').value;
-    const password = document.getElementById('userPassword').value;
-    const result = await login(username, password, 'user');
+    const result = await login(document.getElementById('userUsername').value, document.getElementById('userPassword').value, 'user');
     
     loading.classList.remove('active');
     form.style.opacity = '1';
@@ -190,16 +146,12 @@ document.getElementById('userLogin').onsubmit = async (e) => {
     }
 };
 
-// ============ CHECK EXISTING SESSION ============
-const existingSession = localStorage.getItem('mima_session');
-if (existingSession) {
+const session = localStorage.getItem('mima_session');
+if (session) {
     try {
-        const session = JSON.parse(existingSession);
-        if (session.role === 'admin') {
-            window.location.href = 'admin/dashboard.html';
-        } else if (session.role === 'user') {
-            window.location.href = 'user/dashboard.html';
-        }
+        const s = JSON.parse(session);
+        if (s.role === 'admin') window.location.href = 'admin/dashboard.html';
+        else if (s.role === 'user') window.location.href = 'user/dashboard.html';
     } catch(e) {}
 }
 </script>
