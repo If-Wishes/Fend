@@ -6,7 +6,11 @@
     <title>MIMA Panel | Number Allocation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>.hidden-dropdown{display:none;}</style>
+    <style>
+        .hidden-dropdown { display: none; }
+        .success { background-color: #d1fae5; color: #065f46; }
+        .error { background-color: #fee2e2; color: #991b1b; }
+    </style>
 </head>
 <body class="bg-gray-50">
 
@@ -21,12 +25,17 @@
             </div>
             <div class="flex items-center gap-4 relative">
                 <div class="text-right"><p class="text-sm font-medium" id="adminName">Admin</p><p class="text-xs text-gray-500">Number Allocation</p></div>
-                <div class="relative"><button id="menuBtn" class="bg-gray-100 rounded-full px-3 py-2"><i class="fas fa-user-shield"></i><i class="fas fa-chevron-down text-xs"></i></button>
-                <div id="dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border hidden-dropdown z-50">
-                    <a href="dashboard.html" class="block px-4 py-2">Dashboard</a><a href="users.html" class="block px-4 py-2">Users</a>
-                    <a href="analytics.html" class="block px-4 py-2 bg-indigo-50 text-indigo-600">Number Allocation</a><a href="activities.html" class="block px-4 py-2">User Activities</a>
-                    <div class="border-t"></div><a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600">Logout</a>
-                </div></div>
+                <div class="relative">
+                    <button id="menuBtn" class="bg-gray-100 rounded-full px-3 py-2"><i class="fas fa-user-shield"></i><i class="fas fa-chevron-down text-xs"></i></button>
+                    <div id="dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border hidden-dropdown z-50">
+                        <a href="dashboard.html" class="block px-4 py-2">Dashboard</a>
+                        <a href="users.html" class="block px-4 py-2">Users</a>
+                        <a href="analytics.html" class="block px-4 py-2 bg-indigo-50 text-indigo-600">Number Allocation</a>
+                        <a href="activities.html" class="block px-4 py-2">User Activities</a>
+                        <div class="border-t"></div>
+                        <a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600">Logout</a>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -34,26 +43,62 @@
 
 <main class="max-w-7xl mx-auto px-4 py-8">
     <h1 class="text-2xl font-bold">Number Allocation</h1>
-    <p class="text-gray-500 mb-6">Assign phone numbers to users by country</p>
+    <p class="text-gray-500 mb-6">Assign phone numbers to users. Users will see these numbers in their dashboard.</p>
     
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Add Numbers Form -->
         <div class="bg-white rounded-2xl border p-6">
-            <h2 class="font-semibold mb-4">➕ Add Numbers</h2>
-            <select id="userSelect" class="w-full border rounded-xl px-4 py-2 mb-3"><option value="">-- Select User --</option></select>
-            <select id="countrySelect" class="w-full border rounded-xl px-4 py-2 mb-3">
-                <option value="">-- Country --</option>
-                <option value="Jordan">🇯🇴 Jordan</option><option value="Tajikistan">🇹🇯 Tajikistan</option>
-                <option value="Nigeria">🇳🇬 Nigeria</option><option value="Myanmar">🇲🇲 Myanmar</option>
-                <option value="Hungary">🇭🇺 Hungary</option><option value="Slovenia">🇸🇮 Slovenia</option>
-                <option value="Venezuela">🇻🇪 Venezuela</option><option value="Uzbekistan">🇺🇿 Uzbekistan</option>
-            </select>
-            <textarea id="numbersInput" rows="4" class="w-full border rounded-xl px-4 py-2 mb-3 font-mono" placeholder="Enter numbers (one per line)&#10;Example:&#10;+998901234567&#10;+998902345678"></textarea>
-            <button id="addBtn" class="bg-indigo-600 text-white px-6 py-2 rounded-xl w-full">Add Numbers</button>
+            <h2 class="font-semibold mb-4">➕ Add Numbers to User</h2>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select User *</label>
+                <select id="userSelect" class="w-full border rounded-xl px-4 py-2 bg-gray-50">
+                    <option value="">-- Select User --</option>
+                </select>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Select Country *</label>
+                <select id="countrySelect" class="w-full border rounded-xl px-4 py-2 bg-gray-50">
+                    <option value="">-- Select Country --</option>
+                    <option value="Jordan">🇯🇴 Jordan</option>
+                    <option value="Tajikistan">🇹🇯 Tajikistan</option>
+                    <option value="Nigeria">🇳🇬 Nigeria</option>
+                    <option value="Myanmar">🇲🇲 Myanmar</option>
+                    <option value="Hungary">🇭🇺 Hungary</option>
+                    <option value="Slovenia">🇸🇮 Slovenia</option>
+                    <option value="Venezuela">🇻🇪 Venezuela</option>
+                    <option value="Uzbekistan">🇺🇿 Uzbekistan</option>
+                </select>
+            </div>
+            
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Phone Numbers *</label>
+                <textarea id="numbersInput" rows="5" class="w-full border rounded-xl px-4 py-2 font-mono text-sm" 
+                    placeholder="Enter phone numbers (one per line or comma separated)
+Example:
++2348123456789
++2348023456789
++998901234567"></textarea>
+                <p class="text-xs text-gray-400 mt-1">💡 The last 3 digits will be used to match OTPs automatically</p>
+            </div>
+            
+            <button id="addBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl transition">
+                <i class="fas fa-plus mr-2"></i>Allocate Numbers
+            </button>
+            
+            <div id="messageBox" class="mt-4 text-sm text-center hidden"></div>
         </div>
+        
+        <!-- Allocated Numbers List -->
         <div class="bg-white rounded-2xl border p-6">
             <h2 class="font-semibold mb-4">📋 Allocated Numbers</h2>
-            <select id="filterSelect" class="w-full border rounded-xl px-4 py-2 mb-4"><option value="">-- All Users --</option></select>
-            <div id="allocations" class="max-h-96 overflow-y-auto"></div>
+            <select id="filterSelect" class="w-full border rounded-xl px-4 py-2 mb-4 bg-gray-50">
+                <option value="">-- All Users --</option>
+            </select>
+            <div id="allocationsList" class="max-h-96 overflow-y-auto space-y-3">
+                <div class="text-center py-8 text-gray-400">Loading...</div>
+            </div>
         </div>
     </div>
 </main>
@@ -66,80 +111,246 @@ const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
 if (!session || session.role !== 'admin') window.location.href = '../index.html';
 document.getElementById('adminName').innerText = session.username;
 
-let users = [];
+let usersList = [];
 
-function getLast3(number) { return number.replace(/\D/g, '').slice(-3); }
-
-async function loadUsers() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id,username`, { headers: { 'apikey': API_KEY } });
-    users = await res.json();
-    const userSel = document.getElementById('userSelect');
-    userSel.innerHTML = '<option value="">-- Select User --</option>' + users.map(u => `<option value="${u.id}">${escapeHtml(u.username)}</option>`).join('');
-    const filterSel = document.getElementById('filterSelect');
-    filterSel.innerHTML = '<option value="">-- All Users --</option>' + users.map(u => `<option value="${u.id}">${escapeHtml(u.username)}</option>`).join('');
-    filterSel.onchange = () => renderAllocations();
+// Helper function to extract last 3 digits
+function getLast3Digits(number) {
+    let cleaned = number.replace(/[^0-9]/g, '');
+    return cleaned.slice(-3);
 }
 
-async function renderAllocations() {
-    const filter = document.getElementById('filterSelect').value;
-    let url = `${SUPABASE_URL}/rest/v1/user_numbers?select=*,users(username)&order=allocated_at.desc`;
-    if (filter) url = `${SUPABASE_URL}/rest/v1/user_numbers?select=*,users(username)&user_id=eq.${filter}&order=allocated_at.desc`;
-    const res = await fetch(url, { headers: { 'apikey': API_KEY } });
-    const nums = await res.json();
-    const container = document.getElementById('allocations');
-    if (nums.length === 0) { container.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers allocated</div>'; return; }
+// Escape HTML
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
+}
+
+// Get country flag
+function getCountryFlag(country) {
+    const flags = {
+        'Jordan': '🇯🇴', 'Tajikistan': '🇹🇯', 'Nigeria': '🇳🇬',
+        'Myanmar': '🇲🇲', 'Hungary': '🇭🇺', 'Slovenia': '🇸🇮',
+        'Venezuela': '🇻🇪', 'Uzbekistan': '🇺🇿'
+    };
+    return flags[country] || '🌍';
+}
+
+// Load users for dropdowns
+async function loadUsers() {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id,username`, {
+        headers: { 'apikey': API_KEY }
+    });
+    usersList = await res.json();
     
+    const userSelect = document.getElementById('userSelect');
+    userSelect.innerHTML = '<option value="">-- Select User --</option>' + 
+        usersList.map(u => `<option value="${u.id}">${escapeHtml(u.username)}</option>`).join('');
+    
+    const filterSelect = document.getElementById('filterSelect');
+    filterSelect.innerHTML = '<option value="">-- All Users --</option>' + 
+        usersList.map(u => `<option value="${u.id}">${escapeHtml(u.username)}</option>`).join('');
+    filterSelect.onchange = loadAllocatedNumbers;
+}
+
+// Load and display allocated numbers
+async function loadAllocatedNumbers() {
+    const filterUserId = document.getElementById('filterSelect').value;
+    let url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=*,users(username)&order=allocated_at.desc`;
+    if (filterUserId) {
+        url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=*,users(username)&user_id=eq.${filterUserId}&order=allocated_at.desc`;
+    }
+    
+    const res = await fetch(url, { headers: { 'apikey': API_KEY } });
+    const allocations = await res.json();
+    const container = document.getElementById('allocationsList');
+    
+    if (allocations.length === 0) {
+        container.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers allocated yet</div>';
+        return;
+    }
+    
+    // Group by user and country
     const grouped = {};
-    for (const n of nums) {
-        const key = n.user_id + '_' + n.country;
-        if (!grouped[key]) grouped[key] = { userId: n.user_id, userName: n.users?.username || 'Unknown', country: n.country, numbers: [] };
-        grouped[key].numbers.push(n);
+    for (const item of allocations) {
+        const key = `${item.user_id}_${item.country}`;
+        if (!grouped[key]) {
+            grouped[key] = {
+                userId: item.user_id,
+                userName: item.users?.username || 'Unknown',
+                country: item.country,
+                numbers: []
+            };
+        }
+        grouped[key].numbers.push(item);
     }
     
     let html = '';
     for (const key in grouped) {
         const g = grouped[key];
-        html += `<div class="border rounded-xl mb-3"><div class="bg-gray-50 px-4 py-2 flex justify-between"><span><strong>${escapeHtml(g.userName)}</strong> - ${escapeHtml(g.country)}</span><button onclick="deleteCountry('${g.userId}','${g.country}')" class="text-red-500 text-sm">Delete All</button></div><div class="flex flex-wrap gap-2 p-3">`;
-        for (const num of g.numbers) {
-            html += `<span class="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-1"><span class="font-mono">${escapeHtml(num.number)}</span><button onclick="deleteNumber('${num.id}')" class="text-red-400 hover:text-red-600">&times;</button></span>`;
-        }
-        html += `</div></div>`;
+        html += `
+            <div class="border rounded-xl overflow-hidden">
+                <div class="bg-gray-50 px-4 py-2 flex justify-between items-center">
+                    <div>
+                        <span class="font-semibold">${escapeHtml(g.userName)}</span>
+                        <span class="ml-2 text-sm text-gray-500">${getCountryFlag(g.country)} ${escapeHtml(g.country)}</span>
+                    </div>
+                    <button onclick="deleteCountryNumbers('${g.userId}', '${g.country}')" class="text-red-500 text-sm hover:text-red-700">
+                        <i class="fas fa-trash-alt mr-1"></i>Delete All
+                    </button>
+                </div>
+                <div class="p-3 flex flex-wrap gap-2">
+                    ${g.numbers.map(num => `
+                        <div class="bg-gray-100 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                            <span class="font-mono text-sm">${escapeHtml(num.number)}</span>
+                            <span class="text-xs text-gray-400">(last3: ${num.last3})</span>
+                            <button onclick="deleteSingleNumber('${num.id}')" class="text-red-400 hover:text-red-600">
+                                <i class="fas fa-times-circle"></i>
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+                <div class="bg-gray-50 px-4 py-1 text-xs text-gray-400">
+                    Total: ${g.numbers.length} numbers
+                </div>
+            </div>
+        `;
     }
     container.innerHTML = html;
 }
 
+// Add numbers to user
 async function addNumbers() {
-    const uid = document.getElementById('userSelect').value;
+    const userId = document.getElementById('userSelect').value;
     const country = document.getElementById('countrySelect').value;
-    const input = document.getElementById('numbersInput').value;
-    if (!uid || !country || !input) { alert('Fill all fields'); return; }
-    let nums = input.split(/[,\n]/).map(n => n.trim()).filter(n => n);
-    if (nums.length === 0) { alert('No valid numbers'); return; }
+    const numbersInput = document.getElementById('numbersInput').value;
+    const messageBox = document.getElementById('messageBox');
     
-    for (const num of nums) {
-        await fetch(`${SUPABASE_URL}/rest/v1/user_numbers`, {
-            method: 'POST', headers: { 'apikey': API_KEY, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ user_id: uid, number: num, last3: getLast3(num), country: country })
-        });
+    if (!userId) {
+        showMessage('Please select a user', 'error');
+        return;
     }
-    document.getElementById('numbersInput').value = '';
-    alert(`Added ${nums.length} numbers`);
-    renderAllocations();
+    if (!country) {
+        showMessage('Please select a country', 'error');
+        return;
+    }
+    if (!numbersInput.trim()) {
+        showMessage('Please enter phone numbers', 'error');
+        return;
+    }
+    
+    // Parse numbers (split by new line or comma)
+    let numbers = numbersInput.split(/[,\n]/).map(n => n.trim()).filter(n => n.length > 0);
+    if (numbers.length === 0) {
+        showMessage('No valid numbers found', 'error');
+        return;
+    }
+    
+    showMessage('Adding numbers...', 'info');
+    
+    let successCount = 0;
+    let errorCount = 0;
+    
+    for (const number of numbers) {
+        const last3 = getLast3Digits(number);
+        if (last3.length < 3) {
+            errorCount++;
+            continue;
+        }
+        
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/allocated_numbers`, {
+            method: 'POST',
+            headers: { 
+                'apikey': API_KEY, 
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+                user_id: userId,
+                number: number,
+                last3: last3,
+                country: country
+            })
+        });
+        
+        if (res.ok) {
+            successCount++;
+        } else {
+            errorCount++;
+        }
+    }
+    
+    if (successCount > 0) {
+        showMessage(`✅ Successfully added ${successCount} numbers!`, 'success');
+        document.getElementById('numbersInput').value = '';
+        loadAllocatedNumbers();
+    } else {
+        showMessage(`❌ Failed to add numbers. Check that numbers have at least 3 digits.`, 'error');
+    }
+    
+    setTimeout(() => {
+        messageBox.classList.add('hidden');
+    }, 3000);
 }
 
-window.deleteCountry = async (uid, country) => { if(confirm('Delete all numbers?')) { await fetch(`${SUPABASE_URL}/rest/v1/user_numbers?user_id=eq.${uid}&country=eq.${country}`, { method: 'DELETE', headers: { 'apikey': API_KEY } }); renderAllocations(); } };
-window.deleteNumber = async (id) => { if(confirm('Delete this number?')) { await fetch(`${SUPABASE_URL}/rest/v1/user_numbers?id=eq.${id}`, { method: 'DELETE', headers: { 'apikey': API_KEY } }); renderAllocations(); } };
+// Delete all numbers for a user in a country
+async function deleteCountryNumbers(userId, country) {
+    if (!confirm(`Delete all numbers for this user in ${country}?`)) return;
+    
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/allocated_numbers?user_id=eq.${userId}&country=eq.${country}`, {
+        method: 'DELETE',
+        headers: { 'apikey': API_KEY }
+    });
+    
+    if (res.ok) {
+        loadAllocatedNumbers();
+        showMessage('Numbers deleted successfully', 'success');
+        setTimeout(() => {
+            document.getElementById('messageBox').classList.add('hidden');
+        }, 2000);
+    }
+}
 
-function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]||m)); }
-function logout() { localStorage.removeItem('mima_session'); window.location.href = '../index.html'; }
+// Delete a single number
+async function deleteSingleNumber(numberId) {
+    if (!confirm('Delete this number?')) return;
+    
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/allocated_numbers?id=eq.${numberId}`, {
+        method: 'DELETE',
+        headers: { 'apikey': API_KEY }
+    });
+    
+    if (res.ok) {
+        loadAllocatedNumbers();
+    }
+}
 
+// Show message
+function showMessage(msg, type) {
+    const messageBox = document.getElementById('messageBox');
+    messageBox.textContent = msg;
+    messageBox.className = `mt-4 text-sm text-center p-2 rounded-lg ${type === 'success' ? 'bg-green-100 text-green-700' : type === 'error' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`;
+    messageBox.classList.remove('hidden');
+}
+
+// Logout
+function logout() {
+    localStorage.removeItem('mima_session');
+    window.location.href = '../index.html';
+}
+
+// Make functions global for onclick
+window.deleteCountryNumbers = deleteCountryNumbers;
+window.deleteSingleNumber = deleteSingleNumber;
+
+// Event listeners
 document.getElementById('menuBtn').onclick = e => { e.stopPropagation(); document.getElementById('dropdown').classList.toggle('hidden-dropdown'); };
 document.addEventListener('click', () => document.getElementById('dropdown').classList.add('hidden-dropdown'));
 document.getElementById('logoutBtn').onclick = e => { e.preventDefault(); logout(); };
 document.getElementById('addBtn').onclick = addNumbers;
 
+// Initialize
 loadUsers();
-renderAllocations();
+loadAllocatedNumbers();
 </script>
 </body>
 </html>
