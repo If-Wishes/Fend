@@ -1,136 +1,61 @@
-#!/usr/bin/env python3
-"""
-MIMA Panel Telegram Bot - Saves all messages to sms.json
-No processing, just saves raw messages
-"""
+import re
+import requests
+from telegram.ext import ApplicationBuilder, MessageHandler, filters
 
-import json
-import os
-import threading
-from datetime import datetime
-from flask import Flask, jsonify
-
-# ============ CONFIGURATION ============
 BOT_TOKEN = "7941038643:AAFFM8jv2RkFyyxzgdzuyqy6UiCHNZhIlWo"
-SMS_FILE = os.path.join(os.path.dirname(__file__), '..', 'data', 'sms.json')
+SUPABASE_URL = "https://zubkwzsnpdjtndlvqfqf.supabase.co"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo"
 
-# Ensure data directory exists
-os.makedirs(os.path.dirname(SMS_FILE), exist_ok=True)
+HEADERS = {
+    "apikey": SUPABASE_KEY,
+    "Authorization": f"Bearer {SUPABASE_KEY}",
+    "Content-Type": "application/json"
+}
 
-# Initialize empty file if not exists
-if not os.path.exists(SMS_FILE):
-    with open(SMS_FILE, 'w') as f:
-        json.dump([], f)
+OTP_REGEX = r"\b\d{4,6}\b"
 
-# ============ TELEGRAM BOT ============
-from telegram import Update
-from telegram.ext import Application, MessageHandler, filters
+def extract_data(text):
+    otp_match = re.search(OTP_REGEX, text)
+    number_match = re.search(r"Number:\s*(.+)", text)
 
-def save_message(text, sender, chat_id, chat_title, timestamp):
-    """Save message to sms.json"""
-    try:
-        # Load existing messages
-        with open(SMS_FILE, 'r') as f:
-            messages = json.load(f)
-        
-        # Add new message
-        messages.append({
-            'id': len(messages) + 1,
-            'text': text,
-            'sender': sender,
-            'chat_id': str(chat_id),
-            'chat_title': chat_title,
-            'timestamp': timestamp,
-            'date': datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d'),
-            'time': datetime.fromtimestamp(timestamp).strftime('%H:%M:%S'),
-            'processed': False
-        })
-        
-        # Keep last 10,000 messages
-        if len(messages) > 10000:
-            messages = messages[-10000:]
-        
-        # Save back
-        with open(SMS_FILE, 'w') as f:
-            json.dump(messages, f, indent=2)
-        
-        return True
-    except Exception as e:
-        print(f"Error saving: {e}")
-        return False
+    otp = otp_match.group() if otp_match else None
 
-async def handle_message(update: Update, context):
-    """Save any message to sms.json - NO REPLIES"""
-    message = update.message
-    if not message or not message.text:
+    phone_last3 = None
+    if number_match:
+        digits = re.sub(r"\D", "", number_match.group(1))
+        if len(digits) >= 3:
+            phone_last3 = digits[-3:]
+
+    return otp, phone_last3
+
+async def handle(update, context):
+    if not update.message or not update.message.text:
         return
-    
-    text = message.text
-    sender = message.from_user.username or message.from_user.first_name or "unknown"
-    chat_id = message.chat_id
-    chat_title = message.chat.title or "Private Chat"
-    timestamp = message.date.timestamp()
-    
-    # Save to file - no reply
-    save_message(text, sender, chat_id, chat_title, timestamp)
 
-# ============ FLASK SERVER ============
-app = Flask(__name__)
+    text = update.message.text
 
-@app.route('/')
-def health():
-    """Health check"""
-    with open(SMS_FILE, 'r') as f:
-        messages = json.load(f)
-        unprocessed = len([m for m in messages if not m.get('processed', False)])
-    return jsonify({'status': 'running', 'total_messages': len(messages), 'unprocessed': unprocessed})
+    otp, last3 = extract_data(text)
 
-@app.route('/sms')
-def get_sms():
-    """Get all unprocessed SMS"""
-    with open(SMS_FILE, 'r') as f:
-        messages = json.load(f)
-    return jsonify(messages)
+    if not otp or not last3:
+        return
 
-@app.route('/sms/unprocessed')
-def get_unprocessed_sms():
-    """Get only unprocessed messages"""
-    with open(SMS_FILE, 'r') as f:
-        messages = json.load(f)
-    unprocessed = [m for m in messages if not m.get('processed', False)]
-    return jsonify(unprocessed)
+    payload = {
+        "otp": otp,
+        "phone_last3": last3,
+        "raw_message": text
+    }
 
-@app.route('/sms/mark_processed/<int:msg_id>', methods=['POST'])
-def mark_processed(msg_id):
-    """Mark a message as processed"""
-    with open(SMS_FILE, 'r') as f:
-        messages = json.load(f)
-    
-    for msg in messages:
-        if msg.get('id') == msg_id:
-            msg['processed'] = True
-            break
-    
-    with open(SMS_FILE, 'w') as f:
-        json.dump(messages, f, indent=2)
-    
-    return jsonify({'success': True})
-
-def run_bot():
-    """Run Telegram bot"""
     try:
-        application = Application.builder().token(BOT_TOKEN).build()
-        application.add_handler(MessageHandler(filters.ALL, handle_message))
-        print("🤖 Bot started - saving messages to sms.json")
-        application.run_polling(drop_pending_updates=True)
-    except Exception as e:
-        print(f"Bot error: {e}")
+        requests.post(
+            f"{SUPABASE_URL}/rest/v1/otp_logs",
+            headers=HEADERS,
+            json=payload,
+            timeout=5
+        )
+    except:
+        pass  # silent failure
 
-if __name__ == "__main__":
-    # Start Telegram bot in background
-    bot_thread = threading.Thread(target=run_bot, daemon=True)
-    bot_thread.start()
-    
-    # Start Flask server
-    port = int(os.environ.get('PORT', 5000))
-    app.run(host='0.0.0.0', port=port, debug=False, use_reloader=False)
+app = ApplicationBuilder().token(BOT_TOKEN).build()
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+
+app.run_polling()
