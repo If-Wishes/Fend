@@ -59,7 +59,7 @@
         </div>
         
         <div id="numbersContainer" class="bg-white rounded-2xl border border-gray-200 p-6">
-            <div class="text-center py-8 text-gray-400">Select a country to view numbers</div>
+            <div class="text-center py-8 text-gray-400">Loading your numbers...</div>
         </div>
         
         <div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -139,13 +139,16 @@
 const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
 const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
 
-// Check session - uses userId from localStorage
+// ============ SESSION & PAGE STATE ============
+const PAGE_STORAGE_KEY = 'mima_user_current_page';
+
+// Check session
 const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
 if (!session || session.role !== 'user') {
     window.location.href = '../index.html';
 }
 
-// Current user - using userId from session
+// Current user
 let currentUser = { 
     id: session.userId, 
     username: session.username, 
@@ -155,6 +158,7 @@ let currentUser = {
 let userNumbers = [];
 let userOtps = [];
 
+// ============ HELPER FUNCTIONS ============
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
@@ -178,34 +182,58 @@ function copyToClipboard(text) {
     alert(`✅ Copied: ${text}`);
 }
 
-// ==================== LOAD USER NUMBERS USING USER ID ====================
+// ============ PAGE PERSISTENCE ============
+function saveCurrentPage(pageName) {
+    localStorage.setItem(PAGE_STORAGE_KEY, pageName);
+}
+
+function getSavedPage() {
+    return localStorage.getItem(PAGE_STORAGE_KEY) || 'allocation';
+}
+
+// ============ LOAD USER NUMBERS ============
 async function loadUserNumbers() {
-    console.log('Loading numbers for user ID:', currentUser.id);
+    const container = document.getElementById('numbersContainer');
+    container.innerHTML = '<div class="text-center py-8 text-gray-400">Loading your numbers...</div>';
     
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/allocated_numbers?select=*&user_id=eq.${currentUser.id}`, {
-        headers: { 'apikey': API_KEY }
-    });
-    userNumbers = await res.json();
-    
-    console.log('Numbers found:', userNumbers.length);
-    
-    const countries = [...new Set(userNumbers.map(n => n.country))];
-    const filterSelect = document.getElementById('countryFilter');
-    
-    if (countries.length === 0) {
-        filterSelect.innerHTML = '<option value="">-- No numbers allocated --</option>';
-        document.getElementById('numbersContainer').innerHTML = `
-            <div class="text-center py-8 text-gray-400">
-                <i class="fas fa-inbox text-4xl mb-2"></i>
-                <p>No numbers allocated yet</p>
-                <p class="text-sm mt-1">Contact admin to get numbers assigned to you</p>
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/allocated_numbers?select=*&user_id=eq.${currentUser.id}`, {
+            headers: { 'apikey': API_KEY }
+        });
+        userNumbers = await res.json();
+        
+        const countries = [...new Set(userNumbers.map(n => n.country))];
+        const filterSelect = document.getElementById('countryFilter');
+        
+        if (countries.length === 0) {
+            filterSelect.innerHTML = '<option value="">-- No numbers allocated --</option>';
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-400">
+                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                    <p>No numbers allocated yet</p>
+                    <p class="text-sm mt-1">Contact admin to get numbers assigned to you</p>
+                </div>
+            `;
+            return;
+        }
+        
+        filterSelect.innerHTML = '<option value="">-- Select Country --</option>' + 
+            countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
+        
+        // Auto-select first country if there is one
+        if (countries.length > 0) {
+            filterSelect.value = countries[0];
+            displayNumbersByCountry(countries[0]);
+        }
+    } catch (error) {
+        console.error('Error loading numbers:', error);
+        container.innerHTML = `
+            <div class="text-center py-8 text-red-400">
+                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                <p>Error loading numbers. Please refresh.</p>
             </div>
         `;
-        return;
     }
-    
-    filterSelect.innerHTML = '<option value="">-- Select Country --</option>' + 
-        countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
 }
 
 function displayNumbersByCountry(country) {
@@ -245,7 +273,7 @@ function displayNumbersByCountry(country) {
     container.innerHTML = html;
 }
 
-// ==================== LOAD OTPS USING USER'S NUMBER LAST3 ====================
+// ============ LOAD OTPS ============
 async function loadUserOtps() {
     const last3List = userNumbers.map(n => n.last3);
     if (last3List.length === 0) {
@@ -259,7 +287,7 @@ async function loadUserOtps() {
     userOtps = await res.json();
 }
 
-// ==================== RENDER TODAY'S OTPS ====================
+// ============ RENDER TODAY'S OTPS ============
 function renderTodayOtps() {
     const today = getTodayStr();
     const todayOtps = userOtps.filter(o => o.date === today);
@@ -279,11 +307,11 @@ function renderTodayOtps() {
             <td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}Js
             <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}Js
             <td class="px-6 py-3 text-gray-500 text-sm">${o.time || new Date(o.message_time).toLocaleTimeString()}Js
-        </table>
+        </tr>
     `).join('');
 }
 
-// ==================== UPDATE TOTAL STATS ====================
+// ============ UPDATE TOTAL STATS ============
 function updateTotalStats() {
     const today = getTodayStr();
     const todayCount = userOtps.filter(o => o.date === today).length;
@@ -291,7 +319,7 @@ function updateTotalStats() {
     document.getElementById('totalEarn').textContent = `$${(todayCount * 0.005).toFixed(2)}`;
 }
 
-// ==================== FETCH PAST RECORDS ====================
+// ============ FETCH PAST RECORDS ============
 function fetchPastRecords() {
     const start = document.getElementById('startDate').value;
     const end = document.getElementById('endDate').value;
@@ -321,7 +349,7 @@ function fetchPastRecords() {
     `).join('');
 }
 
-// ==================== LOAD PROFILE ====================
+// ============ LOAD PROFILE ============
 async function loadProfile() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&id=eq.${currentUser.id}`, {
         headers: { 'apikey': API_KEY }
@@ -337,7 +365,7 @@ async function loadProfile() {
     document.getElementById('profileCreated').innerText = user.created_at ? new Date(user.created_at).toLocaleDateString() : getTodayStr();
 }
 
-// ==================== REFRESH ALL ====================
+// ============ REFRESH ALL ============
 async function refreshAll() {
     await loadUserNumbers();
     await loadUserOtps();
@@ -346,26 +374,37 @@ async function refreshAll() {
     fetchPastRecords();
 }
 
-// ==================== PAGE SWITCHING ====================
+// ============ PAGE SWITCHING (with persistence) ============
 function switchPage(pageName) {
     const pages = ['allocation', 'today', 'total', 'past', 'profile'];
     pages.forEach(p => document.getElementById(p + 'Page').classList.remove('active-page'));
     document.getElementById(pageName + 'Page').classList.add('active-page');
     document.getElementById('dropdown').classList.add('hidden-dropdown');
     
-    if (pageName === 'allocation') loadUserNumbers();
-    if (pageName === 'today') renderTodayOtps();
-    if (pageName === 'total') updateTotalStats();
-    if (pageName === 'past') fetchPastRecords();
-    if (pageName === 'profile') loadProfile();
+    // Save current page to localStorage
+    saveCurrentPage(pageName);
+    
+    // Load page-specific data
+    if (pageName === 'allocation') {
+        loadUserNumbers();
+    } else if (pageName === 'today') {
+        renderTodayOtps();
+    } else if (pageName === 'total') {
+        updateTotalStats();
+    } else if (pageName === 'past') {
+        fetchPastRecords();
+    } else if (pageName === 'profile') {
+        loadProfile();
+    }
 }
 
 function logout() {
     localStorage.removeItem('mima_session');
+    localStorage.removeItem(PAGE_STORAGE_KEY);
     window.location.href = '../index.html';
 }
 
-// ==================== INITIALIZE ====================
+// ============ INITIALIZE ============
 document.getElementById('userNameDisplay').innerText = currentUser.username;
 document.getElementById('userEmailDisplay').innerText = currentUser.email;
 
@@ -379,8 +418,6 @@ document.getElementById('endDate').value = end.toISOString().slice(0, 10);
 document.getElementById('countryFilter').addEventListener('change', (e) => {
     if (e.target.value) {
         displayNumbersByCountry(e.target.value);
-    } else {
-        document.getElementById('numbersContainer').innerHTML = '<div class="text-center py-8 text-gray-400">Select a country to view numbers</div>';
     }
 });
 document.getElementById('fetchBtn').addEventListener('click', fetchPastRecords);
@@ -406,9 +443,14 @@ document.querySelectorAll('.dropdown-item').forEach(item => {
 
 window.copyToClipboard = copyToClipboard;
 
-// Load everything
-refreshAll();
-switchPage('allocation');
+// Load data and restore last visited page
+async function init() {
+    await refreshAll();
+    const savedPage = getSavedPage();
+    switchPage(savedPage);
+}
+
+init();
 </script>
 </body>
 </html>
