@@ -10,6 +10,8 @@
         .page { display: none; }
         .page.active-page { display: block; }
         .hidden-dropdown { display: none; }
+        .copy-btn { cursor: pointer; transition: all 0.2s; }
+        .copy-btn:hover { background-color: #d1fae5; }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -18,22 +20,30 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex items-center">
-                <div class="h-8 w-8 rounded-lg bg-emerald-600"><i class="fas fa-chart-line text-white"></i></div>
-                <span class="ml-2 text-xl font-bold">MIMA<span class="text-emerald-600">Panel</span></span>
+                <div class="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+                    <i class="fas fa-chart-line text-white text-sm"></i>
+                </div>
+                <span class="ml-2 text-xl font-bold text-gray-800">MIMA<span class="text-emerald-600">Panel</span></span>
                 <span class="ml-3 text-xs bg-emerald-100 text-emerald-600 px-2 py-1 rounded-full">User</span>
             </div>
             <div class="flex items-center gap-4">
-                <div class="text-right"><p class="text-sm font-medium" id="userName">User</p><p class="text-xs text-gray-500" id="userEmail"></p></div>
+                <div class="text-right hidden sm:block">
+                    <p class="text-sm font-medium text-gray-800" id="userNameDisplay">User</p>
+                    <p class="text-xs text-gray-500" id="userEmailDisplay"></p>
+                </div>
                 <div class="relative">
-                    <button id="menuBtn" class="bg-gray-100 rounded-full px-3 py-2"><i class="fas fa-user-circle"></i><i class="fas fa-chevron-down text-xs"></i></button>
-                    <div id="dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border hidden-dropdown z-50">
-                        <a href="#" data-page="allocation" class="dropdown-item block px-4 py-2">📌 Allocation</a>
-                        <a href="#" data-page="today" class="dropdown-item block px-4 py-2">📊 Today's Stat</a>
-                        <a href="#" data-page="total" class="dropdown-item block px-4 py-2">💰 Total OTP</a>
-                        <a href="#" data-page="past" class="dropdown-item block px-4 py-2">📅 Past Records</a>
-                        <a href="#" data-page="profile" class="dropdown-item block px-4 py-2">👤 Profile</a>
-                        <div class="border-t"></div>
-                        <a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600">Logout</a>
+                    <button id="menuBtn" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-2 transition">
+                        <i class="fas fa-user-circle text-gray-600"></i>
+                        <i class="fas fa-chevron-down text-gray-500 text-xs"></i>
+                    </button>
+                    <div id="dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 hidden-dropdown z-50">
+                        <a href="#" data-page="allocation" class="dropdown-item block px-4 py-2 hover:bg-gray-50">📌 My Numbers</a>
+                        <a href="#" data-page="today" class="dropdown-item block px-4 py-2 hover:bg-gray-50">📊 Today's OTP</a>
+                        <a href="#" data-page="total" class="dropdown-item block px-4 py-2 hover:bg-gray-50">💰 Total OTP</a>
+                        <a href="#" data-page="past" class="dropdown-item block px-4 py-2 hover:bg-gray-50">📅 Past Records</a>
+                        <a href="#" data-page="profile" class="dropdown-item block px-4 py-2 hover:bg-gray-50">👤 Profile</a>
+                        <div class="border-t border-gray-100"></div>
+                        <a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600 hover:bg-red-50">Logout</a>
                     </div>
                 </div>
             </div>
@@ -41,44 +51,136 @@
     </div>
 </nav>
 
-<main class="max-w-7xl mx-auto px-4 py-8">
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- My Numbers Page - Shows FULL allocated numbers -->
     <div id="allocationPage" class="page">
-        <h1 class="text-2xl font-bold">📌 Number Allocation</h1>
-        <p class="text-gray-500 mb-4">Select a country to view your numbers</p>
-        <select id="countrySelect" class="w-full md:w-64 border rounded-xl px-4 py-2 bg-gray-50 mb-4"><option value="">-- Select Country --</option></select>
-        <div id="numbersDisplay" class="bg-white rounded-2xl border p-6 text-center text-gray-400">Select a country</div>
-    </div>
-
-    <div id="todayPage" class="page">
-        <h1 class="text-2xl font-bold">📊 Today's OTP Statistics</h1>
-        <p class="text-gray-500 mb-4">OTP received today from your numbers</p>
-        <div class="bg-white rounded-2xl border overflow-hidden">
-            <table class="w-full"><thead class="bg-gray-50"><tr><th class="px-6 py-3">Number</th><th class="px-6 py-3">Code</th><th class="px-6 py-3">Time</th> </thead><tbody id="todayTable"></tbody>追赶
-            <div id="todayEmpty" class="text-center py-8 text-gray-400 hidden">No OTPs today</div>
+        <h1 class="text-2xl font-bold text-gray-900">📌 My Allocated Numbers</h1>
+        <p class="text-gray-500 mt-1 mb-4">These numbers are assigned to you. Use them to request OTPs.</p>
+        
+        <div id="numbersContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="text-center py-8 text-gray-400 col-span-full">Loading your numbers...</div>
+        </div>
+        
+        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
+            <p class="text-sm text-blue-700">
+                <i class="fas fa-info-circle mr-2"></i>
+                <strong>How it works:</strong> When you request OTP using these numbers, 
+                the OTPs will automatically appear in your dashboard. You earn $0.005 per OTP received.
+            </p>
         </div>
     </div>
 
+    <!-- Today's OTP Page -->
+    <div id="todayPage" class="page">
+        <h1 class="text-2xl font-bold text-gray-900">📊 Today's OTP Statistics</h1>
+        <p class="text-gray-500 mt-1 mb-4">OTPs received today from your numbers</p>
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left">Number (Last 3 digits)</th>
+                            <th class="px-6 py-3 text-left">Service</th>
+                            <th class="px-6 py-3 text-left">OTP Code</th>
+                            <th class="px-6 py-3 text-left">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="todayOtpTable" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            <div id="todayEmptyMsg" class="text-center py-8 text-gray-400 hidden">No OTPs received today</div>
+        </div>
+    </div>
+
+    <!-- Total OTP Page -->
     <div id="totalPage" class="page">
-        <h1 class="text-2xl font-bold">💰 Total OTP Earnings</h1>
-        <p class="text-gray-500 mb-4">Today's OTP summary and earnings</p>
-        <div class="grid grid-cols-2 gap-6"><div class="bg-emerald-600 rounded-2xl p-6"><p class="text-emerald-100">Total OTP Today</p><p class="text-white text-4xl font-bold" id="totalCount">0</p></div>
-        <div class="bg-amber-600 rounded-2xl p-6"><p class="text-amber-100">Earnings</p><p class="text-white text-4xl font-bold" id="totalEarn">$0.00</p><p class="text-amber-100 text-sm">$0.005/OTP</p></div></div>
+        <h1 class="text-2xl font-bold text-gray-900">💰 Total OTP Earnings</h1>
+        <p class="text-gray-500 mt-1 mb-4">Today's OTP summary and earnings</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg p-6">
+                <p class="text-emerald-100 text-sm">Total OTP Today</p>
+                <p class="text-white text-4xl font-bold mt-1" id="totalOtpCount">0</p>
+            </div>
+            <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl shadow-lg p-6">
+                <p class="text-amber-100 text-sm">Total Earnings</p>
+                <p class="text-white text-4xl font-bold mt-1" id="totalEarningsAmount">$0.00</p>
+                <p class="text-amber-100 text-sm mt-1">($0.005 per OTP)</p>
+            </div>
+        </div>
+        
+        <div class="mt-6 bg-gray-50 rounded-xl p-4 text-center text-sm text-gray-500">
+            Keep requesting OTPs to increase your earnings!
+        </div>
     </div>
 
+    <!-- Past Records Page -->
     <div id="pastPage" class="page">
-        <h1 class="text-2xl font-bold">📅 Past Records</h1>
-        <div class="grid grid-cols-2 gap-4 my-4"><input type="date" id="startDate" class="border rounded-xl px-4 py-2"><input type="date" id="endDate" class="border rounded-xl px-4 py-2"></div>
-        <button id="fetchBtn" class="bg-indigo-600 text-white px-6 py-2 rounded-xl mb-4">Fetch Records</button>
-        <div class="bg-white rounded-2xl border"><div class="p-3 border-b flex justify-between"><span class="font-semibold">Records</span><span id="pastEarn" class="text-emerald-600">$0.00</span></div>
-        <table class="w-full"><thead class="bg-gray-50"><tr><th class="px-4 py-2">Date</th><th class="px-4 py-2">Code</th><th class="px-4 py-2">Time</th> </thead><tbody id="pastTable"></tbody>追赶
-        <div id="pastEmpty" class="text-center py-8 text-gray-400 hidden">No records</div></div>
+        <h1 class="text-2xl font-bold text-gray-900">📅 Past OTP Records</h1>
+        <p class="text-gray-500 mt-1 mb-4">View OTP history by date range</p>
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                    <input type="date" id="startDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <input type="date" id="endDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
+                </div>
+            </div>
+            <button id="fetchRecordsBtn" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl transition">Fetch Records</button>
+        </div>
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                <h3 class="font-semibold text-gray-800">OTP Records</h3>
+                <div class="text-sm">
+                    <span class="font-bold text-emerald-600" id="pastTotalEarnings">$0.00</span>
+                    <span class="text-gray-500 ml-2">total earnings</span>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left">Date</th>
+                            <th class="px-6 py-3 text-left">Service</th>
+                            <th class="px-6 py-3 text-left">OTP Code</th>
+                            <th class="px-6 py-3 text-left">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pastOtpTable" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            <div id="pastEmptyMsg" class="text-center py-8 text-gray-400 hidden">No OTP records in this date range</div>
+        </div>
     </div>
 
+    <!-- Profile Page -->
     <div id="profilePage" class="page">
-        <h1 class="text-2xl font-bold">👤 My Profile</h1>
-        <div class="bg-white rounded-2xl border p-6 max-w-md mt-4"><div class="space-y-4"><div class="flex justify-between"><span class="text-gray-500">Username</span><span class="font-medium" id="profileUsername">-</span></div>
-        <div class="flex justify-between"><span class="text-gray-500">Email</span><span class="font-medium" id="profileEmail">-</span></div>
-        <div class="flex justify-between"><span class="text-gray-500">Member Since</span><span id="profileCreated">-</span></div></div></div>
+        <h1 class="text-2xl font-bold text-gray-900">👤 My Profile</h1>
+        <p class="text-gray-500 mt-1 mb-4">Your account information</p>
+        
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 max-w-md">
+            <div class="space-y-4">
+                <div class="flex justify-between py-2 border-b border-gray-100">
+                    <span class="text-gray-500">Username</span>
+                    <span class="font-medium text-gray-800" id="profileUsername">-</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-gray-100">
+                    <span class="text-gray-500">Email</span>
+                    <span class="font-medium text-gray-800" id="profileEmail">-</span>
+                </div>
+                <div class="flex justify-between py-2">
+                    <span class="text-gray-500">Member Since</span>
+                    <span class="text-gray-600" id="profileCreated">-</span>
+                </div>
+            </div>
+        </div>
     </div>
 </main>
 
@@ -86,113 +188,244 @@
 const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
 const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
 
-// Check session
+// Check authentication
 const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
-if (!session || session.role !== 'user') window.location.href = '../index.html';
+if (!session || session.role !== 'user') {
+    window.location.href = '../index.html';
+}
 
 let currentUser = { id: session.userId, username: session.username, email: session.email };
 let userNumbers = [];
 let userOtps = [];
 
-function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]||m)); }
-function getTodayStr() { return new Date().toISOString().slice(0, 10); }
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
+}
 
-function getCountryFlag(c) { const f={Jordan:'🇯🇴',Tajikistan:'🇹🇯',Nigeria:'🇳🇬',Myanmar:'🇲🇲',Hungary:'🇭🇺',Slovenia:'🇸🇮',Venezuela:'🇻🇪',Uzbekistan:'🇺🇿'}; return f[c]||'🌍'; }
+function getTodayStr() {
+    return new Date().toISOString().slice(0, 10);
+}
 
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text);
+    alert(`✅ Copied: ${text}`);
+}
+
+// Load user's allocated numbers (FULL numbers)
 async function loadUserNumbers() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/user_numbers?select=*&user_id=eq.${currentUser.id}`, { headers: { 'apikey': API_KEY } });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/allocated_numbers?select=*&user_id=eq.${currentUser.id}`, {
+        headers: { 'apikey': API_KEY }
+    });
     userNumbers = await res.json();
-    const countries = [...new Set(userNumbers.map(n => n.country))];
-    const sel = document.getElementById('countrySelect');
-    if(sel) sel.innerHTML = '<option value="">-- Select Country --</option>' + countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
+    
+    const container = document.getElementById('numbersContainer');
+    
+    if (userNumbers.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-gray-400 col-span-full">
+                <i class="fas fa-inbox text-4xl mb-2"></i>
+                <p>No numbers allocated yet</p>
+                <p class="text-sm mt-1">Contact admin to get numbers assigned to you</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Group by country
+    const grouped = {};
+    for (const num of userNumbers) {
+        if (!grouped[num.country]) grouped[num.country] = [];
+        grouped[num.country].push(num);
+    }
+    
+    let html = '';
+    for (const country in grouped) {
+        html += `
+            <div class="border border-gray-200 rounded-xl overflow-hidden">
+                <div class="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                    <span class="font-semibold">${getCountryFlag(country)} ${country}</span>
+                    <span class="text-xs text-gray-400 ml-2">${grouped[country].length} numbers</span>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    ${grouped[country].map(num => `
+                        <div class="px-4 py-3 flex justify-between items-center hover:bg-gray-50">
+                            <div>
+                                <span class="font-mono text-sm">${escapeHtml(num.number)}</span>
+                                <span class="text-xs text-gray-400 ml-2">(last3: ${num.last3})</span>
+                            </div>
+                            <button onclick="copyToClipboard('${escapeHtml(num.number)}')" 
+                                class="copy-btn text-xs bg-gray-100 hover:bg-green-100 px-3 py-1 rounded-full transition">
+                                <i class="fas fa-copy mr-1"></i>Copy
+                            </button>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
 }
 
-function displayNumbers(country) {
-    const data = userNumbers.filter(n => n.country === country);
-    const div = document.getElementById('numbersDisplay');
-    if(data.length === 0) { div.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers for this country</div>'; return; }
-    div.innerHTML = `<div class="border rounded-xl"><div class="bg-gray-50 px-4 py-2">${getCountryFlag(country)} ${country}</div><div class="divide-y">${data.map(n => `<div class="px-4 py-2 font-mono">${escapeHtml(n.number)}</div>`).join('')}</div></div>`;
+function getCountryFlag(country) {
+    const flags = {
+        'Jordan': '🇯🇴', 'Tajikistan': '🇹🇯', 'Nigeria': '🇳🇬',
+        'Myanmar': '🇲🇲', 'Hungary': '🇭🇺', 'Slovenia': '🇸🇮',
+        'Venezuela': '🇻🇪', 'Uzbekistan': '🇺🇿'
+    };
+    return flags[country] || '🌍';
 }
 
-async function loadOtps() {
+// Load OTPs for user
+async function loadUserOtps() {
     const last3List = userNumbers.map(n => n.last3);
-    if(last3List.length === 0) { userOtps = []; return; }
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=*&phone_last3=in.(${last3List.join(',')})&order=message_time.desc`, { headers: { 'apikey': API_KEY } });
+    if (last3List.length === 0) {
+        userOtps = [];
+        return;
+    }
+    
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=*&phone_last3=in.(${last3List.join(',')})&order=message_time.desc`, {
+        headers: { 'apikey': API_KEY }
+    });
     userOtps = await res.json();
 }
 
-async function refresh() { await loadUserNumbers(); await loadOtps(); renderToday(); updateTotal(); fetchPast(); }
-
-function renderToday() {
+// Render today's OTPs
+function renderTodayOtps() {
     const today = getTodayStr();
     const todayOtps = userOtps.filter(o => o.date === today);
-    const tbody = document.getElementById('todayTable');
-    const empty = document.getElementById('todayEmpty');
-    if(todayOtps.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
-    empty.classList.add('hidden');
-    tbody.innerHTML = todayOtps.map(o => `<tr class="border-b"><td class="px-6 py-3 font-mono">***${o.phone_last3}Js<td class="font-bold text-emerald-600">${o.otp}Js<td class="text-gray-500">${o.time}Js</tr>`).join('');
+    const tbody = document.getElementById('todayOtpTable');
+    const emptyMsg = document.getElementById('todayEmptyMsg');
+    
+    if (todayOtps.length === 0) {
+        tbody.innerHTML = '';
+        emptyMsg.classList.remove('hidden');
+        return;
+    }
+    emptyMsg.classList.add('hidden');
+    
+    tbody.innerHTML = todayOtps.map(o => `
+        <tr class="border-b border-gray-100 hover:bg-gray-50">
+            <td class="px-6 py-3 font-mono">***${escapeHtml(o.phone_last3)}Js
+            <td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}Js
+            <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}Js
+            <td class="px-6 py-3 text-gray-500 text-sm">${o.time || new Date(o.message_time).toLocaleTimeString()}Js
+        </tr>
+    `).join('');
 }
 
-function updateTotal() {
+// Update total stats
+function updateTotalStats() {
     const today = getTodayStr();
-    const c = userOtps.filter(o => o.date === today).length;
-    document.getElementById('totalCount').textContent = c;
-    document.getElementById('totalEarn').textContent = `$${(c*0.005).toFixed(2)}`;
+    const todayCount = userOtps.filter(o => o.date === today).length;
+    document.getElementById('totalOtpCount').textContent = todayCount;
+    document.getElementById('totalEarningsAmount').textContent = `$${(todayCount * 0.005).toFixed(2)}`;
 }
 
-function fetchPast() {
+// Fetch past records
+async function fetchPastRecords() {
     const start = document.getElementById('startDate').value;
     const end = document.getElementById('endDate').value;
-    if(!start||!end) return;
+    if (!start || !end) return;
+    
     const filtered = userOtps.filter(o => o.date >= start && o.date <= end);
-    const tbody = document.getElementById('pastTable');
-    const empty = document.getElementById('pastEmpty');
-    const earnSpan = document.getElementById('pastEarn');
-    if(filtered.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); earnSpan.textContent = '$0.00'; return; }
-    empty.classList.add('hidden');
-    earnSpan.textContent = `$${(filtered.length*0.005).toFixed(2)}`;
-    tbody.innerHTML = filtered.map(o => `<tr class="border-b"><td class="px-4 py-2 text-xs">${o.date}Js<td class="font-bold text-emerald-600">${o.otp}Js<td class="text-gray-500">${o.time}Js<tr>`).join('');
-}
-
-async function loadProfile() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=username,email,created_at&id=eq.${currentUser.id}`, { headers: { 'apikey': API_KEY } });
-    const user = await res.json();
-    if(user && user[0]) {
-        document.getElementById('profileUsername').innerText = user[0].username;
-        document.getElementById('profileEmail').innerText = user[0].email;
-        document.getElementById('profileCreated').innerText = user[0].created_at?.slice(0,10) || getTodayStr();
+    const tbody = document.getElementById('pastOtpTable');
+    const emptyMsg = document.getElementById('pastEmptyMsg');
+    const earningsSpan = document.getElementById('pastTotalEarnings');
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        emptyMsg.classList.remove('hidden');
+        earningsSpan.textContent = '$0.00';
+        return;
     }
+    emptyMsg.classList.add('hidden');
+    earningsSpan.textContent = `$${(filtered.length * 0.005).toFixed(2)}`;
+    
+    tbody.innerHTML = filtered.map(o => `
+        <tr class="border-b border-gray-100 hover:bg-gray-50">
+            <td class="px-6 py-3 text-gray-600 text-xs">${o.date}Js
+            <td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}Js
+            <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}Js
+            <td class="px-6 py-3 text-gray-500 text-sm">${o.time || new Date(o.message_time).toLocaleTimeString()}Js
+        </tr>
+    `).join('');
 }
 
-function switchPage(p) {
-    const pages = ['allocation','today','total','past','profile'];
-    pages.forEach(x => document.getElementById(x+'Page').classList.remove('active-page'));
-    document.getElementById(p+'Page').classList.add('active-page');
+// Load profile
+async function loadProfile() {
+    document.getElementById('profileUsername').innerText = currentUser.username;
+    document.getElementById('profileEmail').innerText = currentUser.email;
+    document.getElementById('profileCreated').innerText = new Date().toISOString().slice(0, 10);
+}
+
+// Refresh all data
+async function refreshAll() {
+    await loadUserNumbers();
+    await loadUserOtps();
+    renderTodayOtps();
+    updateTotalStats();
+    fetchPastRecords();
+}
+
+// Page switching
+function switchPage(pageName) {
+    const pages = ['allocation', 'today', 'total', 'past', 'profile'];
+    pages.forEach(p => document.getElementById(p + 'Page').classList.remove('active-page'));
+    document.getElementById(pageName + 'Page').classList.add('active-page');
     document.getElementById('dropdown').classList.add('hidden-dropdown');
-    if(p === 'allocation') loadUserNumbers();
-    if(p === 'today') renderToday();
-    if(p === 'total') updateTotal();
-    if(p === 'past') fetchPast();
-    if(p === 'profile') loadProfile();
+    
+    if (pageName === 'allocation') loadUserNumbers();
+    if (pageName === 'today') renderTodayOtps();
+    if (pageName === 'total') updateTotalStats();
+    if (pageName === 'past') fetchPastRecords();
+    if (pageName === 'profile') loadProfile();
 }
 
-function logout() { localStorage.removeItem('mima_session'); window.location.href = '../index.html'; }
+function logout() {
+    localStorage.removeItem('mima_session');
+    window.location.href = '../index.html';
+}
 
-document.getElementById('userName').innerText = currentUser.username;
-document.getElementById('userEmail').innerText = currentUser.email;
+// Set user info
+document.getElementById('userNameDisplay').innerText = currentUser.username;
+document.getElementById('userEmailDisplay').innerText = currentUser.email;
 
-document.getElementById('countrySelect').onchange = e => { if(e.target.value) displayNumbers(e.target.value); };
-document.getElementById('fetchBtn').onclick = fetchPast;
-document.getElementById('menuBtn').onclick = e => { e.stopPropagation(); document.getElementById('dropdown').classList.toggle('hidden-dropdown'); };
-document.addEventListener('click', () => document.getElementById('dropdown').classList.add('hidden-dropdown'));
-document.getElementById('logoutBtn').onclick = e => { e.preventDefault(); logout(); };
-document.querySelectorAll('.dropdown-item').forEach(item => { item.onclick = e => { e.preventDefault(); const p = item.getAttribute('data-page'); if(p) switchPage(p); }; });
+// Set default dates
+const end = new Date();
+const start = new Date();
+start.setDate(end.getDate() - 6);
+document.getElementById('startDate').value = start.toISOString().slice(0, 10);
+document.getElementById('endDate').value = end.toISOString().slice(0, 10);
 
-const end = new Date(); const start = new Date(); start.setDate(end.getDate()-6);
-document.getElementById('startDate').value = start.toISOString().slice(0,10);
-document.getElementById('endDate').value = end.toISOString().slice(0,10);
+// Event listeners
+document.getElementById('fetchRecordsBtn').addEventListener('click', fetchPastRecords);
+document.getElementById('menuBtn').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('dropdown').classList.toggle('hidden-dropdown');
+});
+document.addEventListener('click', () => {
+    document.getElementById('dropdown').classList.add('hidden-dropdown');
+});
+document.getElementById('logoutBtn').addEventListener('click', (e) => {
+    e.preventDefault();
+    logout();
+});
 
-refresh();
+// Dropdown items
+document.querySelectorAll('.dropdown-item').forEach(item => {
+    item.addEventListener('click', (e) => {
+        e.preventDefault();
+        const page = item.getAttribute('data-page');
+        if (page) switchPage(page);
+    });
+});
+
+// Make copy function global
+window.copyToClipboard = copyToClipboard;
+
+// Initialize
+refreshAll();
 switchPage('allocation');
 </script>
 </body>
