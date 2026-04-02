@@ -66,16 +66,39 @@
     </div>
 </div>
 
-<script src="js/supabase.js"></script>
 <script>
+// ============ SUPABASE CONFIGURATION ============
+const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
+
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ============ LOGIN FUNCTION ============
 async function login(username, password, role) {
     try {
-        const { data, error } = await supabase
+        console.log('Attempting login for:', username);
+        
+        // First, try to find user by username
+        let { data, error } = await supabase
             .from('users')
             .select('id, username, email, role')
             .eq('username', username)
             .eq('password', password)
-            .single();
+            .maybeSingle();
+        
+        // If not found, try by email
+        if (!data) {
+            const { data: emailData, error: emailError } = await supabase
+                .from('users')
+                .select('id, username, email, role')
+                .eq('email', username)
+                .eq('password', password)
+                .maybeSingle();
+            data = emailData;
+            error = emailError;
+        }
+        
+        console.log('Query result:', data);
         
         if (data) {
             if (data.role !== role) {
@@ -89,12 +112,15 @@ async function login(username, password, role) {
             }));
             return { success: true };
         }
+        
         return { success: false, message: 'Invalid credentials' };
     } catch (error) {
-        return { success: false, message: 'Login failed' };
+        console.error('Login error:', error);
+        return { success: false, message: 'Login failed: ' + error.message };
     }
 }
 
+// ============ ROLE SELECTION ============
 document.getElementById('adminRoleCard').onclick = () => {
     document.getElementById('adminRoleCard').classList.add('active');
     document.getElementById('userRoleCard').classList.remove('active');
@@ -108,6 +134,7 @@ document.getElementById('userRoleCard').onclick = () => {
     document.getElementById('adminLoginForm').classList.add('hidden-panel');
 };
 
+// ============ ADMIN LOGIN ============
 document.getElementById('adminLogin').onsubmit = async (e) => {
     e.preventDefault();
     const loading = document.getElementById('adminLoading');
@@ -115,7 +142,9 @@ document.getElementById('adminLogin').onsubmit = async (e) => {
     loading.classList.add('active');
     form.style.opacity = '0.5';
     
-    const result = await login(document.getElementById('adminUsername').value, document.getElementById('adminPassword').value, 'admin');
+    const username = document.getElementById('adminUsername').value;
+    const password = document.getElementById('adminPassword').value;
+    const result = await login(username, password, 'admin');
     
     loading.classList.remove('active');
     form.style.opacity = '1';
@@ -123,10 +152,11 @@ document.getElementById('adminLogin').onsubmit = async (e) => {
     if (result.success) {
         window.location.href = 'admin/dashboard.html';
     } else {
-        alert(result.message || 'Invalid admin credentials');
+        alert(result.message);
     }
 };
 
+// ============ USER LOGIN ============
 document.getElementById('userLogin').onsubmit = async (e) => {
     e.preventDefault();
     const loading = document.getElementById('userLoading');
@@ -134,7 +164,9 @@ document.getElementById('userLogin').onsubmit = async (e) => {
     loading.classList.add('active');
     form.style.opacity = '0.5';
     
-    const result = await login(document.getElementById('userUsername').value, document.getElementById('userPassword').value, 'user');
+    const username = document.getElementById('userUsername').value;
+    const password = document.getElementById('userPassword').value;
+    const result = await login(username, password, 'user');
     
     loading.classList.remove('active');
     form.style.opacity = '1';
@@ -142,18 +174,37 @@ document.getElementById('userLogin').onsubmit = async (e) => {
     if (result.success) {
         window.location.href = 'user/dashboard.html';
     } else {
-        alert(result.message || 'Invalid user credentials');
+        alert(result.message);
     }
 };
 
-const session = localStorage.getItem('mima_session');
-if (session) {
+// ============ CHECK EXISTING SESSION ============
+const existingSession = localStorage.getItem('mima_session');
+if (existingSession) {
     try {
-        const s = JSON.parse(session);
-        if (s.role === 'admin') window.location.href = 'admin/dashboard.html';
-        else if (s.role === 'user') window.location.href = 'user/dashboard.html';
+        const s = JSON.parse(existingSession);
+        if (s.role === 'admin') {
+            window.location.href = 'admin/dashboard.html';
+        } else if (s.role === 'user') {
+            window.location.href = 'user/dashboard.html';
+        }
     } catch(e) {}
 }
+
+// Test connection on load
+async function testConnection() {
+    try {
+        const { data, error } = await supabase.from('users').select('count', { count: 'exact', head: true });
+        if (error) {
+            console.error('Supabase connection error:', error);
+        } else {
+            console.log('✅ Supabase connected successfully!');
+        }
+    } catch(e) {
+        console.error('Connection failed:', e);
+    }
+}
+testConnection();
 </script>
 </body>
 </html>
