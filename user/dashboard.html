@@ -139,26 +139,27 @@
 const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
 const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
 
-// ============ SESSION & PAGE STATE ============
-const PAGE_STORAGE_KEY = 'mima_user_current_page';
-
-// Check session
+// Check session - get user from localStorage
 const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
+console.log('Session:', session);
+
 if (!session || session.role !== 'user') {
+    console.log('No valid session, redirecting to login');
     window.location.href = '../index.html';
 }
 
-// Current user
+// Current user - using userId from session
 let currentUser = { 
     id: session.userId, 
     username: session.username, 
     email: session.email 
 };
 
+console.log('Current User ID:', currentUser.id);
+
 let userNumbers = [];
 let userOtps = [];
 
-// ============ HELPER FUNCTIONS ============
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
@@ -182,32 +183,28 @@ function copyToClipboard(text) {
     alert(`✅ Copied: ${text}`);
 }
 
-// ============ PAGE PERSISTENCE ============
-function saveCurrentPage(pageName) {
-    localStorage.setItem(PAGE_STORAGE_KEY, pageName);
-}
-
-function getSavedPage() {
-    return localStorage.getItem(PAGE_STORAGE_KEY) || 'allocation';
-}
-
-// ============ LOAD USER NUMBERS ============
+// ==================== LOAD USER NUMBERS USING USER ID ====================
 async function loadUserNumbers() {
-    const container = document.getElementById('numbersContainer');
-    container.innerHTML = '<div class="text-center py-8 text-gray-400">Loading your numbers...</div>';
+    console.log('Loading numbers for user ID:', currentUser.id);
     
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/allocated_numbers?select=*&user_id=eq.${currentUser.id}`, {
+        const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=*&user_id=eq.${currentUser.id}`;
+        console.log('Fetching from:', url);
+        
+        const res = await fetch(url, {
             headers: { 'apikey': API_KEY }
         });
         userNumbers = await res.json();
+        
+        console.log('Numbers found:', userNumbers.length);
+        console.log('Numbers data:', userNumbers);
         
         const countries = [...new Set(userNumbers.map(n => n.country))];
         const filterSelect = document.getElementById('countryFilter');
         
         if (countries.length === 0) {
             filterSelect.innerHTML = '<option value="">-- No numbers allocated --</option>';
-            container.innerHTML = `
+            document.getElementById('numbersContainer').innerHTML = `
                 <div class="text-center py-8 text-gray-400">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
                     <p>No numbers allocated yet</p>
@@ -219,18 +216,13 @@ async function loadUserNumbers() {
         
         filterSelect.innerHTML = '<option value="">-- Select Country --</option>' + 
             countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
-        
-        // Auto-select first country if there is one
-        if (countries.length > 0) {
-            filterSelect.value = countries[0];
-            displayNumbersByCountry(countries[0]);
-        }
+            
     } catch (error) {
         console.error('Error loading numbers:', error);
-        container.innerHTML = `
+        document.getElementById('numbersContainer').innerHTML = `
             <div class="text-center py-8 text-red-400">
                 <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
-                <p>Error loading numbers. Please refresh.</p>
+                <p>Error loading numbers. Please try again.</p>
             </div>
         `;
     }
@@ -239,6 +231,8 @@ async function loadUserNumbers() {
 function displayNumbersByCountry(country) {
     const container = document.getElementById('numbersContainer');
     const filteredNumbers = userNumbers.filter(n => n.country === country);
+    
+    console.log('Displaying numbers for country:', country, 'Count:', filteredNumbers.length);
     
     if (filteredNumbers.length === 0) {
         container.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers for this country</div>';
@@ -273,9 +267,11 @@ function displayNumbersByCountry(country) {
     container.innerHTML = html;
 }
 
-// ============ LOAD OTPS ============
+// ==================== LOAD OTPS USING USER'S NUMBER LAST3 ====================
 async function loadUserOtps() {
     const last3List = userNumbers.map(n => n.last3);
+    console.log('Last3 list for OTP matching:', last3List);
+    
     if (last3List.length === 0) {
         userOtps = [];
         return;
@@ -285,9 +281,10 @@ async function loadUserOtps() {
         headers: { 'apikey': API_KEY }
     });
     userOtps = await res.json();
+    console.log('OTPs found:', userOtps.length);
 }
 
-// ============ RENDER TODAY'S OTPS ============
+// ==================== RENDER TODAY'S OTPS ====================
 function renderTodayOtps() {
     const today = getTodayStr();
     const todayOtps = userOtps.filter(o => o.date === today);
@@ -311,7 +308,7 @@ function renderTodayOtps() {
     `).join('');
 }
 
-// ============ UPDATE TOTAL STATS ============
+// ==================== UPDATE TOTAL STATS ====================
 function updateTotalStats() {
     const today = getTodayStr();
     const todayCount = userOtps.filter(o => o.date === today).length;
@@ -319,7 +316,7 @@ function updateTotalStats() {
     document.getElementById('totalEarn').textContent = `$${(todayCount * 0.005).toFixed(2)}`;
 }
 
-// ============ FETCH PAST RECORDS ============
+// ==================== FETCH PAST RECORDS ====================
 function fetchPastRecords() {
     const start = document.getElementById('startDate').value;
     const end = document.getElementById('endDate').value;
@@ -349,7 +346,7 @@ function fetchPastRecords() {
     `).join('');
 }
 
-// ============ LOAD PROFILE ============
+// ==================== LOAD PROFILE ====================
 async function loadProfile() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&id=eq.${currentUser.id}`, {
         headers: { 'apikey': API_KEY }
@@ -365,7 +362,7 @@ async function loadProfile() {
     document.getElementById('profileCreated').innerText = user.created_at ? new Date(user.created_at).toLocaleDateString() : getTodayStr();
 }
 
-// ============ REFRESH ALL ============
+// ==================== REFRESH ALL ====================
 async function refreshAll() {
     await loadUserNumbers();
     await loadUserOtps();
@@ -374,37 +371,26 @@ async function refreshAll() {
     fetchPastRecords();
 }
 
-// ============ PAGE SWITCHING (with persistence) ============
+// ==================== PAGE SWITCHING ====================
 function switchPage(pageName) {
     const pages = ['allocation', 'today', 'total', 'past', 'profile'];
     pages.forEach(p => document.getElementById(p + 'Page').classList.remove('active-page'));
     document.getElementById(pageName + 'Page').classList.add('active-page');
     document.getElementById('dropdown').classList.add('hidden-dropdown');
     
-    // Save current page to localStorage
-    saveCurrentPage(pageName);
-    
-    // Load page-specific data
-    if (pageName === 'allocation') {
-        loadUserNumbers();
-    } else if (pageName === 'today') {
-        renderTodayOtps();
-    } else if (pageName === 'total') {
-        updateTotalStats();
-    } else if (pageName === 'past') {
-        fetchPastRecords();
-    } else if (pageName === 'profile') {
-        loadProfile();
-    }
+    if (pageName === 'allocation') loadUserNumbers();
+    if (pageName === 'today') renderTodayOtps();
+    if (pageName === 'total') updateTotalStats();
+    if (pageName === 'past') fetchPastRecords();
+    if (pageName === 'profile') loadProfile();
 }
 
 function logout() {
     localStorage.removeItem('mima_session');
-    localStorage.removeItem(PAGE_STORAGE_KEY);
     window.location.href = '../index.html';
 }
 
-// ============ INITIALIZE ============
+// ==================== INITIALIZE ====================
 document.getElementById('userNameDisplay').innerText = currentUser.username;
 document.getElementById('userEmailDisplay').innerText = currentUser.email;
 
@@ -418,6 +404,8 @@ document.getElementById('endDate').value = end.toISOString().slice(0, 10);
 document.getElementById('countryFilter').addEventListener('change', (e) => {
     if (e.target.value) {
         displayNumbersByCountry(e.target.value);
+    } else {
+        document.getElementById('numbersContainer').innerHTML = '<div class="text-center py-8 text-gray-400">Select a country to view numbers</div>';
     }
 });
 document.getElementById('fetchBtn').addEventListener('click', fetchPastRecords);
@@ -443,14 +431,9 @@ document.querySelectorAll('.dropdown-item').forEach(item => {
 
 window.copyToClipboard = copyToClipboard;
 
-// Load data and restore last visited page
-async function init() {
-    await refreshAll();
-    const savedPage = getSavedPage();
-    switchPage(savedPage);
-}
-
-init();
+// Load everything
+refreshAll();
+switchPage('allocation');
 </script>
 </body>
 </html>
