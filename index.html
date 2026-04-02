@@ -6,7 +6,6 @@
     <title>MIMA Panel | Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, sans-serif; }
@@ -62,65 +61,36 @@
     </div>
 
     <div class="mt-6 pt-4 border-t text-center text-xs text-gray-400">
-        Admin: admin / admin123 | Users stored in Supabase
+        Admin: admin / admin123
     </div>
 </div>
 
 <script>
-// ============ SUPABASE CONFIGURATION ============
-const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
-
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// ============ LOGIN FUNCTION ============
-async function login(username, password, role) {
-    try {
-        console.log('Attempting login for:', username);
-        
-        // First, try to find user by username
-        let { data, error } = await supabase
-            .from('users')
-            .select('id, username, email, role')
-            .eq('username', username)
-            .eq('password', password)
-            .maybeSingle();
-        
-        // If not found, try by email
-        if (!data) {
-            const { data: emailData, error: emailError } = await supabase
-                .from('users')
-                .select('id, username, email, role')
-                .eq('email', username)
-                .eq('password', password)
-                .maybeSingle();
-            data = emailData;
-            error = emailError;
-        }
-        
-        console.log('Query result:', data);
-        
-        if (data) {
-            if (data.role !== role) {
-                return { success: false, message: `This account is not a ${role}` };
-            }
-            localStorage.setItem('mima_session', JSON.stringify({
-                userId: data.id,
-                username: data.username,
-                email: data.email,
-                role: data.role
-            }));
-            return { success: true };
-        }
-        
-        return { success: false, message: 'Invalid credentials' };
-    } catch (error) {
-        console.error('Login error:', error);
-        return { success: false, message: 'Login failed: ' + error.message };
+// Simple hardcoded login - no Supabase needed
+function adminLogin(username, password) {
+    if (username === 'admin' && password === 'admin123') {
+        localStorage.setItem('mima_session', JSON.stringify({
+            username: 'admin',
+            role: 'admin'
+        }));
+        return { success: true };
     }
+    return { success: false };
 }
 
-// ============ ROLE SELECTION ============
+function userLogin(username, password) {
+    // Demo user for testing
+    if (username === 'demo' && password === 'demo123') {
+        localStorage.setItem('mima_session', JSON.stringify({
+            username: 'demo',
+            role: 'user'
+        }));
+        return { success: true };
+    }
+    return { success: false };
+}
+
+// Role selection
 document.getElementById('adminRoleCard').onclick = () => {
     document.getElementById('adminRoleCard').classList.add('active');
     document.getElementById('userRoleCard').classList.remove('active');
@@ -134,77 +104,41 @@ document.getElementById('userRoleCard').onclick = () => {
     document.getElementById('adminLoginForm').classList.add('hidden-panel');
 };
 
-// ============ ADMIN LOGIN ============
-document.getElementById('adminLogin').onsubmit = async (e) => {
+// Admin login
+document.getElementById('adminLogin').onsubmit = (e) => {
     e.preventDefault();
-    const loading = document.getElementById('adminLoading');
-    const form = document.getElementById('adminLogin');
-    loading.classList.add('active');
-    form.style.opacity = '0.5';
-    
     const username = document.getElementById('adminUsername').value;
     const password = document.getElementById('adminPassword').value;
-    const result = await login(username, password, 'admin');
-    
-    loading.classList.remove('active');
-    form.style.opacity = '1';
-    
+    const result = adminLogin(username, password);
     if (result.success) {
         window.location.href = 'admin/dashboard.html';
     } else {
-        alert(result.message);
+        alert('Invalid admin credentials. Use: admin / admin123');
     }
 };
 
-// ============ USER LOGIN ============
-document.getElementById('userLogin').onsubmit = async (e) => {
+// User login
+document.getElementById('userLogin').onsubmit = (e) => {
     e.preventDefault();
-    const loading = document.getElementById('userLoading');
-    const form = document.getElementById('userLogin');
-    loading.classList.add('active');
-    form.style.opacity = '0.5';
-    
     const username = document.getElementById('userUsername').value;
     const password = document.getElementById('userPassword').value;
-    const result = await login(username, password, 'user');
-    
-    loading.classList.remove('active');
-    form.style.opacity = '1';
-    
+    const result = userLogin(username, password);
     if (result.success) {
         window.location.href = 'user/dashboard.html';
     } else {
-        alert(result.message);
+        alert('Invalid user credentials. Use: demo / demo123');
     }
 };
 
-// ============ CHECK EXISTING SESSION ============
-const existingSession = localStorage.getItem('mima_session');
-if (existingSession) {
+// Check existing session
+const session = localStorage.getItem('mima_session');
+if (session) {
     try {
-        const s = JSON.parse(existingSession);
-        if (s.role === 'admin') {
-            window.location.href = 'admin/dashboard.html';
-        } else if (s.role === 'user') {
-            window.location.href = 'user/dashboard.html';
-        }
+        const s = JSON.parse(session);
+        if (s.role === 'admin') window.location.href = 'admin/dashboard.html';
+        else if (s.role === 'user') window.location.href = 'user/dashboard.html';
     } catch(e) {}
 }
-
-// Test connection on load
-async function testConnection() {
-    try {
-        const { data, error } = await supabase.from('users').select('count', { count: 'exact', head: true });
-        if (error) {
-            console.error('Supabase connection error:', error);
-        } else {
-            console.log('✅ Supabase connected successfully!');
-        }
-    } catch(e) {
-        console.error('Connection failed:', e);
-    }
-}
-testConnection();
 </script>
 </body>
 </html>
