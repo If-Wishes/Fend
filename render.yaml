@@ -14,6 +14,3 @@ services:
     runtime: python
     buildCommand: pip install -r bot/requirements.txt
     startCommand: python bot/telegram_bot.py
-    envVars:
-      - key: BOT_TOKEN
-        value: 7941038643:AAFFM8jv2RkFyyxzgdzuyqy6UiCHNZhIlWo
