@@ -10,7 +10,7 @@ import requests
 
 BOT_TOKEN = "7941038643:AAFFM8jv2RkFyyxzgdzuyqy6UiCHNZhIlWo"
 SUPABASE_URL = "https://zubkwzsnpdjtndlvqfqf.supabase.co"
-SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo"
+API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo"
 
 TIME_PATTERN = r'⏰ Time:\s*(.+)'
 COUNTRY_PATTERN = r'🌍 Country:\s*(\w+)'
@@ -34,10 +34,20 @@ def extract_last3(number_text):
 
 def save_to_supabase(otp, phone_last3, country, service, time_raw):
     try:
-        headers = {'apikey': SUPABASE_KEY, 'Authorization': f'Bearer {SUPABASE_KEY}', 'Content-Type': 'application/json'}
-        data = {'otp': otp, 'phone_last3': phone_last3, 'country': country, 'service': service, 'time_raw': time_raw, 'message_time': datetime.now().isoformat()}
-        requests.post(f'{SUPABASE_URL}/rest/v1/otp_logs', headers=headers, json=data)
-    except: pass
+        now = datetime.now()
+        data = {
+            'otp': otp,
+            'phone_last3': phone_last3,
+            'country': country,
+            'service': service,
+            'time_raw': time_raw,
+            'date': now.strftime('%Y-%m-%d'),
+            'message_time': now.isoformat()
+        }
+        headers = {'apikey': API_KEY, 'Content-Type': 'application/json'}
+        r = requests.post(f'{SUPABASE_URL}/rest/v1/otp_logs', headers=headers, json=data)
+        return r.status_code in [200, 201]
+    except: return False
 
 async def handle(update: Update, context):
     msg = update.message
