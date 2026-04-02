@@ -6,7 +6,6 @@
     <title>MIMA Panel | Number Allocation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>.hidden-dropdown{display:none;}</style>
 </head>
 <body class="bg-gray-50">
@@ -41,9 +40,11 @@
         <div class="bg-white rounded-2xl border p-6">
             <h2 class="font-semibold mb-4">➕ Add Numbers</h2>
             <select id="userSelect" class="w-full border rounded-xl px-4 py-2 mb-3"><option value="">-- Select User --</option></select>
-            <select id="countrySelect" class="w-full border rounded-xl px-4 py-2 mb-3"><option value="">-- Country --</option>
-                <option value="Jordan">🇯🇴 Jordan</option><option value="Tajikistan">🇹🇯 Tajikistan</option><option value="Nigeria">🇳🇬 Nigeria</option>
-                <option value="Myanmar">🇲🇲 Myanmar</option><option value="Hungary">🇭🇺 Hungary</option><option value="Slovenia">🇸🇮 Slovenia</option>
+            <select id="countrySelect" class="w-full border rounded-xl px-4 py-2 mb-3">
+                <option value="">-- Country --</option>
+                <option value="Jordan">🇯🇴 Jordan</option><option value="Tajikistan">🇹🇯 Tajikistan</option>
+                <option value="Nigeria">🇳🇬 Nigeria</option><option value="Myanmar">🇲🇲 Myanmar</option>
+                <option value="Hungary">🇭🇺 Hungary</option><option value="Slovenia">🇸🇮 Slovenia</option>
                 <option value="Venezuela">🇻🇪 Venezuela</option><option value="Uzbekistan">🇺🇿 Uzbekistan</option>
             </select>
             <textarea id="numbersInput" rows="4" class="w-full border rounded-xl px-4 py-2 mb-3 font-mono" placeholder="Enter numbers (one per line)&#10;Example:&#10;+998901234567&#10;+998902345678"></textarea>
@@ -57,44 +58,49 @@
     </div>
 </main>
 
-<script src="../js/supabase.js"></script>
 <script>
+const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
+const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
+
 const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
 if (!session || session.role !== 'admin') window.location.href = '../index.html';
 document.getElementById('adminName').innerText = session.username;
 
 let users = [];
 
+function getLast3(number) { return number.replace(/\D/g, '').slice(-3); }
+
 async function loadUsers() {
-    users = await getUsers();
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id,username`, { headers: { 'apikey': API_KEY } });
+    users = await res.json();
     const userSel = document.getElementById('userSelect');
-    if(userSel) userSel.innerHTML = '<option value="">-- Select User --</option>' + users.map(u => `<option value="${u.id}">${escapeHtml(u.username)}</option>`).join('');
+    userSel.innerHTML = '<option value="">-- Select User --</option>' + users.map(u => `<option value="${u.id}">${escapeHtml(u.username)}</option>`).join('');
     const filterSel = document.getElementById('filterSelect');
-    if(filterSel) { filterSel.innerHTML = '<option value="">-- All Users --</option>' + users.map(u => `<option value="${u.id}">${escapeHtml(u.username)}</option>`).join(''); filterSel.onchange = () => renderAllocations(); }
+    filterSel.innerHTML = '<option value="">-- All Users --</option>' + users.map(u => `<option value="${u.id}">${escapeHtml(u.username)}</option>`).join('');
+    filterSel.onchange = () => renderAllocations();
 }
 
 async function renderAllocations() {
     const filter = document.getElementById('filterSelect').value;
-    let nums = await getAllNumbers();
-    if(filter) nums = nums.filter(n => n.user_id === filter);
+    let url = `${SUPABASE_URL}/rest/v1/user_numbers?select=*,users(username)&order=allocated_at.desc`;
+    if (filter) url = `${SUPABASE_URL}/rest/v1/user_numbers?select=*,users(username)&user_id=eq.${filter}&order=allocated_at.desc`;
+    const res = await fetch(url, { headers: { 'apikey': API_KEY } });
+    const nums = await res.json();
     const container = document.getElementById('allocations');
-    if(nums.length === 0) { container.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers allocated</div>'; return; }
+    if (nums.length === 0) { container.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers allocated</div>'; return; }
     
     const grouped = {};
-    for(const n of nums) {
+    for (const n of nums) {
         const key = n.user_id + '_' + n.country;
-        if(!grouped[key]) {
-            const user = users.find(u => u.id === n.user_id);
-            grouped[key] = { userId: n.user_id, userName: user ? user.username : 'Unknown', country: n.country, numbers: [] };
-        }
+        if (!grouped[key]) grouped[key] = { userId: n.user_id, userName: n.users?.username || 'Unknown', country: n.country, numbers: [] };
         grouped[key].numbers.push(n);
     }
     
     let html = '';
-    for(const key in grouped) {
+    for (const key in grouped) {
         const g = grouped[key];
         html += `<div class="border rounded-xl mb-3"><div class="bg-gray-50 px-4 py-2 flex justify-between"><span><strong>${escapeHtml(g.userName)}</strong> - ${escapeHtml(g.country)}</span><button onclick="deleteCountry('${g.userId}','${g.country}')" class="text-red-500 text-sm">Delete All</button></div><div class="flex flex-wrap gap-2 p-3">`;
-        for(const num of g.numbers) {
+        for (const num of g.numbers) {
             html += `<span class="bg-gray-100 px-3 py-1 rounded-full text-sm flex items-center gap-1"><span class="font-mono">${escapeHtml(num.number)}</span><button onclick="deleteNumber('${num.id}')" class="text-red-400 hover:text-red-600">&times;</button></span>`;
         }
         html += `</div></div>`;
@@ -106,20 +112,25 @@ async function addNumbers() {
     const uid = document.getElementById('userSelect').value;
     const country = document.getElementById('countrySelect').value;
     const input = document.getElementById('numbersInput').value;
-    if(!uid || !country || !input) { alert('Fill all fields'); return; }
+    if (!uid || !country || !input) { alert('Fill all fields'); return; }
     let nums = input.split(/[,\n]/).map(n => n.trim()).filter(n => n);
-    if(nums.length === 0) { alert('No valid numbers'); return; }
-    const result = await addNumbers(uid, nums, country);
-    if(result) {
-        document.getElementById('numbersInput').value = '';
-        alert(`Added ${nums.length} numbers`);
-        renderAllocations();
+    if (nums.length === 0) { alert('No valid numbers'); return; }
+    
+    for (const num of nums) {
+        await fetch(`${SUPABASE_URL}/rest/v1/user_numbers`, {
+            method: 'POST', headers: { 'apikey': API_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ user_id: uid, number: num, last3: getLast3(num), country: country })
+        });
     }
+    document.getElementById('numbersInput').value = '';
+    alert(`Added ${nums.length} numbers`);
+    renderAllocations();
 }
 
-window.deleteCountry = async (uid, country) => { if(confirm('Delete all numbers?')) { await deleteNumbersByUserAndCountry(uid, country); renderAllocations(); } };
-window.deleteNumber = async (id) => { if(confirm('Delete this number?')) { await deleteNumber(id); renderAllocations(); } };
+window.deleteCountry = async (uid, country) => { if(confirm('Delete all numbers?')) { await fetch(`${SUPABASE_URL}/rest/v1/user_numbers?user_id=eq.${uid}&country=eq.${country}`, { method: 'DELETE', headers: { 'apikey': API_KEY } }); renderAllocations(); } };
+window.deleteNumber = async (id) => { if(confirm('Delete this number?')) { await fetch(`${SUPABASE_URL}/rest/v1/user_numbers?id=eq.${id}`, { method: 'DELETE', headers: { 'apikey': API_KEY } }); renderAllocations(); } };
 
+function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]||m)); }
 function logout() { localStorage.removeItem('mima_session'); window.location.href = '../index.html'; }
 
 document.getElementById('menuBtn').onclick = e => { e.stopPropagation(); document.getElementById('dropdown').classList.toggle('hidden-dropdown'); };
