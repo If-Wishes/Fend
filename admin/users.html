@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MIMA Panel | Manage Users</title>
+    <title>MIMA Panel | Users</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -19,360 +19,63 @@
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex items-center gap-4">
-                <a href="dashboard.html" class="text-gray-600 hover:text-gray-800"><i class="fas fa-arrow-left"></i></a>
-                <div class="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center"><i class="fas fa-chart-line text-white"></i></div>
+                <a href="dashboard.html" class="text-gray-600"><i class="fas fa-arrow-left"></i></a>
+                <div class="h-8 w-8 rounded-lg bg-indigo-600"><i class="fas fa-chart-line text-white"></i></div>
                 <span class="text-xl font-bold">MIMA<span class="text-indigo-600">Panel</span></span>
                 <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">Admin</span>
             </div>
             <div class="flex items-center gap-4 relative">
-                <div class="text-right hidden sm:block"><p class="text-sm font-medium">Admin</p><p class="text-xs text-gray-500">User Management</p></div>
-                <div class="relative">
-                    <button id="menuBtn" class="bg-gray-100 rounded-full px-3 py-2"><i class="fas fa-user-shield"></i><i class="fas fa-chevron-down text-xs"></i></button>
-                    <div id="dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border hidden-dropdown z-50">
-                        <a href="dashboard.html" class="block px-4 py-2">Dashboard</a>
-                        <a href="users.html" class="block px-4 py-2 bg-indigo-50 text-indigo-600">Users</a>
-                        <a href="analytics.html" class="block px-4 py-2">Number Allocation</a>
-                        <a href="activities.html" class="block px-4 py-2">User Activities</a>
-                        <div class="border-t"></div>
-                        <a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600">Logout</a>
-                    </div>
-                </div>
+                <div class="text-right"><p class="text-sm font-medium" id="adminName">Admin</p><p class="text-xs text-gray-500">Users</p></div>
+                <div class="relative"><button id="menuBtn" class="bg-gray-100 rounded-full px-3 py-2"><i class="fas fa-user-shield"></i><i class="fas fa-chevron-down text-xs"></i></button>
+                <div id="dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border hidden-dropdown z-50">
+                    <a href="dashboard.html" class="block px-4 py-2">Dashboard</a><a href="users.html" class="block px-4 py-2 bg-indigo-50 text-indigo-600">Users</a>
+                    <a href="analytics.html" class="block px-4 py-2">Number Allocation</a><a href="activities.html" class="block px-4 py-2">User Activities</a>
+                    <div class="border-t"></div><a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600">Logout</a>
+                </div></div>
             </div>
         </div>
     </div>
 </nav>
 
-<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="flex justify-between items-center mb-6">
-        <div><h1 class="text-2xl font-bold">User Management</h1><p class="text-gray-500">Users stored in Supabase cloud - accessible from any device</p></div>
-        <button id="createBtn" class="bg-indigo-600 text-white px-5 py-2.5 rounded-xl"><i class="fas fa-plus mr-2"></i>New User</button>
-    </div>
+<main class="max-w-7xl mx-auto px-4 py-8">
+    <div class="flex justify-between mb-6"><h1 class="text-2xl font-bold">User Management</h1><button id="createBtn" class="bg-indigo-600 text-white px-5 py-2 rounded-xl"><i class="fas fa-plus mr-2"></i>New User</button></div>
     <div class="bg-white rounded-2xl border overflow-hidden">
         <table class="w-full"><thead class="bg-gray-50"> …
             <th class="px-6 py-3 text-left">Username</th><th class="px-6 py-3 text-left">Email</th><th class="px-6 py-3 text-left">Role</th><th class="px-6 py-3 text-left">Created</th><th class="px-6 py-3 text-center">Actions</th>
-        </thead><tbody id="usersList"></tbody> 追赶
+        </thead><tbody id="usersList"></tbody>追赶
     </div>
 </main>
 
-<div id="modal" class="modal">
-    <div class="bg-white rounded-2xl p-6 w-96 max-w-full mx-4">
-        <h3 id="modalTitle" class="text-xl font-bold mb-4">Create User</h3>
-        <input type="text" id="username" placeholder="Username" class="w-full border rounded-xl px-4 py-2 mb-3">
-        <input type="email" id="email" placeholder="Email" class="w-full border rounded-xl px-4 py-2 mb-3">
-        <input type="password" id="password" placeholder="Password" class="w-full border rounded-xl px-4 py-2 mb-3">
-        <select id="role" class="w-full border rounded-xl px-4 py-2 mb-3">
-            <option value="user">User</option>
-            <option value="admin">Admin</option>
-        </select>
-        <div class="flex gap-3">
-            <button id="closeModal" class="px-4 py-2 border rounded-xl">Cancel</button>
-            <button id="saveUser" class="px-4 py-2 bg-indigo-600 text-white rounded-xl">Save</button>
-        </div>
-    </div>
-</div>
+<div id="modal" class="modal"><div class="bg-white rounded-2xl p-6 w-96"><h3 class="text-xl font-bold mb-4">Create User</h3><input type="text" id="username" placeholder="Username" class="w-full border rounded-xl px-4 py-2 mb-3"><input type="email" id="email" placeholder="Email" class="w-full border rounded-xl px-4 py-2 mb-3"><input type="password" id="password" placeholder="Password" class="w-full border rounded-xl px-4 py-2 mb-3"><select id="role" class="w-full border rounded-xl px-4 py-2 mb-3"><option value="user">User</option><option value="admin">Admin</option></select><div class="flex gap-3"><button id="closeModal" class="px-4 py-2 border rounded-xl">Cancel</button><button id="saveUser" class="px-4 py-2 bg-indigo-600 text-white rounded-xl">Save</button></div></div></div>
 
+<script src="../js/supabase.js"></script>
 <script>
-const SUPABASE_URL = 'https://uizrpckqnproauqllono.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpenJwY2txbnByb2F1cWxsb25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNDc0NjQsImV4cCI6MjA5MDYyMzQ2NH0.qKVaCbH2NiksMuh85guJiRySQxykwSx-MkbWNuE-PdE';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// Check session
 const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
-if (!session || session.role !== 'admin') {
-    window.location.href = '../index.html';
-}
+if (!session || session.role !== 'admin') window.location.href = '../index.html';
+document.getElementById('adminName').innerText = session.username;
 
-async function loadUsers() {
-    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-    if (data) {
-        document.getElementById('usersList').innerHTML = data.map(u => `
-            <tr class="border-b">
-                <td class="px-6 py-3">${escapeHtml(u.username)}</td>
-                <td class="px-6 py-3">${escapeHtml(u.email)}</td>
-                <td class="px-6 py-3"><span class="px-2 py-1 rounded-full text-xs ${u.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}">${u.role || 'user'}</span></td>
-                <td class="px-6 py-3 text-xs">${u.created_at?.slice(0,10) || '—'}</td>
-                <td class="text-center"><button onclick="deleteUser('${u.id}')" class="text-red-500"><i class="fas fa-trash"></i></button></td>
-            </tr>
-        `).join('');
-    }
-}
-
-async function createUser(username, email, password, role) {
-    const { data, error } = await supabase.from('users').insert([{ username, email, password, role }]).select();
-    if (error) { alert('Error: ' + error.message); return null; }
-    return data[0];
-}
-
-async function deleteUser(id) {
-    if (confirm('Delete this user?')) {
-        await supabase.from('users').delete().eq('id', id);
-        loadUsers();
-    }
-}
-
-function openModal() {
-    document.getElementById('modal').classList.add('active');
-    document.getElementById('username').value = '';
-    document.getElementById('email').value = '';
-    document.getElementById('password').value = '';
-    document.getElementById('role').value = 'user';
-}
-
-function closeModal() {
-    document.getElementById('modal').classList.remove('active');
-}
-
-async function saveUser() {
-    const username = document.getElementById('username').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    const role = document.getElementById('role').value;
-    
-    if (!username || !email || !password) {
-        alert('All fields required');
-        return;
-    }
-    
-    const result = await createUser(username, email, password, role);
-    if (result) {
-        closeModal();
-        loadUsers();
-        alert(`User "${username}" created! Password: ${password}`);
-    }
-}
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m] || m));
-}
-
-function logout() {
-    localStorage.removeItem('mima_session');
-    window.location.href = '../index.html';
-}
-
-// Dropdown menu
-document.getElementById('menuBtn').onclick = e => { e.stopPropagation(); document.getElementById('dropdown').classList.toggle('hidden-dropdown'); };
-document.addEventListener('click', () => document.getElementById('dropdown').classList.add('hidden-dropdown'));
-document.getElementById('logoutBtn').onclick = e => { e.preventDefault(); logout(); };
-document.getElementById('createBtn').onclick = openModal;
-document.getElementById('closeModal').onclick = closeModal;
-document.getElementById('saveUser').onclick = saveUser;
-
-loadUsers();
-</script>
-</body>
-</html>                        <th class="px-6 py-3 text-left">Created</th>
-                        <th class="px-6 py-3 text-center">Actions</th>
-                     </thead>
-                <tbody id="usersList" class="divide-y divide-gray-100"></tbody>
-             </table>
-        </div>
-    </div>
-</main>
-
-<!-- Modal -->
-<div id="userModal" class="modal">
-    <div class="bg-white rounded-2xl p-6 w-96 max-w-full mx-4">
-        <h3 id="modalTitle" class="text-xl font-bold text-gray-800 mb-4">Create New User</h3>
-        <div class="space-y-3">
-            <input type="text" id="username" placeholder="Username" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-300">
-            <input type="email" id="email" placeholder="Email" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-300">
-            <input type="password" id="password" placeholder="Password" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-indigo-300">
-        </div>
-        <div class="flex justify-end gap-3 mt-6">
-            <button id="closeModalBtn" class="px-4 py-2 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition">Cancel</button>
-            <button id="saveUserBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition">Save User</button>
-        </div>
-    </div>
-</div>
-
-<script>
-// Supabase Configuration
-const SUPABASE_URL = 'https://uizrpckqnproauqllono.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVpenJwY2txbnByb2F1cWxsb25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNDc0NjQsImV4cCI6MjA5MDYyMzQ2NH0.qKVaCbH2NiksMuh85guJiRySQxykwSx-MkbWNuE-PdE';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// ============ USER FUNCTIONS ============
-async function getUsers() {
-    const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: false });
-    if (error) { console.error('Error:', error); return []; }
-    return data || [];
-}
-
-async function createUser(username, email, password) {
-    const { data, error } = await supabase
-        .from('users')
-        .insert([{ username: username, email: email, password: password }])
-        .select();
-    
-    if (error) {
-        alert('Error: ' + error.message);
-        return null;
-    }
-    return data ? data[0] : null;
-}
-
-async function deleteUser(userId) {
-    const { error } = await supabase.from('users').delete().eq('id', userId);
-    if (error) {
-        alert('Error: ' + error.message);
-        return false;
-    }
-    return true;
-}
-
-// ============ UI FUNCTIONS ============
 async function loadUsers() {
     const users = await getUsers();
-    const tbody = document.getElementById('usersList');
-    
-    if (!users || users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">No users found</td></tr>';
-        return;
-    }
-    
-    tbody.innerHTML = users.map(user => `
-        <tr class="border-b border-gray-100 hover:bg-gray-50">
-            <td class="px-6 py-3 font-medium">${escapeHtml(user.username)}</td>
-            <td class="px-6 py-3 text-gray-600">${escapeHtml(user.email)}</td>
-            <td class="px-6 py-3 text-xs text-gray-500">${user.created_at ? user.created_at.slice(0,10) : '—'}</td>
-            <td class="px-6 py-3 text-center">
-                <button onclick="deleteUserById('${user.id}')" class="text-red-500 hover:text-red-700">
-                    <i class="fas fa-trash-alt"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
+    document.getElementById('usersList').innerHTML = users.map(u => `
+        <tr class="border-b"><td class="px-6 py-3">${escapeHtml(u.username)}Js<td class="px-6 py-3">${escapeHtml(u.email)}Js<td><span class="px-2 py-1 rounded-full text-xs ${u.role==='admin'?'bg-red-100 text-red-700':'bg-blue-100 text-blue-700'}">${u.role||'user'}</span>Js<td class="text-xs">${u.created_at?.slice(0,10)||'—'}Js<td class="text-center"><button onclick="deleteUser('${u.id}')" class="text-red-500"><i class="fas fa-trash"></i></button>Js</td>`).join('');
 }
 
-function openModal() {
-    const modal = document.getElementById('userModal');
-    modal.classList.add('active');
-    document.getElementById('username').value = '';
-    document.getElementById('email').value = '';
-    document.getElementById('password').value = '';
-    document.getElementById('modalTitle').innerText = 'Create New User';
-}
+async function deleteUser(id) { if(confirm('Delete user?')) { await deleteUser(id); loadUsers(); } }
 
-function closeModal() {
-    const modal = document.getElementById('userModal');
-    modal.classList.remove('active');
-}
+function openModal() { const m=document.getElementById('modal'); m.classList.add('active'); document.getElementById('username').value=''; document.getElementById('email').value=''; document.getElementById('password').value=''; document.getElementById('role').value='user'; }
+function closeModal() { document.getElementById('modal').classList.remove('active'); }
+async function saveUser() { const u=document.getElementById('username').value.trim(), e=document.getElementById('email').value.trim(), p=document.getElementById('password').value, r=document.getElementById('role').value; if(!u||!e||!p){alert('All fields required');return;} const result=await createUser(u,e,p,r); if(result){closeModal();loadUsers();alert(`User "${u}" created! Password: ${p}`);} }
 
-async function saveUser() {
-    const username = document.getElementById('username').value.trim();
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
-    
-    // Validation
-    if (!username) {
-        alert('Please enter a username');
-        return;
-    }
-    if (!email) {
-        alert('Please enter an email');
-        return;
-    }
-    if (!password) {
-        alert('Please enter a password');
-        return;
-    }
-    if (password.length < 4) {
-        alert('Password must be at least 4 characters');
-        return;
-    }
-    
-    // Show loading state on button
-    const saveBtn = document.getElementById('saveUserBtn');
-    const originalText = saveBtn.innerHTML;
-    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
-    saveBtn.disabled = true;
-    
-    // Create user
-    const result = await createUser(username, email, password);
-    
-    // Reset button
-    saveBtn.innerHTML = originalText;
-    saveBtn.disabled = false;
-    
-    if (result) {
-        closeModal();
-        await loadUsers();
-        alert(`✅ User "${username}" created successfully!\nPassword: ${password}`);
-    }
-}
+function logout() { localStorage.removeItem('mima_session'); window.location.href='../index.html'; }
 
-async function deleteUserById(userId) {
-    if (confirm('Delete this user? This action cannot be undone.')) {
-        const success = await deleteUser(userId);
-        if (success) {
-            await loadUsers();
-            alert('User deleted successfully');
-        }
-    }
-}
+document.getElementById('menuBtn').onclick=e=>{e.stopPropagation();document.getElementById('dropdown').classList.toggle('hidden-dropdown');};
+document.addEventListener('click',()=>document.getElementById('dropdown').classList.add('hidden-dropdown'));
+document.getElementById('logoutBtn').onclick=e=>{e.preventDefault();logout();};
+document.getElementById('createBtn').onclick=openModal;
+document.getElementById('closeModal').onclick=closeModal;
+document.getElementById('saveUser').onclick=saveUser;
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, function(m) {
-        if (m === '&') return '&amp;';
-        if (m === '<') return '&lt;';
-        if (m === '>') return '&gt;';
-        return m;
-    });
-}
-
-function adminLogout() {
-    localStorage.removeItem('mima_admin_session');
-    window.location.href = '../index.html';
-}
-
-// ============ INITIALIZATION ============
-document.addEventListener('DOMContentLoaded', function() {
-    // Check admin session
-    if (!localStorage.getItem('mima_admin_session')) {
-        window.location.href = '../index.html';
-        return;
-    }
-    
-    // Load users
-    loadUsers();
-    
-    // Modal controls
-    document.getElementById('createBtn').onclick = openModal;
-    document.getElementById('closeModalBtn').onclick = closeModal;
-    document.getElementById('saveUserBtn').onclick = saveUser;
-    
-    // Close modal when clicking outside
-    document.getElementById('userModal').onclick = function(e) {
-        if (e.target === this) {
-            closeModal();
-        }
-    };
-    
-    // Dropdown menu
-    const menuBtn = document.getElementById('menuBtn');
-    const dropdown = document.getElementById('dropdown');
-    if (menuBtn) {
-        menuBtn.onclick = function(e) {
-            e.stopPropagation();
-            dropdown.classList.toggle('hidden-dropdown');
-        };
-        document.addEventListener('click', function() {
-            dropdown.classList.add('hidden-dropdown');
-        });
-    }
-    
-    // Logout
-    document.getElementById('logoutBtn').onclick = function(e) {
-        e.preventDefault();
-        adminLogout();
-    };
-});
-
-// Make delete function global for onclick
-window.deleteUserById = deleteUserById;
+loadUsers();
 </script>
 </body>
 </html>
