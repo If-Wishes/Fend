@@ -47,7 +47,7 @@
 
 <main class="max-w-7xl mx-auto px-4 py-8">
     
-    <!-- ==================== MY NUMBERS PAGE ==================== -->
+    <!-- MY NUMBERS PAGE -->
     <div id="allocationPage" class="page">
         <h1 class="text-2xl font-bold">📌 My Allocated Numbers</h1>
         <p class="text-gray-500 mb-4">Select a country to view your numbers</p>
@@ -71,98 +71,38 @@
         </div>
     </div>
 
-    <!-- ==================== TODAY'S OTP PAGE ==================== -->
+    <!-- TODAY'S OTP PAGE -->
     <div id="todayPage" class="page">
         <h1 class="text-2xl font-bold">📊 Today's OTP Statistics</h1>
         <p class="text-gray-500 mb-4">OTPs received today from your numbers</p>
-        
         <div class="bg-white rounded-2xl border overflow-hidden">
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left">Number (Last 3 digits)</th>
-                            <th class="px-6 py-3 text-left">Service</th>
-                            <th class="px-6 py-3 text-left">OTP Code</th>
-                            <th class="px-6 py-3 text-left">Time</th>
-                         </thead>
-                    <tbody id="todayTable" class="divide-y divide-gray-100"></tbody>
-                </table>
-            </div>
-            <div id="todayEmpty" class="text-center py-8 text-gray-400 hidden">No OTPs received today</div>
+            <table class="w-full"><thead class="bg-gray-50"><tr><th class="px-6 py-3">Number (Last 3 digits)</th><th class="px-6 py-3">Service</th><th class="px-6 py-3">Code</th><th class="px-6 py-3">Time</th> </thead><tbody id="todayTable"></tbody>追赶
+            <div id="todayEmpty" class="text-center py-8 text-gray-400 hidden">No OTPs today</div>
         </div>
     </div>
 
-    <!-- ==================== TOTAL OTP PAGE ==================== -->
+    <!-- TOTAL OTP PAGE -->
     <div id="totalPage" class="page">
         <h1 class="text-2xl font-bold">💰 Total OTP Earnings</h1>
         <p class="text-gray-500 mb-4">Today's OTP summary and earnings</p>
-        
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="stats-card bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6">
-                <p class="text-emerald-100 text-sm">Total OTP Today</p>
-                <p class="text-white text-4xl font-bold mt-1" id="totalCount">0</p>
-            </div>
-            <div class="stats-card bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-6">
-                <p class="text-amber-100 text-sm">Total Earnings</p>
-                <p class="text-white text-4xl font-bold mt-1" id="totalEarn">$0.00</p>
-                <p class="text-amber-100 text-sm mt-1">($0.005 per OTP)</p>
-            </div>
-        </div>
-        
-        <div class="mt-6 bg-gray-50 rounded-xl p-4 text-center text-sm text-gray-500">
-            <i class="fas fa-chart-line mr-2"></i> Keep requesting OTPs to increase your earnings!
-        </div>
+        <div class="grid grid-cols-2 gap-6"><div class="bg-emerald-600 rounded-2xl p-6"><p class="text-emerald-100">Total OTP Today</p><p class="text-white text-4xl font-bold" id="totalCount">0</p></div>
+        <div class="bg-amber-600 rounded-2xl p-6"><p class="text-amber-100">Earnings</p><p class="text-white text-4xl font-bold" id="totalEarn">$0.00</p><p class="text-amber-100 text-sm">$0.005/OTP</p></div></div>
     </div>
 
-    <!-- ==================== PAST RECORDS PAGE ==================== -->
+    <!-- PAST RECORDS PAGE -->
     <div id="pastPage" class="page">
-        <h1 class="text-2xl font-bold">📅 Past OTP Records</h1>
-        <p class="text-gray-500 mb-4">View OTP history by date range</p>
-        
-        <div class="bg-white rounded-2xl border p-6 mb-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                    <input type="date" id="startDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-                    <input type="date" id="endDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
-                </div>
-            </div>
-            <button id="fetchBtn" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl transition">Fetch Records</button>
-        </div>
-        
-        <div class="bg-white rounded-2xl border overflow-hidden">
-            <div class="p-4 border-b bg-gray-50 flex justify-between items-center">
-                <h3 class="font-semibold text-gray-800">OTP Records</h3>
-                <div class="text-sm">
-                    <span class="font-bold text-emerald-600" id="pastEarn">$0.00</span>
-                    <span class="text-gray-500 ml-2">total earnings</span>
-                </div>
-            </div>
-            <div class="overflow-x-auto">
-                <table class="w-full">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th class="px-4 py-2 text-left">Date</th>
-                            <th class="px-4 py-2 text-left">Service</th>
-                            <th class="px-4 py-2 text-left">OTP Code</th>
-                            <th class="px-4 py-2 text-left">Time</th>
-                         </thead>
-                    <tbody id="pastTable" class="divide-y divide-gray-100"></tbody>
-                </table>
-            </div>
-            <div id="pastEmpty" class="text-center py-8 text-gray-400 hidden">No records found</div>
-        </div>
+        <h1 class="text-2xl font-bold">📅 Past Records</h1>
+        <div class="grid grid-cols-2 gap-4 my-4"><input type="date" id="startDate" class="border rounded-xl px-4 py-2"><input type="date" id="endDate" class="border rounded-xl px-4 py-2"></div>
+        <button id="fetchBtn" class="bg-indigo-600 text-white px-6 py-2 rounded-xl mb-4">Fetch Records</button>
+        <div class="bg-white rounded-2xl border"><div class="p-3 border-b flex justify-between"><span class="font-semibold">Records</span><span id="pastEarn" class="text-emerald-600">$0.00</span></div>
+        <table class="w-full"><thead class="bg-gray-50"><tr><th class="px-4 py-2">Date</th><th class="px-4 py-2">Code</th><th class="px-4 py-2">Time</th> </thead><tbody id="pastTable"></tbody>追赶
+        <div id="pastEmpty" class="text-center py-8 text-gray-400 hidden">No records</div></div>
     </div>
 
-    <!-- ==================== PROFILE PAGE ==================== -->
+    <!-- PROFILE PAGE -->
     <div id="profilePage" class="page">
         <h1 class="text-2xl font-bold">👤 My Profile</h1>
         <p class="text-gray-500 mb-4">Your account information</p>
-        
         <div class="bg-white rounded-2xl border p-6 max-w-md">
             <div class="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
                 <div class="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
@@ -173,7 +113,6 @@
                     <p class="text-sm text-gray-500" id="profileRole">Member</p>
                 </div>
             </div>
-            
             <div class="space-y-4">
                 <div class="flex justify-between py-2 border-b border-gray-100">
                     <span class="text-gray-500">Username</span>
@@ -200,13 +139,19 @@
 const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
 const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
 
-// Check session
+// Check session - uses userId from localStorage
 const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
 if (!session || session.role !== 'user') {
     window.location.href = '../index.html';
 }
 
-let currentUser = { id: session.userId, username: session.username, email: session.email };
+// Current user - using userId from session
+let currentUser = { 
+    id: session.userId, 
+    username: session.username, 
+    email: session.email 
+};
+
 let userNumbers = [];
 let userOtps = [];
 
@@ -233,12 +178,16 @@ function copyToClipboard(text) {
     alert(`✅ Copied: ${text}`);
 }
 
-// ==================== LOAD USER NUMBERS ====================
+// ==================== LOAD USER NUMBERS USING USER ID ====================
 async function loadUserNumbers() {
+    console.log('Loading numbers for user ID:', currentUser.id);
+    
     const res = await fetch(`${SUPABASE_URL}/rest/v1/allocated_numbers?select=*&user_id=eq.${currentUser.id}`, {
         headers: { 'apikey': API_KEY }
     });
     userNumbers = await res.json();
+    
+    console.log('Numbers found:', userNumbers.length);
     
     const countries = [...new Set(userNumbers.map(n => n.country))];
     const filterSelect = document.getElementById('countryFilter');
@@ -296,7 +245,7 @@ function displayNumbersByCountry(country) {
     container.innerHTML = html;
 }
 
-// ==================== LOAD OTPS ====================
+// ==================== LOAD OTPS USING USER'S NUMBER LAST3 ====================
 async function loadUserOtps() {
     const last3List = userNumbers.map(n => n.last3);
     if (last3List.length === 0) {
@@ -330,7 +279,7 @@ function renderTodayOtps() {
             <td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}Js
             <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}Js
             <td class="px-6 py-3 text-gray-500 text-sm">${o.time || new Date(o.message_time).toLocaleTimeString()}Js
-        </tr>
+        </table>
     `).join('');
 }
 
@@ -374,7 +323,6 @@ function fetchPastRecords() {
 
 // ==================== LOAD PROFILE ====================
 async function loadProfile() {
-    // Get full user details from database
     const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&id=eq.${currentUser.id}`, {
         headers: { 'apikey': API_KEY }
     });
@@ -458,6 +406,7 @@ document.querySelectorAll('.dropdown-item').forEach(item => {
 
 window.copyToClipboard = copyToClipboard;
 
+// Load everything
 refreshAll();
 switchPage('allocation');
 </script>
