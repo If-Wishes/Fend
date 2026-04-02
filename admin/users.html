@@ -6,12 +6,7 @@
     <title>MIMA Panel | Users</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 50; }
-        .modal.active { display: flex; }
-        .hidden-dropdown { display: none; }
-    </style>
+    <style>.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);align-items:center;justify-content:center;z-index:50;}.modal.active{display:flex;}.hidden-dropdown{display:none;}</style>
 </head>
 <body class="bg-gray-50">
 
@@ -48,24 +43,36 @@
 
 <div id="modal" class="modal"><div class="bg-white rounded-2xl p-6 w-96"><h3 class="text-xl font-bold mb-4">Create User</h3><input type="text" id="username" placeholder="Username" class="w-full border rounded-xl px-4 py-2 mb-3"><input type="email" id="email" placeholder="Email" class="w-full border rounded-xl px-4 py-2 mb-3"><input type="password" id="password" placeholder="Password" class="w-full border rounded-xl px-4 py-2 mb-3"><select id="role" class="w-full border rounded-xl px-4 py-2 mb-3"><option value="user">User</option><option value="admin">Admin</option></select><div class="flex gap-3"><button id="closeModal" class="px-4 py-2 border rounded-xl">Cancel</button><button id="saveUser" class="px-4 py-2 bg-indigo-600 text-white rounded-xl">Save</button></div></div></div>
 
-<script src="../js/supabase.js"></script>
 <script>
+const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
+const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
+
 const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
 if (!session || session.role !== 'admin') window.location.href = '../index.html';
 document.getElementById('adminName').innerText = session.username;
 
 async function loadUsers() {
-    const users = await getUsers();
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&order=created_at.desc`, { headers: { 'apikey': API_KEY } });
+    const users = await res.json();
     document.getElementById('usersList').innerHTML = users.map(u => `
-        <tr class="border-b"><td class="px-6 py-3">${escapeHtml(u.username)}Js<td class="px-6 py-3">${escapeHtml(u.email)}Js<td><span class="px-2 py-1 rounded-full text-xs ${u.role==='admin'?'bg-red-100 text-red-700':'bg-blue-100 text-blue-700'}">${u.role||'user'}</span>Js<td class="text-xs">${u.created_at?.slice(0,10)||'—'}Js<td class="text-center"><button onclick="deleteUser('${u.id}')" class="text-red-500"><i class="fas fa-trash"></i></button>Js</td>`).join('');
+        <tr class="border-b"><td class="px-6 py-3">${escapeHtml(u.username)}Js<td class="px-6 py-3">${escapeHtml(u.email)}Js<td class="px-6 py-3"><span class="px-2 py-1 rounded-full text-xs ${u.role==='admin'?'bg-red-100 text-red-700':'bg-blue-100 text-blue-700'}">${u.role}</span>Js<td class="text-xs">${u.created_at?.slice(0,10)||'—'}Js<td class="text-center"><button onclick="deleteUser('${u.id}')" class="text-red-500"><i class="fas fa-trash"></i></button>Js</td>`).join('');
 }
 
-async function deleteUser(id) { if(confirm('Delete user?')) { await deleteUser(id); loadUsers(); } }
+async function deleteUser(id) { if(confirm('Delete this user?')) { await fetch(`${SUPABASE_URL}/rest/v1/users?id=eq.${id}`, { method: 'DELETE', headers: { 'apikey': API_KEY } }); loadUsers(); } }
 
-function openModal() { const m=document.getElementById('modal'); m.classList.add('active'); document.getElementById('username').value=''; document.getElementById('email').value=''; document.getElementById('password').value=''; document.getElementById('role').value='user'; }
+async function createUser(username, email, password, role) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users`, {
+        method: 'POST', headers: { 'apikey': API_KEY, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password, role })
+    });
+    return res.ok;
+}
+
+function openModal() { document.getElementById('modal').classList.add('active'); document.getElementById('username').value=''; document.getElementById('email').value=''; document.getElementById('password').value=''; document.getElementById('role').value='user'; }
 function closeModal() { document.getElementById('modal').classList.remove('active'); }
-async function saveUser() { const u=document.getElementById('username').value.trim(), e=document.getElementById('email').value.trim(), p=document.getElementById('password').value, r=document.getElementById('role').value; if(!u||!e||!p){alert('All fields required');return;} const result=await createUser(u,e,p,r); if(result){closeModal();loadUsers();alert(`User "${u}" created! Password: ${p}`);} }
+async function saveUser() { const u=document.getElementById('username').value.trim(), e=document.getElementById('email').value.trim(), p=document.getElementById('password').value, r=document.getElementById('role').value; if(!u||!e||!p){alert('All fields required');return;} const ok=await createUser(u,e,p,r); if(ok){closeModal();loadUsers();alert(`User "${u}" created! Password: ${p}`);} else alert('Error creating user'); }
 
+function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]||m)); }
 function logout() { localStorage.removeItem('mima_session'); window.location.href='../index.html'; }
 
 document.getElementById('menuBtn').onclick=e=>{e.stopPropagation();document.getElementById('dropdown').classList.toggle('hidden-dropdown');};
