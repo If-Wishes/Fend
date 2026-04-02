@@ -6,6 +6,7 @@
     <title>MIMA Panel | Login</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Inter', system-ui, sans-serif; }
@@ -61,36 +62,39 @@
     </div>
 
     <div class="mt-6 pt-4 border-t text-center text-xs text-gray-400">
-        Admin: admin / admin123
+        Admin: admin / admin123 | Users stored in Supabase
     </div>
 </div>
 
+<script src="js/supabase.js"></script>
 <script>
-// Simple hardcoded login - no Supabase needed
-function adminLogin(username, password) {
-    if (username === 'admin' && password === 'admin123') {
-        localStorage.setItem('mima_session', JSON.stringify({
-            username: 'admin',
-            role: 'admin'
-        }));
-        return { success: true };
+async function login(username, password, role) {
+    try {
+        const { data, error } = await supabase
+            .from('users')
+            .select('id, username, email, role')
+            .eq('username', username)
+            .eq('password', password)
+            .single();
+        
+        if (data) {
+            if (data.role !== role) {
+                return { success: false, message: `This account is not a ${role}` };
+            }
+            localStorage.setItem('mima_session', JSON.stringify({
+                userId: data.id,
+                username: data.username,
+                email: data.email,
+                role: data.role
+            }));
+            return { success: true };
+        }
+        return { success: false, message: 'Invalid credentials' };
+    } catch (error) {
+        return { success: false, message: 'Login failed' };
     }
-    return { success: false };
 }
 
-function userLogin(username, password) {
-    // Demo user for testing
-    if (username === 'demo' && password === 'demo123') {
-        localStorage.setItem('mima_session', JSON.stringify({
-            username: 'demo',
-            role: 'user'
-        }));
-        return { success: true };
-    }
-    return { success: false };
-}
-
-// Role selection
 document.getElementById('adminRoleCard').onclick = () => {
     document.getElementById('adminRoleCard').classList.add('active');
     document.getElementById('userRoleCard').classList.remove('active');
@@ -104,33 +108,44 @@ document.getElementById('userRoleCard').onclick = () => {
     document.getElementById('adminLoginForm').classList.add('hidden-panel');
 };
 
-// Admin login
-document.getElementById('adminLogin').onsubmit = (e) => {
+document.getElementById('adminLogin').onsubmit = async (e) => {
     e.preventDefault();
-    const username = document.getElementById('adminUsername').value;
-    const password = document.getElementById('adminPassword').value;
-    const result = adminLogin(username, password);
+    const loading = document.getElementById('adminLoading');
+    const form = document.getElementById('adminLogin');
+    loading.classList.add('active');
+    form.style.opacity = '0.5';
+    
+    const result = await login(document.getElementById('adminUsername').value, document.getElementById('adminPassword').value, 'admin');
+    
+    loading.classList.remove('active');
+    form.style.opacity = '1';
+    
     if (result.success) {
         window.location.href = 'admin/dashboard.html';
     } else {
-        alert('Invalid admin credentials. Use: admin / admin123');
+        alert(result.message || 'Invalid admin credentials');
     }
 };
 
-// User login
-document.getElementById('userLogin').onsubmit = (e) => {
+document.getElementById('userLogin').onsubmit = async (e) => {
     e.preventDefault();
-    const username = document.getElementById('userUsername').value;
-    const password = document.getElementById('userPassword').value;
-    const result = userLogin(username, password);
+    const loading = document.getElementById('userLoading');
+    const form = document.getElementById('userLogin');
+    loading.classList.add('active');
+    form.style.opacity = '0.5';
+    
+    const result = await login(document.getElementById('userUsername').value, document.getElementById('userPassword').value, 'user');
+    
+    loading.classList.remove('active');
+    form.style.opacity = '1';
+    
     if (result.success) {
         window.location.href = 'user/dashboard.html';
     } else {
-        alert('Invalid user credentials. Use: demo / demo123');
+        alert(result.message || 'Invalid user credentials');
     }
 };
 
-// Check existing session
 const session = localStorage.getItem('mima_session');
 if (session) {
     try {
