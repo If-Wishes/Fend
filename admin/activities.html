@@ -6,7 +6,6 @@
     <title>MIMA Panel | User Activities</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>.hidden-dropdown{display:none;}</style>
 </head>
 <body class="bg-gray-50">
@@ -58,37 +57,47 @@
     </div>
 </main>
 
-<script src="../js/supabase.js"></script>
 <script>
+const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
+const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
+
 const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
 if (!session || session.role !== 'admin') window.location.href = '../index.html';
 document.getElementById('adminName').innerText = session.username;
 
+function getTodayStr() { return new Date().toISOString().slice(0, 10); }
+
 async function loadActivities() {
     const filterDate = document.getElementById('filterDate').value || getTodayStr();
-    const users = await getUsers();
-    const allNumbers = await getAllNumbers();
-    const { data: allOtps } = await supabase.from('otp_logs').select('*').gte('created_at', filterDate).lte('created_at', filterDate + ' 23:59:59');
     
-    let totalOtps = 0;
-    let totalEarnings = 0;
-    let activeCount = 0;
+    // Get all users
+    const usersRes = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id,username,email`, { headers: { 'apikey': API_KEY } });
+    const users = await usersRes.json();
     
+    // Get all numbers
+    const numsRes = await fetch(`${SUPABASE_URL}/rest/v1/user_numbers?select=*`, { headers: { 'apikey': API_KEY } });
+    const numbers = await numsRes.json();
+    
+    // Get OTPs for selected date
+    const otpsRes = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=*,date=eq.${filterDate}`, { headers: { 'apikey': API_KEY } });
+    const otps = await otpsRes.json();
+    
+    let totalOtps = 0, totalEarnings = 0, activeCount = 0;
     const rows = [];
-    for(const user of users) {
-        const userNumbers = allNumbers.filter(n => n.user_id === user.id);
-        const numbersCount = userNumbers.length;
+    
+    for (const user of users) {
+        const userNumbers = numbers.filter(n => n.user_id === user.id);
         const userLast3 = userNumbers.map(n => n.last3);
-        const userOtps = allOtps?.filter(o => userLast3.includes(o.phone_last3)) || [];
+        const userOtps = otps.filter(o => userLast3.includes(o.phone_last3));
         const otpCount = userOtps.length;
         const earnings = otpCount * 0.005;
-        const lastOtp = userOtps.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))[0];
+        const lastOtp = userOtps.sort((a,b)=>new Date(b.message_time)-new Date(a.message_time))[0];
         
         totalOtps += otpCount;
         totalEarnings += earnings;
-        if(otpCount > 0) activeCount++;
+        if (otpCount > 0) activeCount++;
         
-        rows.push(`<tr class="border-b"><td class="px-6 py-3 font-medium">${escapeHtml(user.username)}Js<td class="px-6 py-3">${escapeHtml(user.email)}Js<td class="px-6 py-3 text-center">${numbersCount}Js<td class="px-6 py-3 text-center font-bold text-emerald-600">${otpCount}Js<td class="px-6 py-3 text-center">$${earnings.toFixed(2)}Js<td class="px-6 py-3 text-center text-xs">${lastOtp ? new Date(lastOtp.created_at).toLocaleTimeString() : '—'}Js</tr>`);
+        rows.push(`<tr class="border-b"><td class="px-6 py-3 font-medium">${escapeHtml(user.username)}Js<td class="px-6 py-3">${escapeHtml(user.email)}Js<td class="px-6 py-3 text-center">${userNumbers.length}Js<td class="px-6 py-3 text-center font-bold text-emerald-600">${otpCount}Js<td class="px-6 py-3 text-center">$${earnings.toFixed(2)}Js<td class="px-6 py-3 text-center text-xs">${lastOtp ? new Date(lastOtp.message_time).toLocaleTimeString() : '—'}Js</tr>`);
     }
     
     document.getElementById('totalOtps').textContent = totalOtps;
@@ -100,11 +109,12 @@ async function loadActivities() {
 
 function setToday() { document.getElementById('filterDate').value = getTodayStr(); loadActivities(); }
 
+function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]||m)); }
+function logout() { localStorage.removeItem('mima_session'); window.location.href = '../index.html'; }
+
 document.getElementById('applyFilter').onclick = loadActivities;
 document.getElementById('todayBtn').onclick = setToday;
 document.getElementById('filterDate').value = getTodayStr();
-
-function logout() { localStorage.removeItem('mima_session'); window.location.href = '../index.html'; }
 
 document.getElementById('menuBtn').onclick = e => { e.stopPropagation(); document.getElementById('dropdown').classList.toggle('hidden-dropdown'); };
 document.addEventListener('click', () => document.getElementById('dropdown').classList.add('hidden-dropdown'));
