@@ -6,7 +6,11 @@
     <title>MIMA Panel | User Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>.page{display:none;}.page.active-page{display:block;}.hidden-dropdown{display:none;}</style>
+    <style>
+        .page { display: none; }
+        .page.active-page { display: block; }
+        .hidden-dropdown { display: none; }
+    </style>
 </head>
 <body class="bg-gray-50">
 
@@ -38,26 +42,62 @@
 </nav>
 
 <main class="max-w-7xl mx-auto px-4 py-8">
-    <div id="allocationPage" class="page"><h1 class="text-2xl font-bold">📌 Number Allocation</h1><select id="countrySelect" class="w-full md:w-64 border rounded-xl px-4 py-2 my-4"><option value="">-- Select Country --</option></select><div id="numbersDisplay" class="bg-white rounded-2xl border p-6 text-center text-gray-400">Select a country</div></div>
-    <div id="todayPage" class="page"><h1 class="text-2xl font-bold">📊 Today's OTP</h1><div class="bg-white rounded-2xl border mt-4"><table class="w-full"><thead class="bg-gray-50"><tr><th class="px-6 py-3">Number</th><th class="px-6 py-3">Code</th><th class="px-6 py-3">Time</th> </thead><tbody id="todayTable"></tbody>追赶<div id="todayEmpty" class="text-center py-8 text-gray-400 hidden">No OTPs today</div></div></div>
-    <div id="totalPage" class="page"><h1 class="text-2xl font-bold">💰 Total OTP</h1><div class="grid grid-cols-2 gap-6 mt-4"><div class="bg-emerald-600 rounded-2xl p-6"><p class="text-emerald-100">Total OTP Today</p><p class="text-white text-4xl font-bold" id="totalCount">0</p></div><div class="bg-amber-600 rounded-2xl p-6"><p class="text-amber-100">Earnings</p><p class="text-white text-4xl font-bold" id="totalEarn">$0.00</p><p class="text-amber-100 text-sm">$0.005/OTP</p></div></div></div>
-    <div id="pastPage" class="page"><h1 class="text-2xl font-bold">📅 Past Records</h1><div class="grid grid-cols-2 gap-4 my-4"><input type="date" id="startDate" class="border rounded-xl px-4 py-2"><input type="date" id="endDate" class="border rounded-xl px-4 py-2"></div><button id="fetchBtn" class="bg-indigo-600 text-white px-6 py-2 rounded-xl mb-4">Fetch</button><div class="bg-white rounded-2xl border"><div class="p-3 border-b flex justify-between"><span class="font-semibold">Records</span><span id="pastEarn" class="text-emerald-600">$0.00</span></div><table class="w-full"><thead class="bg-gray-50"><tr><th class="px-4 py-2">Date</th><th class="px-4 py-2">Code</th><th class="px-4 py-2">Time</th> </thead><tbody id="pastTable"></tbody>追赶<div id="pastEmpty" class="text-center py-8 text-gray-400 hidden">No records</div></div></div>
-    <div id="profilePage" class="page"><h1 class="text-2xl font-bold">👤 My Profile</h1><div class="bg-white rounded-2xl border p-6 max-w-md mt-4"><div class="space-y-4"><div class="flex justify-between"><span class="text-gray-500">Username</span><span class="font-medium" id="profileUsername">-</span></div><div class="flex justify-between"><span class="text-gray-500">Email</span><span class="font-medium" id="profileEmail">-</span></div><div class="flex justify-between"><span class="text-gray-500">Member Since</span><span id="profileCreated">-</span></div></div></div></div>
+    <div id="allocationPage" class="page">
+        <h1 class="text-2xl font-bold">📌 Number Allocation</h1>
+        <p class="text-gray-500 mb-4">Select a country to view your numbers</p>
+        <select id="countrySelect" class="w-full md:w-64 border rounded-xl px-4 py-2 bg-gray-50 mb-4"><option value="">-- Select Country --</option></select>
+        <div id="numbersDisplay" class="bg-white rounded-2xl border p-6 text-center text-gray-400">Select a country</div>
+    </div>
+
+    <div id="todayPage" class="page">
+        <h1 class="text-2xl font-bold">📊 Today's OTP Statistics</h1>
+        <p class="text-gray-500 mb-4">OTP received today from your numbers</p>
+        <div class="bg-white rounded-2xl border overflow-hidden">
+            <table class="w-full"><thead class="bg-gray-50"><tr><th class="px-6 py-3">Number</th><th class="px-6 py-3">Code</th><th class="px-6 py-3">Time</th> </thead><tbody id="todayTable"></tbody>追赶
+            <div id="todayEmpty" class="text-center py-8 text-gray-400 hidden">No OTPs today</div>
+        </div>
+    </div>
+
+    <div id="totalPage" class="page">
+        <h1 class="text-2xl font-bold">💰 Total OTP Earnings</h1>
+        <p class="text-gray-500 mb-4">Today's OTP summary and earnings</p>
+        <div class="grid grid-cols-2 gap-6"><div class="bg-emerald-600 rounded-2xl p-6"><p class="text-emerald-100">Total OTP Today</p><p class="text-white text-4xl font-bold" id="totalCount">0</p></div>
+        <div class="bg-amber-600 rounded-2xl p-6"><p class="text-amber-100">Earnings</p><p class="text-white text-4xl font-bold" id="totalEarn">$0.00</p><p class="text-amber-100 text-sm">$0.005/OTP</p></div></div>
+    </div>
+
+    <div id="pastPage" class="page">
+        <h1 class="text-2xl font-bold">📅 Past Records</h1>
+        <div class="grid grid-cols-2 gap-4 my-4"><input type="date" id="startDate" class="border rounded-xl px-4 py-2"><input type="date" id="endDate" class="border rounded-xl px-4 py-2"></div>
+        <button id="fetchBtn" class="bg-indigo-600 text-white px-6 py-2 rounded-xl mb-4">Fetch Records</button>
+        <div class="bg-white rounded-2xl border"><div class="p-3 border-b flex justify-between"><span class="font-semibold">Records</span><span id="pastEarn" class="text-emerald-600">$0.00</span></div>
+        <table class="w-full"><thead class="bg-gray-50"><tr><th class="px-4 py-2">Date</th><th class="px-4 py-2">Code</th><th class="px-4 py-2">Time</th> </thead><tbody id="pastTable"></tbody>追赶
+        <div id="pastEmpty" class="text-center py-8 text-gray-400 hidden">No records</div></div>
+    </div>
+
+    <div id="profilePage" class="page">
+        <h1 class="text-2xl font-bold">👤 My Profile</h1>
+        <div class="bg-white rounded-2xl border p-6 max-w-md mt-4"><div class="space-y-4"><div class="flex justify-between"><span class="text-gray-500">Username</span><span class="font-medium" id="profileUsername">-</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">Email</span><span class="font-medium" id="profileEmail">-</span></div>
+        <div class="flex justify-between"><span class="text-gray-500">Member Since</span><span id="profileCreated">-</span></div></div></div>
+    </div>
 </main>
 
 <script>
 const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
 const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
 
+// Check session
 const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
 if (!session || session.role !== 'user') window.location.href = '../index.html';
 
-let currentUser = { id: session.userId, username: session.username };
-let userNumbers = [], userOtps = [];
+let currentUser = { id: session.userId, username: session.username, email: session.email };
+let userNumbers = [];
+let userOtps = [];
+
+function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]||m)); }
+function getTodayStr() { return new Date().toISOString().slice(0, 10); }
 
 function getCountryFlag(c) { const f={Jordan:'🇯🇴',Tajikistan:'🇹🇯',Nigeria:'🇳🇬',Myanmar:'🇲🇲',Hungary:'🇭🇺',Slovenia:'🇸🇮',Venezuela:'🇻🇪',Uzbekistan:'🇺🇿'}; return f[c]||'🌍'; }
-function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]||m)); }
-function getTodayStr() { return new Date().toISOString().slice(0, 10); }
 
 async function loadUserNumbers() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/user_numbers?select=*&user_id=eq.${currentUser.id}`, { headers: { 'apikey': API_KEY } });
@@ -90,7 +130,7 @@ function renderToday() {
     const empty = document.getElementById('todayEmpty');
     if(todayOtps.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
     empty.classList.add('hidden');
-    tbody.innerHTML = todayOtps.map(o => `<tr class="border-b"><td class="px-6 py-3 font-mono">***${o.phone_last3}Js<td class="font-bold text-emerald-600">${o.otp}Js<td class="text-gray-500">${new Date(o.message_time).toLocaleTimeString()}Js</tr>`).join('');
+    tbody.innerHTML = todayOtps.map(o => `<tr class="border-b"><td class="px-6 py-3 font-mono">***${o.phone_last3}Js<td class="font-bold text-emerald-600">${o.otp}Js<td class="text-gray-500">${o.time}Js</tr>`).join('');
 }
 
 function updateTotal() {
@@ -111,13 +151,17 @@ function fetchPast() {
     if(filtered.length === 0) { tbody.innerHTML = ''; empty.classList.remove('hidden'); earnSpan.textContent = '$0.00'; return; }
     empty.classList.add('hidden');
     earnSpan.textContent = `$${(filtered.length*0.005).toFixed(2)}`;
-    tbody.innerHTML = filtered.map(o => `<tr class="border-b"><td class="px-4 py-2 text-xs">${o.date}Js<td class="font-bold text-emerald-600">${o.otp}Js<td class="text-gray-500">${new Date(o.message_time).toLocaleTimeString()}Js</tr>`).join('');
+    tbody.innerHTML = filtered.map(o => `<tr class="border-b"><td class="px-4 py-2 text-xs">${o.date}Js<td class="font-bold text-emerald-600">${o.otp}Js<td class="text-gray-500">${o.time}Js<tr>`).join('');
 }
 
-function loadProfile() {
-    document.getElementById('profileUsername').innerText = currentUser.username;
-    document.getElementById('profileEmail').innerText = currentUser.email;
-    document.getElementById('profileCreated').innerText = new Date().toISOString().slice(0,10);
+async function loadProfile() {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=username,email,created_at&id=eq.${currentUser.id}`, { headers: { 'apikey': API_KEY } });
+    const user = await res.json();
+    if(user && user[0]) {
+        document.getElementById('profileUsername').innerText = user[0].username;
+        document.getElementById('profileEmail').innerText = user[0].email;
+        document.getElementById('profileCreated').innerText = user[0].created_at?.slice(0,10) || getTodayStr();
+    }
 }
 
 function switchPage(p) {
