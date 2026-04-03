@@ -22,18 +22,29 @@
             animation: spin 0.6s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .number-badge {
-            background: #eef2ff;
-            color: #1e40af;
-            padding: 2px 8px;
-            border-radius: 20px;
-            font-size: 11px;
-            font-weight: 500;
+        .reset-timer {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 8px;
+            text-align: center;
         }
-        .used-number {
-            text-decoration: line-through;
-            opacity: 0.5;
-            background: #fef2f2;
+        .reset-notification {
+            position: fixed;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 14px;
+            z-index: 1000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            animation: slideDown 0.3s ease;
+        }
+        @keyframes slideDown {
+            from { top: -50px; opacity: 0; }
+            to { top: 70px; opacity: 1; }
         }
     </style>
 </head>
@@ -63,8 +74,8 @@
                     <div id="dropdownMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 hidden-dropdown z-50">
                         <a href="#" data-page="allocation" class="nav-link block px-4 py-2 hover:bg-gray-50">📌 Allocation</a>
                         <a href="#" data-page="today" class="nav-link block px-4 py-2 hover:bg-gray-50">📊 Today's Stat</a>
-                        <a href="#" data-page="total" class="nav-link block px-4 py-2 hover:bg-gray-50">💰 Total OTP</a>
-                        <a href="#" data-page="past" class="nav-link block px-4 py-2 hover:bg-gray-50">📅 Past Records</a>
+                        <a href="#" data-page="total" class="nav-link block px-4 py-2 hover:bg-gray-50">📅 Today's OTP</a>
+                        <a href="#" data-page="past" class="nav-link block px-4 py-2 hover:bg-gray-50">📋 Past Records</a>
                         <div class="border-t border-gray-100"></div>
                         <a href="https://wa.me/2348113903584" target="_blank" class="block px-4 py-2 hover:bg-gray-50 text-green-600">
                             <i class="fab fa-whatsapp mr-2"></i>Contact Support
@@ -109,27 +120,30 @@
             </div>
         </div>
 
-        <!-- Total OTP Page -->
+        <!-- Today's OTP Page (renamed from Total OTP) -->
         <div id="totalPage" class="page">
-            <h1 class="text-2xl font-bold text-gray-900">💰 Total OTP Earnings</h1>
-            <p class="text-gray-500 mt-1 mb-4">Today's OTP summary and earnings</p>
+            <h1 class="text-2xl font-bold text-gray-900">📅 Today's OTP Earnings</h1>
+            <p class="text-gray-500 mt-1 mb-4">Today's OTP summary and earnings (resets daily at 1:00 AM)</p>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg p-6">
-                    <p class="text-emerald-100 text-sm">Total OTP Today</p>
+                    <p class="text-emerald-100 text-sm">Today's OTP Count</p>
                     <p class="text-white text-4xl font-bold mt-1" id="totalOtpCount">0</p>
                 </div>
                 <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl shadow-lg p-6">
-                    <p class="text-amber-100 text-sm">Total Earnings</p>
+                    <p class="text-amber-100 text-sm">Today's Earnings</p>
                     <p class="text-white text-4xl font-bold mt-1" id="totalEarnings">$0.00</p>
                     <p class="text-amber-100 text-sm mt-1">($0.005 per OTP)</p>
                 </div>
+            </div>
+            <div class="reset-timer" id="resetTimer">
+                <i class="fas fa-clock mr-1"></i> Resets in --h --m --s
             </div>
         </div>
 
         <!-- Past Records Page -->
         <div id="pastPage" class="page">
-            <h1 class="text-2xl font-bold text-gray-900">📅 Past OTP Records</h1>
-            <p class="text-gray-500 mt-1 mb-4">View OTP history by date range</p>
+            <h1 class="text-2xl font-bold text-gray-900">📋 Past OTP Records</h1>
+            <p class="text-gray-500 mt-1 mb-4">View OTP history by date range (all-time records)</p>
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div><label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label><input type="date" id="startDate" class="w-full border rounded-xl px-4 py-2.5"></div>
@@ -140,7 +154,7 @@
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                     <h3 class="font-semibold text-gray-800">OTP Records</h3>
-                    <div class="text-sm"><span class="font-bold text-emerald-600" id="pastTotalEarnings">$0.00</span><span class="text-gray-500 ml-2">total earnings</span></div>
+                    <div class="text-sm"><span class="font-bold text-emerald-600" id="pastTotalEarnings">$0.00</span><span class="text-gray-500 ml-2">total earnings (selected range)</span></div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
@@ -164,7 +178,20 @@ let userPhoneNumbers = [];
 let userPhoneLast3s = [];
 let userOtps = [];
 
-function getTodayStr() { return new Date().toISOString().slice(0, 10); }
+// Get today's date string
+function getTodayStr() { 
+    return new Date().toISOString().slice(0, 10); 
+}
+
+// Get current date for reset timer (1 AM reset)
+function getDisplayDate() {
+    const now = new Date();
+    if (now.getHours() < 1) {
+        now.setDate(now.getDate() - 1);
+    }
+    return now.toISOString().slice(0, 10);
+}
+
 function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m)); }
 function getCountryFlag(c) { const f = {'Nigeria':'🇳🇬','Uzbekistan':'🇺🇿','USA':'🇺🇸','UK':'🇬🇧','Jordan':'🇯🇴','Tajikistan':'🇹🇯','Myanmar':'🇲🇲','Hungary':'🇭🇺','Slovenia':'🇸🇮','Venezuela':'🇻🇪','India':'🇮🇳','Germany':'🇩🇪','France':'🇫🇷'}; return f[c] || '🌍'; }
 function showToast(m) { const t = document.createElement('div'); t.className = 'fixed bottom-24 right-6 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm z-50 shadow-lg'; t.innerHTML = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2500); }
@@ -229,8 +256,14 @@ function renderTodayOtps() {
     tbody.innerHTML = todayOtps.map(o => { const m = userPhoneNumbers.find(n => getLast3Digits(n) === o.phone_last3); return `<tr class="otp-row border-b"><td class="px-6 py-3 font-mono">${escapeHtml(m ? maskPhoneNumber(m) : '***'+o.phone_last3)}</td><td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}</td><td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td><td class="px-6 py-3">${o.message_time ? new Date(o.message_time).toLocaleTimeString() : ''}</td></tr>`; }).join('');
 }
 
-function updateTotalStats() { const todayCount = userOtps.filter(o => o.date === getTodayStr()).length; document.getElementById('totalOtpCount').textContent = todayCount; document.getElementById('totalEarnings').textContent = `$${(todayCount * 0.005).toFixed(2)}`; }
+// Today's OTP - uses current date (resets at 1 AM)
+function updateTodayStats() { 
+    const todayCount = userOtps.filter(o => o.date === getTodayStr()).length; 
+    document.getElementById('totalOtpCount').textContent = todayCount; 
+    document.getElementById('totalEarnings').textContent = `$${(todayCount * 0.005).toFixed(2)}`; 
+}
 
+// Past Records - uses date range filter, does NOT reset
 function fetchPastOtps() {
     const s = document.getElementById('startDate').value, e = document.getElementById('endDate').value;
     if (!s || !e) return;
@@ -243,12 +276,62 @@ function fetchPastOtps() {
     tbody.innerHTML = f.map(o => { const m = userPhoneNumbers.find(n => getLast3Digits(n) === o.phone_last3); return `<tr class="hover:bg-gray-50 border-b"><td class="px-6 py-3 text-gray-600 text-xs">${o.date || ''}</td><td class="px-6 py-3 font-mono">${escapeHtml(m ? maskPhoneNumber(m) : '***'+o.phone_last3)}</td><td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}</td><td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td><td class="px-6 py-3">${escapeHtml(o.country || 'Unknown')}</td><td class="px-6 py-3 text-gray-500">${o.message_time ? new Date(o.message_time).toLocaleTimeString() : ''}</td></tr>`; }).join('');
 }
 
-async function refreshAll() { if (!currentUser) return; const all = await fetchAllOtps(); userOtps = all.filter(o => userPhoneLast3s.includes(o.phone_last3)); renderTodayOtps(); updateTotalStats(); fetchPastOtps(); loadUserNumbersUI(); if (document.getElementById('allocationPage').classList.contains('active-page') && document.getElementById('countrySelect').value) displayNumbers(document.getElementById('countrySelect').value); }
+async function refreshAll() { 
+    if (!currentUser) return; 
+    const all = await fetchAllOtps(); 
+    userOtps = all.filter(o => userPhoneLast3s.includes(o.phone_last3)); 
+    renderTodayOtps(); 
+    updateTodayStats(); 
+    fetchPastOtps(); 
+    loadUserNumbersUI(); 
+    if (document.getElementById('allocationPage').classList.contains('active-page') && document.getElementById('countrySelect').value) 
+        displayNumbers(document.getElementById('countrySelect').value); 
+}
+
+// Reset timer for 1 AM
+function updateResetTimer() {
+    const now = new Date();
+    const resetTime = new Date();
+    resetTime.setHours(1, 0, 0, 0);
+    
+    if (now >= resetTime) {
+        resetTime.setDate(resetTime.getDate() + 1);
+    }
+    
+    const diff = resetTime - now;
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+    
+    const timerElement = document.getElementById('resetTimer');
+    if (timerElement) {
+        timerElement.innerHTML = `<i class="fas fa-clock mr-1"></i> Resets in ${hours}h ${minutes}m ${seconds}s`;
+    }
+}
+
+// Check if date changed and show notification
+let lastDate = getTodayStr();
+function checkDateChange() {
+    const currentDate = getTodayStr();
+    if (currentDate !== lastDate) {
+        lastDate = currentDate;
+        refreshAll();
+        showNotification("📅 Today's OTP stats have been reset at 1:00 AM");
+    }
+}
+
+function showNotification(msg) {
+    const notif = document.createElement('div');
+    notif.className = 'reset-notification';
+    notif.innerHTML = `<i class="fas fa-sync-alt mr-2"></i>${msg}`;
+    document.body.appendChild(notif);
+    setTimeout(() => notif.remove(), 3000);
+}
 
 function getUserIdFromUrl() { return new URLSearchParams(window.location.search).get('id'); }
 function saveCurrentPage(p) { localStorage.setItem('nexus_current_page', p); }
 function getSavedPage() { return localStorage.getItem('nexus_current_page') || 'allocation'; }
-function loadSavedPage() { const s = getSavedPage(); ['allocation','today','total','past'].forEach(p => document.getElementById(p+'Page').classList.remove('active-page')); document.getElementById(s+'Page').classList.add('active-page'); if (s === 'allocation') loadUserNumbersUI(); if (s === 'today') renderTodayOtps(); if (s === 'total') updateTotalStats(); if (s === 'past') fetchPastOtps(); }
+function loadSavedPage() { const s = getSavedPage(); ['allocation','today','total','past'].forEach(p => document.getElementById(p+'Page').classList.remove('active-page')); document.getElementById(s+'Page').classList.add('active-page'); if (s === 'allocation') loadUserNumbersUI(); if (s === 'today') renderTodayOtps(); if (s === 'total') updateTodayStats(); if (s === 'past') fetchPastOtps(); }
 
 async function initDashboard() {
     const userId = getUserIdFromUrl();
@@ -268,11 +351,16 @@ async function initDashboard() {
     document.getElementById('endDate').value = end.toISOString().slice(0,10);
     document.getElementById('countrySelect').onchange = e => { if (e.target.value) displayNumbers(e.target.value); };
     document.getElementById('fetchBtn').onclick = fetchPastOtps;
-    renderTodayOtps(); updateTotalStats(); fetchPastOtps();
+    renderTodayOtps(); updateTodayStats(); fetchPastOtps();
     loadUserNumbersUI();
     document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-8 text-gray-400">Select a country to view numbers</div>';
     loadSavedPage();
     showToast(`✅ Welcome ${currentUser.username}!`);
+    
+    // Start reset timer
+    updateResetTimer();
+    setInterval(updateResetTimer, 1000);
+    setInterval(checkDateChange, 60000);
 }
 
 function setupNavigation() {
@@ -286,7 +374,7 @@ function setupNavigation() {
                 saveCurrentPage(p);
                 if (p === 'allocation') { loadUserNumbersUI(); if (document.getElementById('countrySelect').value) displayNumbers(document.getElementById('countrySelect').value); }
                 if (p === 'today') renderTodayOtps();
-                if (p === 'total') updateTotalStats();
+                if (p === 'total') updateTodayStats();
                 if (p === 'past') fetchPastOtps();
             };
         });
