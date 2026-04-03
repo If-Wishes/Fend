@@ -15,7 +15,15 @@ app = Flask(__name__)
 TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
 last_update_id = 0
 
-# No send_message function needed - bot will be silent
+def send_message(chat_id, text):
+    """Send message back to chat (for testing)"""
+    try:
+        url = f"{TELEGRAM_API_URL}/sendMessage"
+        data = {"chat_id": chat_id, "text": text}
+        requests.post(url, json=data, timeout=10)
+        print(f"   📤 Reply sent")
+    except Exception as e:
+        print(f"   ❌ Send error: {e}")
 
 def save_to_supabase(otp, phone_last3, country, service, time_raw):
     try:
@@ -45,18 +53,27 @@ def process_updates():
         
         if response.ok:
             result = response.json().get('result', [])
+            print(f"📡 Checking updates... Found {len(result)} new messages")
+            
             for update in result:
                 last_update_id = update['update_id']
                 
                 if 'message' in update:
                     msg = update['message']
+                    chat_id = msg['chat']['id']
+                    chat_title = msg['chat'].get('title', 'Private Chat')
                     text = msg.get('text', '')
                     
-                    print(f"\n📨 Message: {text[:80]}...")
+                    print(f"\n{'='*50}")
+                    print(f"📨 Message from: {chat_title}")
+                    print(f"   Chat ID: {chat_id}")
+                    print(f"   Text: {text[:100]}...")
+                    print(f"{'='*50}")
                     
                     otp_match = re.search(r'\b\d{4,6}\b', text)
                     if not otp_match:
-                        print("   ❌ No OTP code found - ignoring")
+                        print("   ❌ No OTP code found")
+                        send_message(chat_id, "❌ No OTP code found in message")
                         continue
                     
                     otp = otp_match.group()
@@ -78,44 +95,59 @@ def process_updates():
                     time_match = re.search(r'⏰ Time:\s*(.+)', text)
                     time_raw = time_match.group(1).strip() if time_match else None
                     
-                    print(f"   🔑 OTP: {otp} | 📱 Last3: {phone_last3} | 🌍 {country} | ⚙️ {service}")
+                    print(f"   🔑 Extracted OTP: {otp}")
+                    print(f"   📱 Phone last3: {phone_last3}")
+                    print(f"   🌍 Country: {country}")
+                    print(f"   ⚙️ Service: {service}")
                     
                     if save_to_supabase(otp, phone_last3, country, service, time_raw):
-                        print(f"   ✅ Saved successfully! (silent mode - no reply sent)")
+                        reply = f"✅ OTP {otp} saved!\n📞 Phone: ***{phone_last3}\n💰 +$0.005"
+                        send_message(chat_id, reply)
+                        print(f"   ✅ Saved and replied!")
                     else:
-                        print(f"   ❌ Failed to save")
+                        send_message(chat_id, "❌ Failed to save OTP")
+                        print(f"   ❌ Save failed!")
                         
     except Exception as e:
         print(f"❌ Polling error: {e}")
 
 def poll_loop():
     print("🔄 Polling loop started...")
-    print("🤫 Bot is in SILENT mode - will NOT send any replies")
+    print("🤖 Bot is active and listening for messages")
+    print("💬 Add this bot to a Telegram group to start receiving OTPs")
+    print("="*50)
+    
     while True:
         try:
             process_updates()
         except Exception as e:
             print(f"Loop error: {e}")
-        time.sleep(1)
+        time.sleep(2)
 
 @app.route('/')
 def health():
-    return '🤖 MIMA Bot Running (Silent Mode - No Replies)', 200
+    return '🤖 MIMA Bot Running - Active and Listening', 200
+
+@app.route('/test')
+def test():
+    """Test if bot can send message to yourself"""
+    return 'Bot is alive! Check Telegram if you sent a message', 200
 
 if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     
     print("="*50)
-    print("🚀 MIMA Panel Bot (Silent Polling Mode)")
+    print("🚀 MIMA Panel Bot - WITH LOGGING")
     print("="*50)
-    print("🤫 Bot will NOT send any messages to Telegram")
-    print("💾 Only saves OTPs to Supabase database")
+    print(f"🤖 Bot Token: {BOT_TOKEN[:10]}...")
+    print(f"📡 Bot Name: @MIMABot")
     print("="*50)
     
     poll_thread = threading.Thread(target=poll_loop, daemon=True)
     poll_thread.start()
     
-    print("✅ Bot running silently! Waiting for messages...")
+    print("✅ Bot running! Waiting for messages...")
+    print("📊 Check Render logs for message details")
     print("="*50)
     
     app.run(host='0.0.0.0', port=port, debug=False)
