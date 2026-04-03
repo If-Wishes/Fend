@@ -10,6 +10,15 @@
         .hidden-dropdown { display: none; }
         .success { background-color: #d1fae5; color: #065f46; }
         .error { background-color: #fee2e2; color: #991b1b; }
+        .used-number {
+            background-color: #fee2e2 !important;
+            border-left: 3px solid #dc2626 !important;
+            text-decoration: line-through;
+            opacity: 0.8;
+        }
+        .used-number:hover {
+            background-color: #fecaca !important;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -43,7 +52,7 @@
 
 <main class="max-w-7xl mx-auto px-4 py-8">
     <h1 class="text-2xl font-bold">Number Allocation</h1>
-    <p class="text-gray-500 mb-6"> </p>
+    <p class="text-gray-500 mb-6">Manage numbers - <span class="text-red-600">Red highlighted numbers</span> have received OTPs</p>
     
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Add Numbers Form -->
@@ -81,7 +90,7 @@ Example:
 +2348123456789
 +2348023456789
 +998901234567"></textarea>
-                <p class="text-xs text-gray-400 mt-1"> </p>
+                <p class="text-xs text-gray-400 mt-1"></p>
             </div>
             
             <button id="addBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl transition">
@@ -95,7 +104,6 @@ Example:
         <div class="bg-white rounded-2xl border p-6">
             <h2 class="font-semibold mb-4">📋 Allocated Numbers</h2>
             <select id="filterSelect" class="w-full border rounded-xl px-4 py-2 mb-4 bg-gray-50">
-            
             </select>
             <div id="allocationsList" class="max-h-96 overflow-y-auto space-y-3">
                 <div class="text-center py-8 text-gray-400">Loading...</div>
@@ -113,6 +121,7 @@ if (!session || session.role !== 'admin') window.location.href = '../index.html'
 document.getElementById('adminName').innerText = session.username;
 
 let usersList = [];
+let usedNumbersSet = new Set(); // Store last3 digits that have received OTPs
 
 // Helper function to extract last 3 digits
 function getLast3Digits(number) {
@@ -131,9 +140,26 @@ function getCountryFlag(country) {
     const flags = {
         'Jordan': '🇯🇴', 'Tajikistan': '🇹🇯', 'Nigeria': '🇳🇬',
         'Myanmar': '🇲🇲', 'Hungary': '🇭🇺', 'Slovenia': '🇸🇮',
-        'Venezuela': '🇻🇪', 'Uzbekistan': '🇺🇿'
+        'Venezuela': '🇻🇪', 'Uzbekistan': '🇺🇿', 'Bolivia': '🇧🇴'
     };
     return flags[country] || '🌍';
+}
+
+// Fetch all OTPs to know which numbers are used
+async function fetchUsedNumbers() {
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=phone_last3`, {
+            headers: { 'apikey': API_KEY }
+        });
+        const otps = await res.json();
+        usedNumbersSet.clear();
+        otps.forEach(otp => {
+            if (otp.phone_last3) usedNumbersSet.add(otp.phone_last3);
+        });
+        console.log(`Found ${usedNumbersSet.size} used numbers (last3):`, Array.from(usedNumbersSet));
+    } catch (err) {
+        console.error("Error fetching OTPs:", err);
+    }
 }
 
 // Load users for dropdowns
@@ -153,7 +179,7 @@ async function loadUsers() {
     filterSelect.onchange = loadAllocatedNumbers;
 }
 
-// Load and display allocated numbers
+// Load and display allocated numbers with RED HIGHLIGHT for used ones
 async function loadAllocatedNumbers() {
     const filterUserId = document.getElementById('filterSelect').value;
     let url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=*,users(username)&order=allocated_at.desc`;
@@ -188,30 +214,44 @@ async function loadAllocatedNumbers() {
     let html = '';
     for (const key in grouped) {
         const g = grouped[key];
+        
+        // Count used numbers in this group
+        const usedCount = g.numbers.filter(num => usedNumbersSet.has(num.last3)).length;
+        const totalCount = g.numbers.length;
+        
         html += `
             <div class="border rounded-xl overflow-hidden">
                 <div class="bg-gray-50 px-4 py-2 flex justify-between items-center">
                     <div>
                         <span class="font-semibold">${escapeHtml(g.userName)}</span>
                         <span class="ml-2 text-sm text-gray-500">${getCountryFlag(g.country)} ${escapeHtml(g.country)}</span>
+                        ${usedCount > 0 ? `<span class="ml-2 text-xs text-red-600">(${usedCount}/${totalCount} used)</span>` : `<span class="ml-2 text-xs text-green-600">(${totalCount} active)</span>`}
                     </div>
                     <button onclick="deleteCountryNumbers('${g.userId}', '${g.country}')" class="text-red-500 text-sm hover:text-red-700">
                         <i class="fas fa-trash-alt mr-1"></i>Delete All
                     </button>
                 </div>
                 <div class="p-3 flex flex-wrap gap-2">
-                    ${g.numbers.map(num => `
-                        <div class="bg-gray-100 rounded-lg px-3 py-1.5 flex items-center gap-2">
-                            <span class="font-mono text-sm">${escapeHtml(num.number)}</span>
-                            <span class="text-xs text-gray-400">(last3: ${num.last3})</span>
-                            <button onclick="deleteSingleNumber('${num.id}')" class="text-red-400 hover:text-red-600">
-                                <i class="fas fa-times-circle"></i>
-                            </button>
-                        </div>
-                    `).join('')}
+                    ${g.numbers.map(num => {
+                        const isUsed = usedNumbersSet.has(num.last3);
+                        const usedClass = isUsed ? 'used-number' : '';
+                        const usedIcon = isUsed ? '<i class="fas fa-check-circle text-red-500 mr-1 text-xs"></i>' : '<i class="fas fa-circle text-green-500 mr-1 text-xs"></i>';
+                        const title = isUsed ? 'This number has received an OTP' : 'Active number - no OTP received yet';
+                        
+                        return `
+                            <div class="bg-gray-100 rounded-lg px-3 py-1.5 flex items-center gap-2 ${usedClass}" title="${title}">
+                                ${usedIcon}
+                                <span class="font-mono text-sm">${escapeHtml(num.number)}</span>
+                                <span class="text-xs text-gray-400">(last3: ${num.last3})</span>
+                                <button onclick="deleteSingleNumber('${num.id}')" class="text-red-400 hover:text-red-600">
+                                    <i class="fas fa-times-circle"></i>
+                                </button>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
                 <div class="bg-gray-50 px-4 py-1 text-xs text-gray-400">
-                    Total: ${g.numbers.length} numbers
+                    Total: ${totalCount} numbers | Used: ${usedCount} | Active: ${totalCount - usedCount}
                 </div>
             </div>
         `;
@@ -239,7 +279,6 @@ async function addNumbers() {
         return;
     }
     
-    // Parse numbers (split by new line or comma)
     let numbers = numbersInput.split(/[,\n]/).map(n => n.trim()).filter(n => n.length > 0);
     if (numbers.length === 0) {
         showMessage('No valid numbers found', 'error');
@@ -283,7 +322,7 @@ async function addNumbers() {
     if (successCount > 0) {
         showMessage(`✅ Successfully added ${successCount} numbers!`, 'success');
         document.getElementById('numbersInput').value = '';
-        loadAllocatedNumbers();
+        await loadAllocatedNumbers();
     } else {
         showMessage(`❌ Failed to add numbers. Check that numbers have at least 3 digits.`, 'error');
     }
@@ -303,7 +342,7 @@ async function deleteCountryNumbers(userId, country) {
     });
     
     if (res.ok) {
-        loadAllocatedNumbers();
+        await loadAllocatedNumbers();
         showMessage('Numbers deleted successfully', 'success');
         setTimeout(() => {
             document.getElementById('messageBox').classList.add('hidden');
@@ -321,7 +360,7 @@ async function deleteSingleNumber(numberId) {
     });
     
     if (res.ok) {
-        loadAllocatedNumbers();
+        await loadAllocatedNumbers();
     }
 }
 
@@ -350,8 +389,13 @@ document.getElementById('logoutBtn').onclick = e => { e.preventDefault(); logout
 document.getElementById('addBtn').onclick = addNumbers;
 
 // Initialize
-loadUsers();
-loadAllocatedNumbers();
+async function init() {
+    await fetchUsedNumbers();
+    await loadUsers();
+    await loadAllocatedNumbers();
+}
+
+init();
 </script>
 </body>
 </html>
