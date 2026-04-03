@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Slide CAPTCHA → Auto Verify & Redirect</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: linear-gradient(145deg, #0b2b2b 0%, #0a1c1f 100%);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+    }
+
+    /* main card */
+    .captcha-card {
+      max-width: 500px;
+      width: 100%;
+      background: rgba(255,255,255,0.97);
+      border-radius: 2rem;
+      box-shadow: 0 25px 45px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.2);
+      overflow: hidden;
+      transition: transform 0.2s ease;
+    }
+
+    .card-header {
+      background: #0f2f2f;
+      padding: 1.2rem 1.5rem;
+      color: white;
+    }
+    .card-header h3 {
+      margin: 0;
+      font-weight: 700;
+      font-size: 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card-header p {
+      margin: 6px 0 0;
+      font-size: 0.8rem;
+      opacity: 0.85;
+    }
+
+    .captcha-content {
+      padding: 1.8rem 1.5rem 1.8rem 1.5rem;
+    }
+
+    /* PUZZLE ARENA */
+    .puzzle-arena {
+      position: relative;
+      background: #eef2f5;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: inset 0 1px 4px rgba(0,0,0,0.05), 0 8px 20px rgba(0,0,0,0.15);
+      margin-bottom: 1.6rem;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+      cursor: grab;
+    }
+    canvas:active {
+      cursor: grabbing;
+    }
+    #pieceCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      pointer-events: none;
+    }
+
+    /* SLIDER UI */
+    .slider-wrapper {
+      margin-top: 10px;
+      position: relative;
+    }
+    .slider-track-bg {
+      background: #e2e8f0;
+      border-radius: 60px;
+      height: 56px;
+      position: relative;
+      box-shadow: inset 0 2px 6px rgba(0,0,0,0.15);
+      cursor: pointer;
+    }
+    .slider-fill {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #2ecc71, #1f8f4b);
+      border-radius: 60px;
+      transition: width 0.02s linear;
+      pointer-events: none;
+      box-shadow: inset 0 1px 2px rgba(255,255,255,0.5);
+    }
+    .slider-thumb {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 56px;
+      height: 56px;
+      background: white;
+      border-radius: 50%;
+      cursor: grab;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      transition: left 0.02s linear;
+      z-index: 10;
+      color: #1e4a4a;
+      font-weight: bold;
+    }
+    .slider-thumb:active {
+      cursor: grabbing;
+      transform: scale(0.97);
+    }
+    .drag-label {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: #2c5a5a;
+      pointer-events: none;
+      white-space: nowrap;
+      background: rgba(255,255,235,0.8);
+      padding: 4px 14px;
+      border-radius: 40px;
+      backdrop-filter: blur(3px);
+    }
+
+    .status-area {
+      margin: 22px 0 18px;
+      text-align: center;
+    }
+    .message-box {
+      padding: 12px;
+      border-radius: 60px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      background: #f1f5f9;
+      color: #1e293b;
+      transition: all 0.2s;
+    }
+    .message-box.success {
+      background: #d1fae5;
+      color: #065f46;
+      border-left: 5px solid #10b981;
+    }
+    .message-box.redirect {
+      background: #d9efff;
+      color: #004e7c;
+      border-left: 5px solid #0e7fc0;
+      font-weight: bold;
+    }
+    .message-box.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border-left: 5px solid #ef4444;
+    }
+    .button-group {
+      display: flex;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .btn {
+      flex: 1;
+      padding: 12px 8px;
+      font-weight: 600;
+      border: none;
+      border-radius: 60px;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: 0.2s;
+      background: #eef2ff;
+      color: #1f3a6b;
+    }
+    .btn-primary {
+      background: #1f4e4e;
+      color: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    }
+    .btn-primary:hover {
+      background: #0f3a3a;
+      transform: translateY(-2px);
+    }
+    .btn-secondary {
+      background: #e9ecef;
+      border: 1px solid #ced4da;
+    }
+    .btn-secondary:hover {
+      background: #dee2e6;
+      transform: translateY(-1px);
+    }
+    .footer-note {
+      margin-top: 18px;
+      font-size: 0.7rem;
+      text-align: center;
+      color: #6c757d;
+      border-top: 1px solid #e9ecef;
+      padding-top: 14px;
+    }
+    .loading-dots:after {
+      content: ' .';
+      animation: dots 1s steps(5, end) infinite;
+    }
+    @keyframes dots {
+      0%, 20% { content: '.'; }
+      40% { content: '..'; }
+      60%, 100% { content: '...'; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="captcha-card">
+  <div class="card-header">
+    <h3>🔐 Sliding Puzzle CAPTCHA</h3>
+    <p>➡️ drag the piece → align with the missing gap ⬅️</p>
+    <p style="font-size:0.75rem; margin-top:4px;">✨ Release finger at exact position → auto verify & open page ✨</p>
+  </div>
+  <div class="captcha-content">
+    <!-- puzzle canvas area -->
+    <div class="puzzle-arena">
+      <canvas id="bgCanvas" width="420" height="230" style="width:100%; height:auto; background:#d9e2ec"></canvas>
+      <canvas id="pieceCanvas" width="420" height="230" style="width:100%; height:auto"></canvas>
+    </div>
+
+    <!-- sliding mechanism -->
+    <div class="slider-wrapper">
+      <div class="slider-track-bg" id="sliderTrackBg">
+        <div class="slider-fill" id="sliderFill"></div>
+        <div class="slider-thumb" id="sliderThumb">↔️</div>
+        <div class="drag-label" id="dragLabel">⸻  slide until piece fits the gap  ⸻</div>
+      </div>
+    </div>
+
+    <div class="status-area">
+      <div class="message-box" id="statusMsg">🔁 Slide the puzzle piece into the transparent hole</div>
+    </div>
+
+    <div class="button-group">
+      <button class="btn btn-primary" id="manualRedirectBtn" style="background:#2c6e6e;">📂 Open index1.html (manual)</button>
+      <button class="btn btn-secondary" id="resetCaptchaBtn">🔄 New Puzzle</button>
+    </div>
+    <div class="footer-note">
+      ✅ Auto-redirect on successful slide & release | Anti-bot trajectory check
+    </div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    // ---------- CONFIGURATION ----------
+    const PUZZLE_SIZE = 48;          // width/height of missing part
+    const TOLERANCE_PX = 8;          // allowed pixel offset (strict but fair)
+    const MIN_SLIDE_MS = 320;
+    const MAX_SLIDE_MS = 5500;
+
+    // canvas dimensions (fixed)
+    const CANVAS_W = 420;
+    const CANVAS_H = 230;
+    const GAP_Y = (CANVAS_H / 2) - (PUZZLE_SIZE / 2);   // vertically centered
+
+    // DOM elements
+    const bgCanvas = document.getElementById('bgCanvas');
+    const pieceCanvas = document.getElementById('pieceCanvas');
+    const sliderThumb = document.getElementById('sliderThumb');
+    const sliderFill = document.getElementById('sliderFill');
+    const trackBg = document.getElementById('sliderTrackBg');
+    const resetBtn = document.getElementById('resetCaptchaBtn');
+    const manualBtn = document.getElementById('manualRedirectBtn');
+    const statusDiv = document.getElementById('statusMsg');
+
+    bgCanvas.width = CANVAS_W;
+    bgCanvas.height = CANVAS_H;
+    pieceCanvas.width = CANVAS_W;
+    pieceCanvas.height = CANVAS_H;
+
+    // ---------- GLOBAL STATE ----------
+    let currentBackgroundImage = null;     // original full artwork (offscreen canvas)
+    let targetGapX = 0;                   // correct X coordinate of the hole (px)
+    let currentPieceX = 0;               // current X position of the movable piece
+    let sliderMaxLeft = 0;               // max left offset for slider thumb (px)
+    let currentSliderX = 0;              // slider thumb left position (0..sliderMaxLeft)
+    let isDragging = false;
+    let dragStartMouseX = 0;
+    let slideStartTimestamp = 0;
+    let alreadyRedirected = false;        // prevent double redirect
+    let verificationPassed = false;       // internal flag for successful captcha
+    let trajectoryPoints = [];             // store {x, relativeTimeMs}
+    let autoRedirectEnabled = true;        // will redirect immediately on success
+
+    // ---------- UTILITIES ----------
+    function showMessage(text, type = 'info') {
+      statusDiv.innerText = text;
+      statusDiv.className = 'message-box';
+      if (type === 'success') statusDiv.classList.add('success');
+      else if (type === 'redirect') statusDiv.classList.add('redirect');
+      else if (type === 'error') statusDiv.classList.add('error');
+      else statusDiv.classList.remove('success', 'redirect', 'error');
+    }
+
+    // generate vibrant, unique canvas image with random shapes & noise (makes puzzle non-guessable)
+    function generateRandomArtwork() {
+      const offCanvas = document.createElement('canvas');
+      offCanvas.width = CANVAS_W;
+      offCanvas.height = CANVAS_H;
+      const ctx = offCanvas.getContext('2d');
+      
+      const hueA = Math.floor(Math.random() * 360);
+      const hueB = (hueA + 60 + Math.random() * 100) % 360;
+      const grad = ctx.createLinearGradient(0, 0, CANVAS_W, CANVAS_H);
+      grad.addColorStop(0, `hsl(${hueA}, 75%, 60%)`);
+      grad.addColorStop(1, `hsl(${hueB}, 80%, 45%)`);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      
+      // abstract shapes
+      for (let i = 0; i < 35; i++) {
+        ctx.save();
+        ctx.globalAlpha = 0.55 + Math.random() * 0.4;
+        ctx.fillStyle = `hsl(${Math.random() * 360}, 80%, 70%)`;
+        ctx.beginPath();
+        if (Math.random() > 0.55) {
+          ctx.arc(Math.random() * CANVAS_W, Math.random() * CANVAS_H, 7 + Math.random() * 24, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillRect(Math.random() * CANVAS_W, Math.random() * CANVAS_H, 10 + Math.random() * 30, 10 + Math.random() * 30);
+        }
+        ctx.restore();
+      }
+      
+      // wavy lines
+      ctx.beginPath();
+      ctx.strokeStyle = `rgba(255,250,210,0.7)`;
+      ctx.lineWidth = 2.2;
+      for (let s = 0; s < 14; s++) {
+        ctx.beginPath();
+        ctx.moveTo(Math.random() * CANVAS_W, Math.random() * CANVAS_H);
+        ctx.lineTo(Math.random() * CANVAS_W, Math.random() * CANVAS_H);
+        ctx.stroke();
+      }
+      
+      // tiny text / fingerprint
+      ctx.font = `bold ${18 + Math.random() * 12}px "Segoe UI"`;
+      ctx.fillStyle = `rgba(0,0,0,0.35)`;
+      ctx.fillText("🔒", 12, 40);
+      ctx.fillStyle = `rgba(255,245,200,0.6)`;
+      ctx.fillText("⌗", CANVAS_W - 35, CANVAS_H - 18);
+      
+      // subtle noise
+      const imgData = ctx.getImageData(0, 0, CANVAS_W, CANVAS_H);
+      const data = imgData.data;
+      for (let i = 0; i < data.length; i += 12) {
+        if (Math.random() > 0.94) {
+          data[i] = Math.min(255, data[i] + 45);
+          data[i+1] = Math.min(255, data[i+1] + 35);
+          data[i+2] = Math.min(255, data[i+2] + 55);
+        }
+      }
+      ctx.putImageData(imgData, 0, 0);
+      return offCanvas;
+    }
+    
+    // draw background canvas with transparent hole
+    function drawBackgroundWithHole(bgImageCanvas, gapX) {
+      const ctx = bgCanvas.getContext('2d');
+      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+      ctx.drawImage(bgImageCanvas, 0, 0, CANVAS_W, CANVAS_H);
+      // create hole using destination-out
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = 'rgba(0,0,0,1)';
+      ctx.fillRect(gapX, GAP_Y, PUZZLE_SIZE, PUZZLE_SIZE);
+      ctx.globalCompositeOperation = 'source-over';
+      // subtle border around hole for visibility
+      ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(gapX, GAP_Y, PUZZLE_SIZE, PUZZLE_SIZE);
+    }
+    
+    // draw movable piece (extracted from original image)
+    function drawMovablePiece(originalFullCanvas, gapX, pieceX) {
+      const ctx = pieceCanvas.getContext('2d');
+      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+      if (!originalFullCanvas) return;
+      ctx.drawImage(originalFullCanvas, 
+        gapX, GAP_Y, PUZZLE_SIZE, PUZZLE_SIZE,
+        pieceX, GAP_Y, PUZZLE_SIZE, PUZZLE_SIZE
+      );
+      // add realistic border & shadow
+      ctx.save();
+      ctx.shadowBlur = 5;
+      ctx.shadowColor = "rgba(0,0,0,0.4)";
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2.2;
+      ctx.strokeRect(pieceX, GAP_Y, PUZZLE_SIZE, PUZZLE_SIZE);
+      ctx.strokeStyle = "#1e3a3a";
+      ctx.lineWidth = 1;
+      ctx.strokeRect(pieceX+1, GAP_Y+1, PUZZLE_SIZE-2, PUZZLE_SIZE-2);
+      ctx.restore();
+    }
+    
+    function refreshPuzzle() {
+      if (!currentBackgroundImage) return;
+      drawBackgroundWithHole(currentBackgroundImage, targetGapX);
+      drawMovablePiece(currentBackgroundImage, targetGapX, currentPieceX);
+    }
+    
+    // reset slider position and recorded trajectory
+    function resetSliderUI(resetVerificationFlag = true) {
+      currentSliderX = 0;
+      sliderThumb.style.left = '0px';
+      sliderFill.style.width = '0%';
+      currentPieceX = 0;
+      refreshPuzzle();
+      trajectoryPoints = [];
+      if (resetVerificationFlag) {
+        verificationPassed = false;
+        alreadyRedirected = false;
+      }
+      isDragging = false;
+    }
+    
+    // update slider max range based on actual container width
+    function updateSliderMaxRange() {
+      const trackRect = trackBg.getBoundingClientRect();
+      const thumbWidth = sliderThumb.offsetWidth;
+      sliderMaxLeft = trackRect.width - thumbWidth;
+      if (sliderMaxLeft < 0) sliderMaxLeft = 0;
+      if (currentSliderX > sliderMaxLeft) currentSliderX = sliderMaxLeft;
+    }
+    
+    function sliderXToPieceX(sliderX) {
+      if (sliderMaxLeft <= 0) return 0;
+      const ratio = sliderX / sliderMaxLeft;
+      const maxPieceX = CANVAS_W - PUZZLE_SIZE;
+      return ratio * maxPieceX;
+    }
+    
+    function pieceXToSliderX(pieceX) {
+      const maxPieceX = CANVAS_W - PUZZLE_SIZE;
+      if (maxPieceX <= 0) return 0;
+      const ratio = Math.min(1, Math.max(0, pieceX / maxPieceX));
+      return ratio * sliderMaxLeft;
+    }
+    
+    function syncPieceFromSlider() {
+      currentPieceX = sliderXToPieceX(currentSliderX);
+      refreshPuzzle();
+    }
+    
+    function addTrajectoryPoint() {
+      if (!isDragging) return;
+      const nowRel = Date.now() - slideStartTimestamp;
+      trajectoryPoints.push({ x: currentSliderX, timeMs: nowRel });
+      if (trajectoryPoints.length > 140) trajectoryPoints.shift();
+    }
+    
+    // advanced human-like movement detection (avoid scripted bots)
+    function isHumanLikeTrajectory(points, slideDuration) {
+      if (points.length < 5) return false;
+      let linearSteps = 0;
+      let prevSpeed = null;
+      for (let i = 1; i < points.length; i++) {
+        const dx = points[i].x - points[i-1].x;
+        const dt = points[i].timeMs - points[i-1].timeMs;
+        if (dt < 8) continue;
+        const speed = Math.abs(dx) / dt;
+        if (prevSpeed !== null && Math.abs(speed - prevSpeed) < 0.018) {
+          linearSteps++;
+        }
+        prevSpeed = speed;
+      }
+      const linearRatio = linearSteps / (points.length-1);
+      let teleportCount = 0;
+      for (let i = 1; i < points.length; i++) {
+        if (Math.abs(points[i].x - points[i-1].x) > 34) teleportCount++;
+      }
+      const isTooLinear = linearRatio > 0.66;
+      const hasTeleports = teleportCount > 2;
+      const tooFast = slideDuration < 280;
+      return (!isTooLinear && !hasTeleports && !tooFast);
+    }
+    
+    // ---------- REDIRECT TO index1.html ----------
+    function redirectToIndex1() {
+      if (alreadyRedirected) return;
+      alreadyRedirected = true;
+      showMessage("✅ Verification successful! Redirecting to index1.html ...", "redirect");
+      // add visual loading effect
+      statusDiv.innerHTML = "✅ VERIFIED! Redirecting to index1.html <span class='loading-dots'></span>";
+      // small delay for UX to show success feedback
+      setTimeout(() => {
+        window.location.href = "index1.html";
+      }, 400);
+    }
+    
+    // automatic verification on finger/mouse release (exact point + trajectory)
+    function evaluateAndAutoVerify() {
+      if (alreadyRedirected || verificationPassed) return false;
+      
+      const expectedPieceX = targetGapX;
+      const currentPiecePos = currentPieceX;
+      const distanceError = Math.abs(currentPiecePos - expectedPieceX);
+      const slideDuration = (Date.now() - slideStartTimestamp);
+      let finalDuration = slideDuration;
+      if (trajectoryPoints.length === 0) finalDuration = 9999;
+      
+      const posOk = distanceError <= TOLERANCE_PX;
+      const timeOk = (finalDuration >= MIN_SLIDE_MS && finalDuration <= MAX_SLIDE_MS);
+      let trajectoryOk = false;
+      if (trajectoryPoints.length > 4 && finalDuration > 180) {
+        trajectoryOk = isHumanLikeTrajectory(trajectoryPoints, finalDuration);
+      } else {
+        trajectoryOk = false;
+      }
+      
+      if (posOk && timeOk && trajectoryOk) {
+        // SUCCESSFUL CAPTCHA !
+        verificationPassed = true;
+        showMessage("🎉 PERFECT! Puzzle solved. Redirecting now...", "success");
+        // disable further dragging
+        isDragging = false;
+        // instantly redirect after short visual feedback
+        redirectToIndex1();
+        return true;
+      } else {
+        // failure: show error and reset slider so user can try again (same puzzle)
+        let errMsg = "";
+        if (!posOk) errMsg = `Position off by ${Math.round(distanceError)}px. `;
+        if (!timeOk) errMsg += `Slide speed ${finalDuration}ms (need ${MIN_SLIDE_MS}-${MAX_SLIDE_MS}ms). `;
+        if (!trajectoryOk && trajectoryPoints.length > 3) errMsg += `Unnatural movement. `;
+        if (trajectoryPoints.length < 4) errMsg += `Smooth sliding required. `;
+        showMessage(`❌ Verification failed: ${errMsg}Please try again`, "error");
+        // reset slider position but keep the same image & gap for another attempt
+        resetSliderUI(false);
+        // restart timing variables
+        slideStartTimestamp = Date.now();
+        trajectoryPoints = [];
+        return false;
+      }
+    }
+    
+    // ---------- DRAG HANDLERS (touch + mouse) ----------
+    function onDragStart(e) {
+      if (alreadyRedirected || verificationPassed) {
+        showMessage("Already verified! Use 'New Puzzle' to try another.", "error");
+        return;
+      }
+      e.preventDefault();
+      isDragging = true;
+      const clientX = e.clientX ?? (e.touches ? e.touches[0].clientX : 0);
+      dragStartMouseX = clientX - currentSliderX;
+      slideStartTimestamp = Date.now();
+      trajectoryPoints = [];
+      trajectoryPoints.push({ x: currentSliderX, timeMs: 0 });
+      showMessage("👉 Keep sliding until piece aligns with hole...", "info");
+    }
+    
+    function onDragMove(e) {
+      if (!isDragging || alreadyRedirected || verificationPassed) return;
+      e.preventDefault();
+      let clientX = e.clientX;
+      if (clientX === undefined && e.touches) clientX = e.touches[0].clientX;
+      if (clientX === undefined) return;
+      let newSliderX = clientX - dragStartMouseX;
+      newSliderX = Math.min(Math.max(0, newSliderX), sliderMaxLeft);
+      if (Math.abs(newSliderX - currentSliderX) > 0.3) {
+        currentSliderX = newSliderX;
+        sliderThumb.style.left = currentSliderX + 'px';
+        const fillPercent = (currentSliderX / sliderMaxLeft) * 100;
+        sliderFill.style.width = fillPercent + '%';
+        currentPieceX = sliderXToPieceX(currentSliderX);
+        refreshPuzzle();
+        addTrajectoryPoint();
+      }
+    }
+    
+    function onDragEnd(e) {
+      if (!isDragging) return;
+      isDragging = false;
+      if (alreadyRedirected || verificationPassed) return;
+      // add final trajectory point
+      addTrajectoryPoint();
+      // evaluate and auto-verify/redirect if condition met
+      evaluateAndAutoVerify();
+    }
+    
+    // reset full puzzle (new image, new gap, fresh state)
+    function fullReset() {
+      if (alreadyRedirected) {
+        // if already redirected, reset internal flag but don't break
+        alreadyRedirected = false;
+      }
+      verificationPassed = false;
+      alreadyRedirected = false;
+      const newArt = generateRandomArtwork();
+      currentBackgroundImage = newArt;
+      const minGap = 20;
+      const maxGap = CANVAS_W - PUZZLE_SIZE - 20;
+      targetGapX = Math.floor(Math.random() * (maxGap - minGap + 1) + minGap);
+      resetSliderUI(true);
+      updateSliderMaxRange();
+      refreshPuzzle();
+      showMessage("🔄 New puzzle generated! Slide to verify & auto-open page.", false);
+    }
+    
+    function handleResize() {
+      updateSliderMaxRange();
+      const newSliderX = pieceXToSliderX(currentPieceX);
+      currentSliderX = Math.min(sliderMaxLeft, Math.max(0, newSliderX));
+      sliderThumb.style.left = currentSliderX + 'px';
+      sliderFill.style.width = (currentSliderX / sliderMaxLeft) * 100 + '%';
+      refreshPuzzle();
+    }
+    
+    // manual redirect button (for testing / fallback)
+    function manualRedirect() {
+      if (verificationPassed || alreadyRedirected) {
+        redirectToIndex1();
+      } else {
+        showMessage("⚠️ You must solve the sliding CAPTCHA first!", "error");
+      }
+    }
+    
+    // ---------- EVENT LISTENERS ----------
+    sliderThumb.addEventListener('mousedown', onDragStart);
+    sliderThumb.addEventListener('touchstart', onDragStart, { passive: false });
+    window.addEventListener('mousemove', onDragMove);
+    window.addEventListener('mouseup', onDragEnd);
+    window.addEventListener('touchmove', onDragMove, { passive: false });
+    window.addEventListener('touchend', onDragEnd);
+    window.addEventListener('resize', () => setTimeout(handleResize, 30));
+    resetBtn.addEventListener('click', fullReset);
+    manualBtn.addEventListener('click', manualRedirect);
+    
+    // initial generation & sizing
+    setTimeout(() => {
+      updateSliderMaxRange();
+      const initialArt = generateRandomArtwork();
+      currentBackgroundImage = initialArt;
+      const minG = 20, maxG = CANVAS_W - PUZZLE_SIZE - 20;
+      targetGapX = Math.floor(Math.random() * (maxG - minG + 1) + minG);
+      resetSliderUI(true);
+      refreshPuzzle();
+      showMessage("🔐 Slide the piece exactly into the missing area → auto redirects", false);
+    }, 30);
+  })();
+</script>
+</body>
+</html>
