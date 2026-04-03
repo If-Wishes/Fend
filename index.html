@@ -140,7 +140,7 @@ document.getElementById('adminLogin').onsubmit = async (e) => {
     else alert('Invalid admin credentials');
 };
 
-// User login handler - redirects to dashboard with user ID in URL
+// User login handler - redirects to dashboard in /user/ folder with user ID in URL
 document.getElementById('userLogin').onsubmit = async (e) => {
     e.preventDefault();
     const loading = document.getElementById('userLoading');
@@ -154,8 +154,8 @@ document.getElementById('userLogin').onsubmit = async (e) => {
     loading.classList.remove('active');
     form.style.opacity = '1';
     if (result.success) {
-        // Redirect to dashboard with user ID in URL
-        window.location.href = `dashboard.html?id=${result.userId}`;
+        // Redirect to dashboard in /user/ folder with user ID in URL
+        window.location.href = `user/dashboard.html?id=${result.userId}`;
     } else {
         alert('Invalid user credentials');
     }
@@ -168,7 +168,7 @@ if (session) {
         const s = JSON.parse(session);
         if (s.role === 'admin') window.location.href = 'admin/dashboard.html';
         else if (s.role === 'user' && s.userId) {
-            window.location.href = `dashboard.html?id=${s.userId}`;
+            window.location.href = `user/dashboard.html?id=${s.userId}`;
         }
     } catch(e) {}
 }
