@@ -8,10 +8,6 @@ from flask import Flask
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters
 
-# Suppress logging
-import logging
-logging.getLogger().setLevel(logging.ERROR)
-
 BOT_TOKEN = "7941038643:AAFFM8jv2RkFyyxzgdzuyqy6UiCHNZhIlWo"
 SUPABASE_URL = "https://zubkwzsnpdjtndlvqfqf.supabase.co"
 API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo"
@@ -34,9 +30,12 @@ def save_to_supabase(otp, phone_last3, country, service, time_raw):
             'message_time': datetime.now().isoformat()
         }
         headers = {'apikey': API_KEY, 'Content-Type': 'application/json'}
-        requests.post(f'{SUPABASE_URL}/rest/v1/otp_logs', headers=headers, json=data)
-    except:
-        pass
+        r = requests.post(f'{SUPABASE_URL}/rest/v1/otp_logs', headers=headers, json=data)
+        print(f"   📤 Supabase response: {r.status_code}")
+        return True
+    except Exception as e:
+        print(f"   ❌ Supabase error: {e}")
+        return False
 
 async def handle(update, context):
     msg = update.message
@@ -44,6 +43,8 @@ async def handle(update, context):
         return
     
     text = msg.text
+    print(f"\n📨 Message received:")
+    print(f"   └─ {text[:100]}...")
     
     # Extract Time
     time_match = re.search(r'⏰ Time:\s*(.+)', text)
@@ -70,21 +71,39 @@ async def handle(update, context):
     # Extract OTP
     otp_match = re.search(r'\b\d{4,6}\b', text)
     if not otp_match:
+        print("   ❌ No OTP code found")
         return
     
     otp = otp_match.group()
+    print(f"   🔑 OTP: {otp}")
+    print(f"   📱 Phone last3: {phone_last3}")
+    print(f"   🌍 Country: {country}")
+    print(f"   ⚙️ Service: {service}")
+    print(f"   ⏰ Time: {time_raw}")
+    
     save_to_supabase(otp, phone_last3, country, service, time_raw)
+    print(f"   ✅ OTP saved successfully!")
 
 def run_bot():
+    print("🤖 Bot started!")
+    print("   Waiting for messages...")
+    print("=" * 50)
+    
     bot_app = Application.builder().token(BOT_TOKEN).build()
     bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
     bot_app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
+    print("=" * 50)
+    print("🚀 Starting MIMA Panel Telegram Bot")
+    print("=" * 50)
+    
     # Start bot in background
     bot_thread = threading.Thread(target=run_bot, daemon=True)
     bot_thread.start()
     
     # Start Flask server
     port = int(os.environ.get('PORT', 5000))
+    print(f"🌐 Flask server running on port {port}")
+    print("=" * 50)
     app.run(host='0.0.0.0', port=port, debug=False)
