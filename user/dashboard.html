@@ -7,13 +7,6 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
-        .number-card {
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .number-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        }
         .copy-btn {
             transition: all 0.2s;
         }
@@ -41,11 +34,19 @@
         </div>
     </div>
 
-    <!-- Numbers Display - Like Admin Panel -->
-    <div id="numbersContainer" class="space-y-4">
+    <!-- Country Filter Dropdown -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Select Country</label>
+        <select id="countryFilter" class="w-full md:w-64 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50">
+            <option value="">-- Select Country --</option>
+        </select>
+    </div>
+
+    <!-- Numbers Display -->
+    <div id="numbersContainer" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
         <div class="text-center py-12 text-gray-400">
-            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
-            <p>Loading your numbers...</p>
+            <i class="fas fa-globe text-4xl mb-2"></i>
+            <p>Select a country to view your numbers</p>
         </div>
     </div>
 
@@ -68,6 +69,8 @@ if (!session || session.role !== 'user') {
 // Display user info
 document.getElementById('userName').innerText = session.username;
 document.getElementById('userEmail').innerText = session.email || 'user@example.com';
+
+let allNumbers = [];
 
 function getCountryFlag(country) {
     const flags = {
@@ -95,82 +98,93 @@ function copyToClipboard(text) {
     }, 1500);
 }
 
-async function loadUserNumbers() {
+function displayNumbersByCountry(country) {
     const container = document.getElementById('numbersContainer');
+    const filteredNumbers = allNumbers.filter(n => n.country === country);
     
+    if (filteredNumbers.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-12 text-gray-400">
+                <i class="fas fa-inbox text-4xl mb-2"></i>
+                <p>No numbers for ${escapeHtml(country)}</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="border rounded-xl overflow-hidden">
+            <div class="bg-gray-50 px-4 py-3 border-b">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">${getCountryFlag(country)}</span>
+                    <h2 class="font-semibold text-gray-800">${escapeHtml(country)}</h2>
+                    <span class="text-xs text-gray-400">(${filteredNumbers.length} numbers)</span>
+                </div>
+            </div>
+            <div class="divide-y divide-gray-100">
+    `;
+    
+    for (const num of filteredNumbers) {
+        html += `
+            <div class="px-4 py-3 flex justify-between items-center hover:bg-gray-50 transition">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-phone text-gray-400"></i>
+                    <span class="font-mono text-sm font-medium text-gray-800">${escapeHtml(num.number)}</span>
+                </div>
+                <button onclick="copyToClipboard('${escapeHtml(num.number)}')" 
+                    class="copy-btn text-xs bg-gray-100 hover:bg-emerald-500 hover:text-white px-3 py-1.5 rounded-full transition">
+                    <i class="fas fa-copy mr-1"></i>Copy
+                </button>
+            </div>
+        `;
+    }
+    
+    html += `</div></div>`;
+    container.innerHTML = html;
+}
+
+async function loadUserNumbers() {
     try {
         const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=id,number,last3,country&user_id=eq.${session.userId}`;
         const response = await fetch(url, {
             headers: { 'apikey': API_KEY }
         });
         
-        const numbers = await response.json();
-        console.log('Numbers loaded:', numbers);
+        allNumbers = await response.json();
+        console.log('Numbers loaded:', allNumbers);
         
-        if (!numbers || numbers.length === 0) {
-            container.innerHTML = `
-                <div class="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-                    <i class="fas fa-inbox text-5xl text-gray-300 mb-3"></i>
-                    <p class="text-gray-400">No numbers allocated yet</p>
-                    <p class="text-sm text-gray-400 mt-1">Contact admin to get numbers assigned to you</p>
+        if (!allNumbers || allNumbers.length === 0) {
+            document.getElementById('countryFilter').innerHTML = '<option value="">-- No numbers allocated --</option>';
+            document.getElementById('numbersContainer').innerHTML = `
+                <div class="text-center py-12 text-gray-400">
+                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                    <p>No numbers allocated yet</p>
+                    <p class="text-sm mt-1">Contact admin to get numbers assigned to you</p>
                 </div>
             `;
             return;
         }
         
-        // Group by country like admin panel
-        const grouped = {};
-        numbers.forEach(num => {
-            if (!grouped[num.country]) grouped[num.country] = [];
-            grouped[num.country].push(num);
-        });
+        // Get unique countries for dropdown
+        const countries = [...new Set(allNumbers.map(n => n.country))];
+        const filterSelect = document.getElementById('countryFilter');
         
-        let html = '';
+        filterSelect.innerHTML = '<option value="">-- Select Country --</option>' + 
+            countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
         
-        for (const country in grouped) {
-            const numbersList = grouped[country];
-            html += `
-                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                    <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xl">${getCountryFlag(country)}</span>
-                            <h2 class="font-semibold text-gray-800">${escapeHtml(country)}</h2>
-                            <span class="text-xs text-gray-400">(${numbersList.length} numbers)</span>
-                        </div>
-                    </div>
-                    <div class="divide-y divide-gray-100">
-            `;
-            
-            for (const num of numbersList) {
-                html += `
-                    <div class="px-6 py-4 flex justify-between items-center hover:bg-gray-50 transition">
-                        <div class="flex items-center gap-3">
-                            <i class="fas fa-phone text-gray-400"></i>
-                            <div>
-                                <span class="font-mono text-sm font-medium text-gray-800">${escapeHtml(num.number)}</span>
-                                <span class="text-xs text-gray-400 ml-2">(last3: ${num.last3})</span>
-                            </div>
-                        </div>
-                        <button onclick="copyToClipboard('${escapeHtml(num.number)}')" 
-                            class="copy-btn text-xs bg-gray-100 hover:bg-emerald-500 hover:text-white px-3 py-1.5 rounded-full transition">
-                            <i class="fas fa-copy mr-1"></i>Copy
-                        </button>
-                    </div>
-                `;
-            }
-            
-            html += `</div></div>`;
+        // Auto-select first country
+        if (countries.length > 0) {
+            filterSelect.value = countries[0];
+            displayNumbersByCountry(countries[0]);
         }
-        
-        container.innerHTML = html;
         
     } catch (error) {
         console.error('Error:', error);
-        container.innerHTML = `
-            <div class="bg-white rounded-2xl border border-red-200 p-12 text-center">
-                <i class="fas fa-exclamation-triangle text-5xl text-red-400 mb-3"></i>
-                <p class="text-red-500">Error loading numbers</p>
-                <p class="text-sm text-gray-400 mt-1">Please refresh the page</p>
+        document.getElementById('numbersContainer').innerHTML = `
+            <div class="text-center py-12 text-red-400">
+                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                <p>Error loading numbers</p>
+                <p class="text-sm mt-1">Please refresh the page</p>
             </div>
         `;
     }
@@ -180,6 +194,20 @@ function logout() {
     localStorage.removeItem('mima_session');
     window.location.href = '../index.html';
 }
+
+// Event listener for country filter
+document.getElementById('countryFilter').addEventListener('change', (e) => {
+    if (e.target.value) {
+        displayNumbersByCountry(e.target.value);
+    } else {
+        document.getElementById('numbersContainer').innerHTML = `
+            <div class="text-center py-12 text-gray-400">
+                <i class="fas fa-globe text-4xl mb-2"></i>
+                <p>Select a country to view your numbers</p>
+            </div>
+        `;
+    }
+});
 
 // Load numbers when page loads
 loadUserNumbers();
