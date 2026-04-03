@@ -37,7 +37,7 @@ def save_to_supabase(otp, phone_last3, country, service, time_raw):
         print(f"   ❌ Supabase error: {e}")
         return False
 
-async def handle(update, context):
+async def handle(update: Update, context):
     msg = update.message
     if not msg or not msg.text:
         return
@@ -89,9 +89,20 @@ def run_bot():
     print("   Waiting for messages...")
     print("=" * 50)
     
-    bot_app = Application.builder().token(BOT_TOKEN).build()
-    bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
-    bot_app.run_polling(drop_pending_updates=True)
+    try:
+        # Create application with updated method
+        bot_app = Application.builder().token(BOT_TOKEN).build()
+        bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+        
+        # Start polling with proper error handling
+        print("   Starting polling...")
+        bot_app.run_polling(drop_pending_updates=True, allowed_updates=['message'])
+    except Exception as e:
+        print(f"   ❌ Bot error: {e}")
+        print("   ⚠️ Retrying in 5 seconds...")
+        import time
+        time.sleep(5)
+        run_bot()
 
 if __name__ == "__main__":
     print("=" * 50)
@@ -106,4 +117,6 @@ if __name__ == "__main__":
     port = int(os.environ.get('PORT', 5000))
     print(f"🌐 Flask server running on port {port}")
     print("=" * 50)
-    app.run(host='0.0.0.0', port=port, debug=False)
+    
+    # Use waitress or gunicorn for production, but for now use Flask
+    app.run(host='0.0.0.0', port=port, debug=False, threaded=True)
