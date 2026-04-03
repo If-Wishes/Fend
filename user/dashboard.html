@@ -3,39 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MIMA Panel | User Dashboard</title>
+    <title>NexusPanel | User Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #f9fafb; }
         .page { display: none; }
         .page.active-page { display: block; }
         .hidden-dropdown { display: none; }
-        .copy-btn { transition: all 0.2s; }
-        .copy-btn:hover { background-color: #10b981; color: white; }
+        .otp-row:hover { background: #fef3c7; }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-gray-50">
 
-<nav class="bg-white shadow-sm border-b sticky top-0 z-50">
+<!-- Top Navigation Bar -->
+<nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
             <div class="flex items-center">
-                <div class="h-8 w-8 rounded-lg bg-emerald-600"><i class="fas fa-chart-line text-white"></i></div>
-                <span class="ml-2 text-xl font-bold">MIMA<span class="text-emerald-600">Panel</span></span>
+                <div class="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+                    <i class="fas fa-chart-line text-white text-sm"></i>
+                </div>
+                <span class="ml-2 text-xl font-bold text-gray-800">Nexus<span class="text-emerald-600">Panel</span></span>
                 <span class="ml-3 text-xs bg-emerald-100 text-emerald-600 px-2 py-1 rounded-full">User</span>
             </div>
-            <div class="flex items-center gap-4">
-                <div class="text-right"><p class="text-sm font-medium" id="userNameDisplay">User</p><p class="text-xs text-gray-500" id="userEmailDisplay"></p></div>
+            <div class="flex items-center gap-4 relative">
+                <div class="text-right hidden sm:block">
+                    <p class="text-sm font-medium text-gray-800" id="userName">User</p>
+                    <p class="text-xs text-gray-500" id="userEmail"></p>
+                </div>
                 <div class="relative">
-                    <button id="menuBtn" class="bg-gray-100 rounded-full px-3 py-2"><i class="fas fa-user-circle"></i><i class="fas fa-chevron-down text-xs"></i></button>
-                    <div id="dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border hidden-dropdown z-50">
-                        <a href="allocation.html" class="dropdown-item block px-4 py-2">📌 My Numbers</a>
-                        <a href="#" data-page="today" class="dropdown-item block px-4 py-2">📊 Today's OTP</a>
-                        <a href="#" data-page="total" class="dropdown-item block px-4 py-2">💰 Total OTP</a>
-                        <a href="#" data-page="past" class="dropdown-item block px-4 py-2">📅 Past Records</a>
-                        <a href="#" data-page="profile" class="dropdown-item block px-4 py-2">👤 Profile</a>
-                        <div class="border-t"></div>
-                        <a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600">Logout</a>
+                    <button id="menuButton" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-2 transition">
+                        <i class="fas fa-user-circle text-gray-600"></i>
+                        <i class="fas fa-chevron-down text-gray-500 text-xs"></i>
+                    </button>
+                    <div id="dropdownMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 hidden-dropdown z-50">
+                        <a href="#" data-page="allocation" class="block px-4 py-2 hover:bg-gray-50">📌 Allocation</a>
+                        <a href="#" data-page="today" class="block px-4 py-2 hover:bg-gray-50">📊 Today's Stat</a>
+                        <a href="#" data-page="total" class="block px-4 py-2 hover:bg-gray-50">💰 Total OTP</a>
+                        <a href="#" data-page="past" class="block px-4 py-2 hover:bg-gray-50">📅 Past Records</a>
+                        <div class="border-t border-gray-100"></div>
+                        <a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600 hover:bg-red-50">Logout</a>
                     </div>
                 </div>
             </div>
@@ -43,263 +62,534 @@
     </div>
 </nav>
 
-<main class="max-w-7xl mx-auto px-4 py-8">
-    
-    <!-- TODAY'S OTP PAGE -->
-    <div id="todayPage" class="page">
-        <h1 class="text-2xl font-bold">📊 Today's OTP Statistics</h1>
-        <p class="text-gray-500 mb-4">OTPs received today from your numbers</p>
-        <div class="bg-white rounded-2xl border overflow-hidden">
-            <table class="w-full"><thead class="bg-gray-50"><tr><th class="px-6 py-3">Number (Last 3 digits)</th><th class="px-6 py-3">Service</th><th class="px-6 py-3">Code</th><th class="px-6 py-3">Time</th> </thead><tbody id="todayTable"></tbody>追赶
-            <div id="todayEmpty" class="text-center py-8 text-gray-400 hidden">No OTPs today</div>
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Allocation Page -->
+    <div id="allocationPage" class="page">
+        <h1 class="text-2xl font-bold text-gray-900">📌 Number Allocation</h1>
+        <p class="text-gray-500 mt-1 mb-4">Select a country to view numbers assigned to you</p>
+        <select id="countrySelect" class="w-full md:w-64 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 mb-4">
+            <option value="">-- Select Country --</option>
+        </select>
+        <div id="numbersDisplay" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center text-gray-400">
+            Select a country to view numbers
         </div>
     </div>
 
-    <!-- TOTAL OTP PAGE -->
+    <!-- Today's Stat Page -->
+    <div id="todayPage" class="page">
+        <h1 class="text-2xl font-bold text-gray-900">📊 Today's OTP Statistics</h1>
+        <p class="text-gray-500 mt-1 mb-4">OTP received today from your numbers</p>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left font-semibold text-gray-600">Number</th>
+                            <th class="px-6 py-3 text-left font-semibold text-gray-600">Sender</th>
+                            <th class="px-6 py-3 text-left font-semibold text-gray-600">Code</th>
+                            <th class="px-6 py-3 text-left font-semibold text-gray-600">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="todayOtpTable" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            <div id="todayEmptyMsg" class="text-center py-8 text-gray-400 hidden">
+                <i class="fas fa-inbox text-4xl mb-2"></i>
+                <p>No OTP received today</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Total OTP Page -->
     <div id="totalPage" class="page">
-        <h1 class="text-2xl font-bold">💰 Total OTP Earnings</h1>
-        <p class="text-gray-500 mb-4">Today's OTP summary and earnings</p>
-        <div class="grid grid-cols-2 gap-6"><div class="bg-emerald-600 rounded-2xl p-6"><p class="text-emerald-100">Total OTP Today</p><p class="text-white text-4xl font-bold" id="totalCount">0</p></div>
-        <div class="bg-amber-600 rounded-2xl p-6"><p class="text-amber-100">Earnings</p><p class="text-white text-4xl font-bold" id="totalEarn">$0.00</p><p class="text-amber-100 text-sm">$0.005/OTP</p></div></div>
+        <h1 class="text-2xl font-bold text-gray-900">💰 Total OTP Earnings</h1>
+        <p class="text-gray-500 mt-1 mb-4">Today's OTP summary and earnings</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg p-6">
+                <p class="text-emerald-100 text-sm">Total OTP Today</p>
+                <p class="text-white text-4xl font-bold mt-1" id="totalOtpCount">0</p>
+            </div>
+            <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl shadow-lg p-6">
+                <p class="text-amber-100 text-sm">Total Earnings</p>
+                <p class="text-white text-4xl font-bold mt-1" id="totalEarnings">$0.00</p>
+                <p class="text-amber-100 text-sm mt-1">($0.005 per OTP)</p>
+            </div>
+        </div>
     </div>
 
-    <!-- PAST RECORDS PAGE -->
+    <!-- Past Records Page -->
     <div id="pastPage" class="page">
-        <h1 class="text-2xl font-bold">📅 Past Records</h1>
-        <div class="grid grid-cols-2 gap-4 my-4"><input type="date" id="startDate" class="border rounded-xl px-4 py-2"><input type="date" id="endDate" class="border rounded-xl px-4 py-2"></div>
-        <button id="fetchBtn" class="bg-indigo-600 text-white px-6 py-2 rounded-xl mb-4">Fetch Records</button>
-        <div class="bg-white rounded-2xl border"><div class="p-3 border-b flex justify-between"><span class="font-semibold">Records</span><span id="pastEarn" class="text-emerald-600">$0.00</span></div>
-        <table class="w-full"><thead class="bg-gray-50"><tr><th class="px-4 py-2">Date</th><th class="px-4 py-2">Code</th><th class="px-4 py-2">Time</th> </thead><tbody id="pastTable"></tbody>追赶
-        <div id="pastEmpty" class="text-center py-8 text-gray-400 hidden">No records</div></div>
-    </div>
-
-    <!-- PROFILE PAGE (Default Landing Page) -->
-    <div id="profilePage" class="page active-page">
-        <h1 class="text-2xl font-bold">👤 My Profile</h1>
-        <p class="text-gray-500 mb-4">Your account information</p>
-        <div class="bg-white rounded-2xl border p-6 max-w-md">
-            <div class="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
-                <div class="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <i class="fas fa-user text-emerald-600 text-2xl"></i>
+        <h1 class="text-2xl font-bold text-gray-900">📅 Past OTP Records</h1>
+        <p class="text-gray-500 mt-1 mb-4">View OTP history by date range</p>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                    <input type="date" id="startDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
                 </div>
                 <div>
-                    <h2 class="text-xl font-bold text-gray-800" id="profileName">User</h2>
-                    <p class="text-sm text-gray-500" id="profileRole">Member</p>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <input type="date" id="endDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
                 </div>
             </div>
-            <div class="space-y-4">
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">Username</span>
-                    <span class="font-medium text-gray-800" id="profileUsername">-</span>
+            <button id="fetchBtn" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl transition">Fetch Records</button>
+        </div>
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                <h3 class="font-semibold text-gray-800">OTP Records</h3>
+                <div class="text-sm">
+                    <span class="font-bold text-emerald-600" id="pastTotalEarnings">$0.00</span>
+                    <span class="text-gray-500 ml-2">total earnings</span>
                 </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">Email Address</span>
-                    <span class="font-medium text-gray-800" id="profileEmail">-</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">User ID</span>
-                    <span class="font-mono text-sm text-gray-600" id="profileUserId">-</span>
-                </div>
-                <div class="flex justify-between py-2">
-                    <span class="text-gray-500">Member Since</span>
-                    <span class="text-gray-600" id="profileCreated">-</span>
-                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left">Date</th>
+                            <th class="px-6 py-3 text-left">Number</th>
+                            <th class="px-6 py-3 text-left">Sender</th>
+                            <th class="px-6 py-3 text-left">Code</th>
+                            <th class="px-6 py-3 text-left">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pastOtpTable" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            <div id="pastEmptyMsg" class="text-center py-8 text-gray-400 hidden">
+                <i class="fas fa-calendar-times text-4xl mb-2"></i>
+                <p>No OTP records in this date range</p>
             </div>
         </div>
     </div>
 </main>
 
+<button id="addOtpBtn" class="fixed bottom-6 right-6 bg-emerald-600 text-white p-4 rounded-full shadow-lg hover:bg-emerald-700 transition z-20">
+    <i class="fas fa-plus text-xl"></i>
+</button>
+
 <script>
+// ================= SUPABASE CONFIGURATION =================
 const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
-const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
+const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
 
-// Get logged-in user from session
-const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
-if (!session || session.role !== 'user') {
-    window.location.href = '../index.html';
-}
-
-let currentUser = { id: session.userId, username: session.username, email: session.email };
+// ================= GLOBAL STATE =================
+let currentUser = null;
 let userNumbers = [];
 let userOtps = [];
 
-// Display user info in top bar
-document.getElementById('userNameDisplay').innerText = currentUser.username;
-document.getElementById('userEmailDisplay').innerText = currentUser.email;
+// ================= HELPER FUNCTIONS =================
+function getTodayStr() {
+    return new Date().toISOString().slice(0, 10);
+}
 
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
 }
 
-function getTodayStr() {
-    return new Date().toISOString().slice(0, 10);
+function getCountryFlag(country) {
+    const flags = {
+        'Jordan': '🇯🇴', 'Tajikistan': '🇹🇯', 'Nigeria': '🇳🇬',
+        'Myanmar': '🇲🇲', 'Hungary': '🇭🇺', 'Slovenia': '🇸🇮',
+        'Venezuela': '🇻🇪', 'Uzbekistan': '🇺🇿', 'USA': '🇺🇸', 'Canada': '🇨🇦',
+        'UK': '🇬🇧', 'Germany': '🇩🇪', 'France': '🇫🇷', 'India': '🇮🇳'
+    };
+    return flags[country] || '🌍';
 }
 
-// Load user's allocated numbers
-async function loadUserNumbers() {
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.className = 'fixed bottom-24 right-6 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm z-50 shadow-lg';
+    toast.innerHTML = message;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
+}
+
+// ================= SUPABASE FETCH FUNCTIONS =================
+async function fetchUserById(userId) {
     try {
-        const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=id,number,last3,country&user_id=eq.${currentUser.id}`;
-        const res = await fetch(url, { headers: { 'apikey': API_KEY } });
-        userNumbers = await res.json();
-    } catch (error) {
-        console.error('Error loading numbers:', error);
-        userNumbers = [];
+        const url = `${SUPABASE_URL}/rest/v1/users?select=id,username,email,role&id=eq.${encodeURIComponent(userId)}`;
+        const response = await fetch(url, {
+            headers: { 'apikey': SUPABASE_API_KEY }
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        if (data && data.length > 0) return data[0];
+        return null;
+    } catch (err) {
+        console.error("Fetch user error:", err);
+        return null;
     }
 }
 
-// Load OTPs for user
-async function loadUserOtps() {
-    const last3List = userNumbers.map(n => n.last3);
-    if (last3List.length === 0) {
-        userOtps = [];
+async function fetchUserAllocatedNumbers(userId) {
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=id,number,last3,country,user_id&user_id=eq.${encodeURIComponent(userId)}`;
+        const response = await fetch(url, {
+            headers: { 'apikey': SUPABASE_API_KEY }
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data || [];
+    } catch (err) {
+        console.error("Fetch numbers error:", err);
+        return [];
+    }
+}
+
+async function fetchUserOtps(userId) {
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/otp_logs?select=*&user_id=eq.${encodeURIComponent(userId)}&order=timestamp.desc`;
+        const response = await fetch(url, {
+            headers: { 'apikey': SUPABASE_API_KEY }
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data || [];
+    } catch (err) {
+        console.error("Fetch OTPs error:", err);
+        return [];
+    }
+}
+
+async function addOtpToSupabase(otpRecord) {
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/otp_logs`;
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_API_KEY,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify(otpRecord)
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return true;
+    } catch (err) {
+        console.error("Add OTP error:", err);
+        return false;
+    }
+}
+
+// ================= PROCESS NUMBER ALLOCATION =================
+function processAllocatedNumbers(rawNumbers) {
+    // Group numbers by country
+    const grouped = {};
+    rawNumbers.forEach(item => {
+        const country = item.country || 'Other';
+        if (!grouped[country]) {
+            grouped[country] = { country, numbers: [] };
+        }
+        grouped[country].numbers.push(item.number);
+    });
+    return Object.values(grouped);
+}
+
+// ================= UI RENDER FUNCTIONS =================
+function loadUserNumbersUI() {
+    const processed = processAllocatedNumbers(userNumbers);
+    const countries = processed.map(g => g.country);
+    const sel = document.getElementById('countrySelect');
+    if (sel) {
+        sel.innerHTML = '<option value="">-- Select Country --</option>' +
+            countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
+    }
+}
+
+function displayNumbers(country) {
+    const processed = processAllocatedNumbers(userNumbers);
+    const countryData = processed.find(g => g.country === country);
+    const div = document.getElementById('numbersDisplay');
+    if (!countryData || !countryData.numbers || countryData.numbers.length === 0) {
+        div.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers for this country</div>';
         return;
     }
-    
-    try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=*&phone_last3=in.(${last3List.join(',')})&order=message_time.desc`, {
-            headers: { 'apikey': API_KEY }
-        });
-        userOtps = await res.json();
-    } catch (error) {
-        console.error('Error loading OTPs:', error);
-        userOtps = [];
-    }
+    div.innerHTML = `
+        <div class="border rounded-xl overflow-hidden">
+            <div class="bg-gray-50 px-4 py-3 font-semibold border-b">${getCountryFlag(country)} ${country}</div>
+            <div class="divide-y divide-gray-100">
+                ${countryData.numbers.map(num => `<div class="px-4 py-3 font-mono text-sm">📞 ${escapeHtml(num)}</div>`).join('')}
+            </div>
+        </div>
+    `;
 }
 
-// Render today's OTPs
 function renderTodayOtps() {
     const today = getTodayStr();
     const todayOtps = userOtps.filter(o => o.date === today);
-    const tbody = document.getElementById('todayTable');
-    const empty = document.getElementById('todayEmpty');
-    
+    const tbody = document.getElementById('todayOtpTable');
+    const emptyMsg = document.getElementById('todayEmptyMsg');
+
+    if (!tbody) return;
     if (todayOtps.length === 0) {
         tbody.innerHTML = '';
-        empty.classList.remove('hidden');
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
         return;
     }
-    empty.classList.add('hidden');
-    
+    if (emptyMsg) emptyMsg.classList.add('hidden');
+
     tbody.innerHTML = todayOtps.map(o => `
-        <tr class="border-b hover:bg-gray-50">
-            <td class="px-6 py-3 font-mono">***${escapeHtml(o.phone_last3)}Js
-            <td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}Js
-            <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}Js
-            <td class="px-6 py-3 text-gray-500 text-sm">${o.time || new Date(o.message_time).toLocaleTimeString()}Js
+        <tr class="otp-row border-b border-gray-100 hover:bg-amber-50">
+            <td class="px-6 py-3 font-mono">***${escapeHtml(o.phone_last4 || '????')}</td>
+            <td class="px-6 py-3">${escapeHtml(o.sender || 'Bot')}</td>
+            <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td>
+            <td class="px-6 py-3 text-gray-500">${o.time || ''}</td>
         </tr>
     `).join('');
 }
 
-// Update total stats
 function updateTotalStats() {
     const today = getTodayStr();
     const todayCount = userOtps.filter(o => o.date === today).length;
-    document.getElementById('totalCount').textContent = todayCount;
-    document.getElementById('totalEarn').textContent = `$${(todayCount * 0.005).toFixed(2)}`;
+    document.getElementById('totalOtpCount').textContent = todayCount;
+    document.getElementById('totalEarnings').textContent = `$${(todayCount * 0.005).toFixed(2)}`;
 }
 
-// Fetch past records
-function fetchPastRecords() {
+function fetchPastOtps() {
     const start = document.getElementById('startDate').value;
     const end = document.getElementById('endDate').value;
     if (!start || !end) return;
-    
+
     const filtered = userOtps.filter(o => o.date >= start && o.date <= end);
-    const tbody = document.getElementById('pastTable');
-    const empty = document.getElementById('pastEmpty');
-    const earnSpan = document.getElementById('pastEarn');
-    
+    const tbody = document.getElementById('pastOtpTable');
+    const emptyMsg = document.getElementById('pastEmptyMsg');
+    const totalEarningsSpan = document.getElementById('pastTotalEarnings');
+
+    if (!tbody) return;
     if (filtered.length === 0) {
         tbody.innerHTML = '';
-        empty.classList.remove('hidden');
-        earnSpan.textContent = '$0.00';
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
+        if (totalEarningsSpan) totalEarningsSpan.textContent = '$0.00';
         return;
     }
-    empty.classList.add('hidden');
-    earnSpan.textContent = `$${(filtered.length * 0.005).toFixed(2)}`;
-    
+    if (emptyMsg) emptyMsg.classList.add('hidden');
+    if (totalEarningsSpan) totalEarningsSpan.textContent = `$${(filtered.length * 0.005).toFixed(2)}`;
+
     tbody.innerHTML = filtered.map(o => `
-        <tr class="border-b hover:bg-gray-50">
-            <td class="px-4 py-2 text-xs text-gray-600">${o.date}Js
-            <td class="px-4 py-2 font-bold text-emerald-600">${escapeHtml(o.otp)}Js
-            <td class="px-4 py-2 text-gray-500 text-xs">${o.time || new Date(o.message_time).toLocaleTimeString()}Js
+        <tr class="hover:bg-gray-50 border-b">
+            <td class="px-6 py-3 text-gray-600 text-xs">${o.date}</td>
+            <td class="px-6 py-3 font-mono">***${escapeHtml(o.phone_last4 || '????')}</td>
+            <td class="px-6 py-3">${escapeHtml(o.sender || 'Bot')}</td>
+            <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td>
+            <td class="px-6 py-3 text-gray-500 text-xs">${o.time || ''}</td>
         </tr>
     `).join('');
 }
 
-// Load profile
-async function loadProfile() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&id=eq.${currentUser.id}`, {
-        headers: { 'apikey': API_KEY }
-    });
-    const userData = await res.json();
-    const user = userData[0];
-    
-    document.getElementById('profileName').innerText = user.username;
-    document.getElementById('profileRole').innerText = user.role === 'admin' ? 'Administrator' : 'Regular User';
-    document.getElementById('profileUsername').innerText = user.username;
-    document.getElementById('profileEmail').innerText = user.email;
-    document.getElementById('profileUserId').innerText = user.id;
-    document.getElementById('profileCreated').innerText = user.created_at ? new Date(user.created_at).toLocaleDateString() : getTodayStr();
-}
-
 async function refreshAll() {
-    await loadUserNumbers();
-    await loadUserOtps();
+    if (!currentUser) return;
+    
+    // Show loading indicators
+    document.getElementById('todayOtpTable').innerHTML = '<tr><td colspan="4" class="text-center py-4"><div class="loading-spinner"></div> Loading...</td></tr>';
+    
+    userOtps = await fetchUserOtps(currentUser.id);
     renderTodayOtps();
     updateTotalStats();
-    fetchPastRecords();
+    fetchPastOtps();
 }
 
-function switchPage(pageName) {
-    const pages = ['today', 'total', 'past', 'profile'];
-    pages.forEach(p => document.getElementById(p + 'Page').classList.remove('active-page'));
-    document.getElementById(pageName + 'Page').classList.add('active-page');
-    document.getElementById('dropdown').classList.add('hidden-dropdown');
+// ================= ADD TEST OTP =================
+async function addTestOtp() {
+    if (!currentUser) {
+        alert('User not logged in');
+        return;
+    }
     
-    if (pageName === 'today') renderTodayOtps();
-    if (pageName === 'total') updateTotalStats();
-    if (pageName === 'past') fetchPastRecords();
-    if (pageName === 'profile') loadProfile();
+    const phoneLast4 = prompt("Enter last 4 digits of phone number:", "4567");
+    const otpCode = prompt("Enter OTP code:", "123456");
+    const sender = prompt("Enter sender name:", "Test Service");
+
+    if (phoneLast4 && otpCode && phoneLast4.length === 4 && /^\d+$/.test(phoneLast4)) {
+        const now = new Date();
+        const newOtp = {
+            id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
+            user_id: currentUser.id,
+            otp: otpCode,
+            phone_last4: phoneLast4,
+            sender: sender || 'Unknown',
+            timestamp: now.getTime(),
+            date: now.toISOString().slice(0, 10),
+            time: now.toLocaleTimeString()
+        };
+        
+        const success = await addOtpToSupabase(newOtp);
+        if (success) {
+            await refreshAll();
+            alert(`✅ Test OTP added to Supabase!\nPhone: ***${phoneLast4}\nOTP: ${otpCode}\nEarned: $0.005`);
+        } else {
+            alert('❌ Failed to add OTP. Please try again.');
+        }
+    } else if (phoneLast4 && phoneLast4.length !== 4) {
+        alert('Please enter exactly 4 digits for phone number');
+    } else if (phoneLast4 && !/^\d+$/.test(phoneLast4)) {
+        alert('Phone last 4 must contain only digits');
+    }
 }
 
-function logout() {
-    localStorage.removeItem('mima_session');
-    window.location.href = '../index.html';
+// ================= GET USER ID FROM URL AND LOAD =================
+function getUserIdFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('id');
 }
 
-// Set default dates
-const end = new Date();
-const start = new Date();
-start.setDate(end.getDate() - 6);
-document.getElementById('startDate').value = start.toISOString().slice(0, 10);
-document.getElementById('endDate').value = end.toISOString().slice(0, 10);
+// Function to copy user ID and add to allocation link
+function setupAllocationLink() {
+    if (!currentUser) return;
+    
+    // The allocation link should include the user ID for the allocation.html page
+    const allocationBaseUrl = 'allocation.html';
+    const fullAllocationUrl = `${allocationBaseUrl}?id=${encodeURIComponent(currentUser.id)}`;
+    
+    // You can also display a message or provide a copy button for the link
+    const allocationSection = document.getElementById('numbersDisplay');
+    const existingLinkHint = document.getElementById('allocationLinkHint');
+    
+    if (!existingLinkHint && allocationSection) {
+        const hintDiv = document.createElement('div');
+        hintDiv.id = 'allocationLinkHint';
+        hintDiv.className = 'mt-4 p-3 bg-gray-50 rounded-xl text-xs text-gray-500 border border-gray-200';
+        hintDiv.innerHTML = `
+            <div class="flex items-center justify-between flex-wrap gap-2">
+                <span><i class="fas fa-link"></i> Allocation page link (includes your ID):</span>
+                <button id="copyAllocationLinkBtn" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 py-1 rounded-full text-xs transition">
+                    <i class="fas fa-copy"></i> Copy Link
+                </button>
+            </div>
+            <code class="block mt-2 text-xs bg-white p-2 rounded border overflow-x-auto">${escapeHtml(fullAllocationUrl)}</code>
+        `;
+        allocationSection.parentNode.insertBefore(hintDiv, allocationSection.nextSibling);
+        
+        document.getElementById('copyAllocationLinkBtn')?.addEventListener('click', () => {
+            navigator.clipboard.writeText(fullAllocationUrl);
+            showToast('✅ Allocation link copied! Use ?id= parameter');
+        });
+    }
+}
 
-// Event listeners
-document.getElementById('fetchBtn').addEventListener('click', fetchPastRecords);
-document.getElementById('menuBtn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    document.getElementById('dropdown').classList.toggle('hidden-dropdown');
-});
-document.addEventListener('click', () => {
-    document.getElementById('dropdown').classList.add('hidden-dropdown');
-});
-document.getElementById('logoutBtn').addEventListener('click', (e) => {
-    e.preventDefault();
-    logout();
-});
+// ================= MAIN INITIALIZATION =================
+async function initDashboard() {
+    const userId = getUserIdFromUrl();
+    
+    if (!userId) {
+        // Show error if no user ID in URL
+        document.getElementById('numbersDisplay').innerHTML = `
+            <div class="text-center py-12 text-red-500">
+                <i class="fas fa-exclamation-triangle text-5xl mb-3"></i>
+                <p class="font-medium">No User ID provided</p>
+                <p class="text-sm mt-1">Please add <code class="bg-gray-100 px-2 py-0.5 rounded">?id=YOUR_USER_ID</code> to the URL</p>
+                <p class="text-xs text-gray-400 mt-2">Example: ?id=3b6de643-3b66-4090-ad42-1ae3615f97ba</p>
+            </div>
+        `;
+        return;
+    }
+    
+    // Show loading state
+    document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-12"><div class="loading-spinner"></div><p class="mt-2">Loading user data...</p></div>';
+    
+    // Fetch user from Supabase
+    const user = await fetchUserById(userId);
+    if (!user) {
+        document.getElementById('numbersDisplay').innerHTML = `
+            <div class="text-center py-12 text-red-500">
+                <i class="fas fa-user-slash text-5xl mb-3"></i>
+                <p class="font-medium">User not found</p>
+                <p class="text-sm mt-1">No user with ID: ${escapeHtml(userId.slice(0, 16))}...</p>
+            </div>
+        `;
+        return;
+    }
+    
+    currentUser = user;
+    
+    // Update UI with user info
+    document.getElementById('userName').innerText = currentUser.username || 'User';
+    document.getElementById('userEmail').innerText = currentUser.email || '';
+    
+    // Fetch numbers from Supabase
+    const numbersData = await fetchUserAllocatedNumbers(currentUser.id);
+    userNumbers = numbersData;
+    
+    // Load numbers into UI
+    loadUserNumbersUI();
+    
+    // Fetch OTP records from Supabase
+    userOtps = await fetchUserOtps(currentUser.id);
+    
+    // Set default date range (last 7 days)
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 6);
+    document.getElementById('startDate').value = start.toISOString().slice(0, 10);
+    document.getElementById('endDate').value = end.toISOString().slice(0, 10);
+    
+    // Setup event listeners
+    document.getElementById('countrySelect').onchange = e => { if (e.target.value) displayNumbers(e.target.value); };
+    document.getElementById('fetchBtn').onclick = fetchPastOtps;
+    document.getElementById('addOtpBtn').onclick = addTestOtp;
+    
+    // Render initial data
+    renderTodayOtps();
+    updateTotalStats();
+    fetchPastOtps();
+    
+    // Setup allocation link for allocation.html
+    setupAllocationLink();
+    
+    // Show default message in numbers display
+    document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-8 text-gray-400">Select a country to view numbers</div>';
+    
+    // Set active page to allocation
+    document.getElementById('allocationPage').classList.add('active-page');
+}
 
-document.querySelectorAll('.dropdown-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-        const page = item.getAttribute('data-page');
-        if (page) switchPage(page);
+// ================= PAGE NAVIGATION =================
+function setupNavigation() {
+    const pages = ['allocation', 'today', 'total', 'past'];
+    pages.forEach(page => {
+        const links = document.querySelectorAll(`[data-page="${page}"]`);
+        links.forEach(link => {
+            link.onclick = (e) => {
+                e.preventDefault();
+                pages.forEach(p => document.getElementById(p + 'Page').classList.remove('active-page'));
+                document.getElementById(page + 'Page').classList.add('active-page');
+                document.getElementById('dropdownMenu').classList.add('hidden-dropdown');
+                if (page === 'allocation') loadUserNumbersUI();
+                if (page === 'today') renderTodayOtps();
+                if (page === 'total') updateTotalStats();
+                if (page === 'past') fetchPastOtps();
+            };
+        });
     });
-});
+}
 
-// Initialize - Profile is default active page
-loadProfile();
-refreshAll();
+// ================= DROPDOWN MENU =================
+function setupDropdown() {
+    const menuBtn = document.getElementById('menuButton');
+    const dropdown = document.getElementById('dropdownMenu');
+    if (menuBtn) {
+        menuBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('hidden-dropdown'); };
+        document.addEventListener('click', () => dropdown.classList.add('hidden-dropdown'));
+    }
+}
+
+// ================= LOGOUT =================
+function setupLogout() {
+    document.getElementById('logoutBtn').onclick = (e) => {
+        e.preventDefault();
+        // Clear session and redirect to login without ID
+        window.location.href = window.location.pathname;
+    };
+}
+
+// ================= START APP =================
+document.addEventListener('DOMContentLoaded', async () => {
+    setupNavigation();
+    setupDropdown();
+    setupLogout();
+    await initDashboard();
+});
 </script>
 </body>
 </html>
