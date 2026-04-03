@@ -23,6 +23,14 @@
             animation: spin 0.6s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+        .number-badge {
+            background: #eef2ff;
+            color: #1e40af;
+            padding: 2px 8px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 500;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -80,15 +88,15 @@
         <!-- Today's Stat Page -->
         <div id="todayPage" class="page">
             <h1 class="text-2xl font-bold text-gray-900">📊 Today's OTP Statistics</h1>
-            <p class="text-gray-500 mt-1 mb-4">OTP received today from your numbers</p>
+            <p class="text-gray-500 mt-1 mb-4">OTP received today on your numbers</p>
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left font-semibold text-gray-600">Number</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-600">Phone Number</th>
                                 <th class="px-6 py-3 text-left font-semibold text-gray-600">Sender</th>
-                                <th class="px-6 py-3 text-left font-semibold text-gray-600">Code</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-600">OTP Code</th>
                                 <th class="px-6 py-3 text-left font-semibold text-gray-600">Time</th>
                             </tr>
                         </thead>
@@ -97,7 +105,7 @@
                 </div>
                 <div id="todayEmptyMsg" class="text-center py-8 text-gray-400 hidden">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>No OTP received today</p>
+                    <p>No OTP received today on your numbers</p>
                 </div>
             </div>
         </div>
@@ -149,9 +157,9 @@
                         <thead class="bg-gray-50">
                             <tr>
                                 <th class="px-6 py-3 text-left">Date</th>
-                                <th class="px-6 py-3 text-left">Number</th>
+                                <th class="px-6 py-3 text-left">Phone Number</th>
                                 <th class="px-6 py-3 text-left">Sender</th>
-                                <th class="px-6 py-3 text-left">Code</th>
+                                <th class="px-6 py-3 text-left">OTP Code</th>
                                 <th class="px-6 py-3 text-left">Time</th>
                             </tr>
                         </thead>
@@ -178,7 +186,9 @@ const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 
 // ================= GLOBAL STATE =================
 let currentUser = null;
-let userNumbers = [];
+let userNumbers = [];           // Array of allocated number objects
+let userPhoneNumbers = [];      // Array of full phone numbers (strings)
+let userPhoneLast4s = [];       // Array of last 4 digits for matching
 let userOtps = [];
 
 // ================= HELPER FUNCTIONS =================
@@ -207,6 +217,15 @@ function showToast(message) {
     toast.innerHTML = message;
     document.body.appendChild(toast);
     setTimeout(() => toast.remove(), 2500);
+}
+
+// Extract last 4 digits from a phone number (remove non-digits)
+function getLast4Digits(phoneNumber) {
+    const digits = phoneNumber.toString().replace(/\D/g, '');
+    if (digits.length >= 4) {
+        return digits.slice(-4);
+    }
+    return digits; // return whatever we have if less than 4
 }
 
 // ================= SUPABASE FETCH FUNCTIONS =================
@@ -241,9 +260,10 @@ async function fetchUserAllocatedNumbers(userId) {
     }
 }
 
-async function fetchUserOtps(userId) {
+// Fetch ALL OTP logs (not filtered by user_id yet - we'll filter by phone number match)
+async function fetchAllOtps() {
     try {
-        const url = `${SUPABASE_URL}/rest/v1/otp_logs?select=*&user_id=eq.${encodeURIComponent(userId)}&order=timestamp.desc`;
+        const url = `${SUPABASE_URL}/rest/v1/otp_logs?select=*&order=timestamp.desc`;
         const response = await fetch(url, {
             headers: { 'apikey': SUPABASE_API_KEY }
         });
@@ -274,6 +294,38 @@ async function addOtpToSupabase(otpRecord) {
         console.error("Add OTP error:", err);
         return false;
     }
+}
+
+// ================= OTP FILTERING BASED ON USER'S NUMBERS =================
+// Filter OTPs to only those that match the user's allocated phone numbers
+function filterOtpsByUserNumbers(allOtps) {
+    if (!userPhoneLast4s.length) return [];
+    
+    return allOtps.filter(otp => {
+        // Check if OTP's phone_last4 matches any of user's phone numbers' last 4 digits
+        return userPhoneLast4s.includes(otp.phone_last4);
+    });
+}
+
+// Update the user's phone number arrays from allocated numbers
+function updateUserPhoneArrays() {
+    userPhoneNumbers = [];
+    userPhoneLast4s = [];
+    
+    userNumbers.forEach(item => {
+        if (item.number) {
+            userPhoneNumbers.push(item.number);
+            const last4 = getLast4Digits(item.number);
+            if (last4) {
+                userPhoneLast4s.push(last4);
+            }
+        }
+    });
+    
+    // Remove duplicates
+    userPhoneLast4s = [...new Set(userPhoneLast4s)];
+    
+    console.log(`User has ${userPhoneNumbers.length} numbers, matching last4s:`, userPhoneLast4s);
 }
 
 // ================= PROCESS NUMBER ALLOCATION =================
@@ -332,14 +384,20 @@ function renderTodayOtps() {
     }
     if (emptyMsg) emptyMsg.classList.add('hidden');
 
-    tbody.innerHTML = todayOtps.map(o => `
-        <tr class="otp-row border-b border-gray-100 hover:bg-amber-50">
-            <td class="px-6 py-3 font-mono">***${escapeHtml(o.phone_last4 || '????')}</td>
-            <td class="px-6 py-3">${escapeHtml(o.sender || 'Bot')}</td>
-            <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td>
-            <td class="px-6 py-3 text-gray-500">${o.time || ''}</td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = todayOtps.map(o => {
+        // Find the full phone number that matches this OTP's last4
+        const matchingNumber = userPhoneNumbers.find(num => getLast4Digits(num) === o.phone_last4);
+        const displayNumber = matchingNumber ? matchingNumber : `***${o.phone_last4 || '????'}`;
+        
+        return `
+            <tr class="otp-row border-b border-gray-100 hover:bg-amber-50">
+                <td class="px-6 py-3 font-mono text-sm">${escapeHtml(displayNumber)}</td>
+                <td class="px-6 py-3">${escapeHtml(o.sender || 'Bot')}</td>
+                <td class="px-6 py-3 font-bold text-emerald-600 text-lg">${escapeHtml(o.otp)}</td>
+                <td class="px-6 py-3 text-gray-500">${o.time || ''}</td>
+            </tr>
+        `;
+    }).join('');
 }
 
 function updateTotalStats() {
@@ -369,15 +427,20 @@ function fetchPastOtps() {
     if (emptyMsg) emptyMsg.classList.add('hidden');
     if (totalEarningsSpan) totalEarningsSpan.textContent = `$${(filtered.length * 0.005).toFixed(2)}`;
 
-    tbody.innerHTML = filtered.map(o => `
-        <tr class="hover:bg-gray-50 border-b">
-            <td class="px-6 py-3 text-gray-600 text-xs">${o.date}</td>
-            <td class="px-6 py-3 font-mono">***${escapeHtml(o.phone_last4 || '????')}</td>
-            <td class="px-6 py-3">${escapeHtml(o.sender || 'Bot')}</td>
-            <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td>
-            <td class="px-6 py-3 text-gray-500 text-xs">${o.time || ''}</td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = filtered.map(o => {
+        const matchingNumber = userPhoneNumbers.find(num => getLast4Digits(num) === o.phone_last4);
+        const displayNumber = matchingNumber ? matchingNumber : `***${o.phone_last4 || '????'}`;
+        
+        return `
+            <tr class="hover:bg-gray-50 border-b">
+                <td class="px-6 py-3 text-gray-600 text-xs">${o.date}</td>
+                <td class="px-6 py-3 font-mono text-sm">${escapeHtml(displayNumber)}</td>
+                <td class="px-6 py-3">${escapeHtml(o.sender || 'Bot')}</td>
+                <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td>
+                <td class="px-6 py-3 text-gray-500 text-xs">${o.time || ''}</td>
+             </tr>
+        `;
+    }).join('');
 }
 
 async function refreshAll() {
@@ -385,7 +448,10 @@ async function refreshAll() {
     
     document.getElementById('todayOtpTable').innerHTML = '<tr><td colspan="4" class="text-center py-4"><div class="loading-spinner"></div> Loading...</td></tr>';
     
-    userOtps = await fetchUserOtps(currentUser.id);
+    // Fetch all OTPs and filter by user's numbers
+    const allOtps = await fetchAllOtps();
+    userOtps = filterOtpsByUserNumbers(allOtps);
+    
     renderTodayOtps();
     updateTotalStats();
     fetchPastOtps();
@@ -398,17 +464,36 @@ async function addTestOtp() {
         return;
     }
     
-    const phoneLast4 = prompt("Enter last 4 digits of phone number:", "4567");
-    const otpCode = prompt("Enter OTP code:", "123456");
+    if (userPhoneNumbers.length === 0) {
+        alert('You have no allocated numbers. Please contact admin to assign numbers to your account.');
+        return;
+    }
+    
+    // Show list of user's numbers to choose from
+    const numberOptions = userPhoneNumbers.map((num, idx) => `${idx + 1}. ${num}`).join('\n');
+    const selectedIndex = prompt(`Select a phone number to receive OTP:\n${numberOptions}\n\nEnter number (1-${userPhoneNumbers.length}):`, "1");
+    
+    if (!selectedIndex) return;
+    
+    const idx = parseInt(selectedIndex) - 1;
+    if (isNaN(idx) || idx < 0 || idx >= userPhoneNumbers.length) {
+        alert('Invalid selection');
+        return;
+    }
+    
+    const selectedNumber = userPhoneNumbers[idx];
+    const phoneLast4 = getLast4Digits(selectedNumber);
+    const otpCode = prompt("Enter OTP code:", Math.floor(100000 + Math.random() * 900000).toString());
     const sender = prompt("Enter sender name:", "Test Service");
-
-    if (phoneLast4 && otpCode && phoneLast4.length === 4 && /^\d+$/.test(phoneLast4)) {
+    
+    if (otpCode) {
         const now = new Date();
         const newOtp = {
             id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
             user_id: currentUser.id,
             otp: otpCode,
             phone_last4: phoneLast4,
+            full_number: selectedNumber,
             sender: sender || 'Unknown',
             timestamp: now.getTime(),
             date: now.toISOString().slice(0, 10),
@@ -418,14 +503,10 @@ async function addTestOtp() {
         const success = await addOtpToSupabase(newOtp);
         if (success) {
             await refreshAll();
-            alert(`✅ Test OTP added to Supabase!\nPhone: ***${phoneLast4}\nOTP: ${otpCode}\nEarned: $0.005`);
+            alert(`✅ Test OTP added!\nNumber: ${selectedNumber}\nOTP: ${otpCode}\nEarned: $0.005`);
         } else {
             alert('❌ Failed to add OTP. Please try again.');
         }
-    } else if (phoneLast4 && phoneLast4.length !== 4) {
-        alert('Please enter exactly 4 digits for phone number');
-    } else if (phoneLast4 && !/^\d+$/.test(phoneLast4)) {
-        alert('Phone last 4 must contain only digits');
     }
 }
 
@@ -440,15 +521,12 @@ async function initDashboard() {
     const userId = getUserIdFromUrl();
     
     if (!userId) {
-        // No user ID, redirect to login
         window.location.href = '../index.html';
         return;
     }
     
-    // Show loading state
     document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-12"><div class="loading-spinner"></div><p class="mt-2">Loading user data...</p></div>';
     
-    // Fetch user from Supabase
     const user = await fetchUserById(userId);
     if (!user) {
         document.getElementById('numbersDisplay').innerHTML = `
@@ -464,42 +542,54 @@ async function initDashboard() {
     
     currentUser = user;
     
-    // Update UI with user info
     document.getElementById('userName').innerText = currentUser.username || 'User';
     document.getElementById('userEmail').innerText = currentUser.email || '';
     
-    // Fetch numbers from Supabase
+    // Fetch allocated numbers
     const numbersData = await fetchUserAllocatedNumbers(currentUser.id);
     userNumbers = numbersData;
+    
+    // Update phone number arrays for filtering
+    updateUserPhoneArrays();
+    
+    console.log(`User ${currentUser.username} has ${userPhoneNumbers.length} numbers:`, userPhoneNumbers);
+    
+    if (userPhoneNumbers.length === 0) {
+        document.getElementById('numbersDisplay').innerHTML = `
+            <div class="text-center py-12 text-amber-500">
+                <i class="fas fa-exclamation-triangle text-5xl mb-3"></i>
+                <p class="font-medium">No numbers allocated yet</p>
+                <p class="text-sm mt-1">Please contact admin to assign numbers to your account</p>
+            </div>
+        `;
+    }
+    
     loadUserNumbersUI();
     
-    // Fetch OTP records from Supabase
-    userOtps = await fetchUserOtps(currentUser.id);
+    // Fetch ALL OTPs and filter by user's numbers
+    const allOtps = await fetchAllOtps();
+    userOtps = filterOtpsByUserNumbers(allOtps);
     
-    // Set default date range (last 7 days)
+    console.log(`Found ${userOtps.length} OTPs matching user's numbers`);
+    
     const end = new Date();
     const start = new Date();
     start.setDate(end.getDate() - 6);
     document.getElementById('startDate').value = start.toISOString().slice(0, 10);
     document.getElementById('endDate').value = end.toISOString().slice(0, 10);
     
-    // Setup event listeners
     document.getElementById('countrySelect').onchange = e => { if (e.target.value) displayNumbers(e.target.value); };
     document.getElementById('fetchBtn').onclick = fetchPastOtps;
     document.getElementById('addOtpBtn').onclick = addTestOtp;
     
-    // Render initial data
     renderTodayOtps();
     updateTotalStats();
     fetchPastOtps();
     
-    // Show default message in numbers display
     document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-8 text-gray-400">Select a country to view numbers</div>';
-    
-    // Set active page to allocation
     document.getElementById('allocationPage').classList.add('active-page');
     
-    showToast(`✅ Welcome ${currentUser.username}!`);
+    showToast(`✅ Welcome ${currentUser.username}! You have ${userPhoneNumbers.length} active numbers.`);
 }
 
 // ================= PAGE NAVIGATION =================
