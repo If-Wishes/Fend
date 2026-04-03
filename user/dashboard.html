@@ -3,140 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MIMA Panel | My Numbers</title>
+    <title>NexusPanel | User Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #f9fafb; }
+        .page { display: none; }
+        .page.active-page { display: block; }
+        .hidden-dropdown { display: none; }
+        .otp-row:hover { background: #fef3c7; }
+    </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-50">
 
-<div class="max-w-4xl mx-auto px-4 py-8">
-    <!-- Header -->
-    <div class="bg-white rounded-2xl shadow-sm border p-6 mb-6">
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-800">MIMA<span class="text-emerald-600">Panel</span></h1>
-                <p class="text-gray-500 mt-1">Your Allocated Numbers</p>
-            </div>
-            <div class="text-right">
-                <p class="text-sm font-medium text-gray-800" id="userName">Loading...</p>
-                <p class="text-xs text-gray-500" id="userEmail"></p>
-            </div>
-        </div>
-    </div>
+<!-- (UNCHANGED UI ABOVE) -->
 
-    <!-- Numbers Display -->
-    <div id="numbersContainer" class="bg-white rounded-2xl shadow-sm border p-6">
-        <div class="text-center py-8 text-gray-400">Loading your numbers...</div>
-    </div>
-
-    <!-- Footer -->
-    <div class="mt-6 text-center text-xs text-gray-400">
-        Each OTP earns $0.005 | Contact admin for support
-    </div>
-</div>
+<script src="../js/data.js"></script>
+<script src="../js/auth.js"></script>
 
 <script>
+// ✅ SUPABASE INIT
 const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
-const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
+const API_KEY = 'YOUR_API_KEY_HERE';
+const supabase = window.supabase.createClient(SUPABASE_URL, API_KEY);
 
-// Get logged-in user from session
-const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
+// =============================
 
-if (!session || session.role !== 'user') {
-    // No session - redirect to login
-    window.location.href = '../index.html';
-}
+if (!requireUserAuth()) {}
 
-// Display user info
-document.getElementById('userName').innerText = session.username;
-document.getElementById('userEmail').innerText = session.email || 'user@example.com';
+let currentUser = getCurrentUser();
+let userNumbers = [];
+let userOtps = [];
 
-// Fetch numbers for this specific user
-async function loadUserNumbers() {
-    const container = document.getElementById('numbersContainer');
-    container.innerHTML = '<div class="text-center py-8 text-gray-400">Loading your numbers...</div>';
-    
-    try {
-        // Query allocated_numbers where user_id matches the logged-in user
-        const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=*&user_id=eq.${session.userId}`;
-        console.log('Fetching for user:', session.userId);
-        
-        const response = await fetch(url, {
-            headers: { 'apikey': API_KEY }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        
-        const numbers = await response.json();
-        console.log('Numbers found:', numbers.length);
-        
-        if (numbers.length === 0) {
-            container.innerHTML = `
-                <div class="text-center py-8 text-gray-400">
-                    <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>No numbers allocated yet</p>
-                    <p class="text-sm mt-1">Contact admin to get numbers assigned to you</p>
-                </div>
-            `;
-            return;
-        }
-        
-        // Group by country
-        const grouped = {};
-        numbers.forEach(num => {
-            if (!grouped[num.country]) grouped[num.country] = [];
-            grouped[num.country].push(num);
-        });
-        
-        let html = '<div class="space-y-4">';
-        
-        for (const country in grouped) {
-            html += `
-                <div class="border border-gray-200 rounded-xl overflow-hidden">
-                    <div class="bg-gray-50 px-4 py-3 border-b">
-                        <div class="flex items-center gap-2">
-                            <span class="text-xl">${getCountryFlag(country)}</span>
-                            <span class="font-semibold text-gray-800">${country}</span>
-                            <span class="text-xs text-gray-400">${grouped[country].length} numbers</span>
-                        </div>
-                    </div>
-                    <div class="divide-y divide-gray-100">
-            `;
-            
-            for (const num of grouped[country]) {
-                html += `
-                    <div class="px-4 py-3 flex justify-between items-center hover:bg-gray-50">
-                        <div>
-                            <span class="font-mono text-sm">${escapeHtml(num.number)}</span>
-                            <span class="text-xs text-gray-400 ml-2">(last3: ${num.last3})</span>
-                        </div>
-                        <button onclick="copyToClipboard('${escapeHtml(num.number)}')" 
-                            class="text-xs bg-gray-100 hover:bg-green-100 px-3 py-1.5 rounded-full transition">
-                            <i class="fas fa-copy mr-1"></i>Copy
-                        </button>
-                    </div>
-                `;
-            }
-            
-            html += `</div></div>`;
-        }
-        
-        html += '</div>';
-        container.innerHTML = html;
-        
-    } catch (error) {
-        console.error('Error:', error);
-        container.innerHTML = `
-            <div class="text-center py-8 text-red-400">
-                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
-                <p>Error loading numbers</p>
-                <p class="text-sm mt-1">Please try again later</p>
-            </div>
-        `;
-    }
-}
+// =============================
 
 function getCountryFlag(country) {
     const flags = {
@@ -147,18 +48,234 @@ function getCountryFlag(country) {
     return flags[country] || '🌍';
 }
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
+// ✅ CHANGED (Supabase)
+async function loadUserNumbers() {
+    const { data, error } = await supabase
+        .from('numbers')
+        .select('*')
+        .eq('user_id', currentUser.userId);
+
+    if (error) return console.error(error);
+
+    userNumbers = [];
+
+    data.forEach(row => {
+        let existing = userNumbers.find(n => n.country === row.country);
+
+        if (!existing) {
+            existing = { country: row.country, numbers: [] };
+            userNumbers.push(existing);
+        }
+
+        existing.numbers.push(row.number);
+    });
+
+    const countries = [...new Set(userNumbers.map(n => n.country))];
+    const sel = document.getElementById('countrySelect');
+
+    if (sel) {
+        sel.innerHTML = '<option value="">-- Select Country --</option>' +
+            countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
+    }
 }
 
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text);
-    alert(`✅ Copied: ${text}`);
+// =============================
+
+function displayNumbers(country) {
+    const data = userNumbers.find(n => n.country === country);
+    const div = document.getElementById('numbersDisplay');
+
+    if (!data || !data.numbers || data.numbers.length === 0) {
+        div.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers for this country</div>';
+        return;
+    }
+
+    div.innerHTML = `
+        <div class="border rounded-xl overflow-hidden">
+            <div class="bg-gray-50 px-4 py-2 font-semibold">${getCountryFlag(country)} ${country}</div>
+            <div class="divide-y">
+                ${data.numbers.map(num => `<div class="px-4 py-2 font-mono">${escapeHtml(num)}</div>`).join('')}
+            </div>
+        </div>
+    `;
 }
 
-// Load numbers when page loads
-loadUserNumbers();
+// ✅ CHANGED (Supabase)
+async function loadOtps() {
+    try {
+        const { data: numbersData } = await supabase
+            .from('numbers')
+            .select('number')
+            .eq('user_id', currentUser.userId);
+
+        const userPhoneLast4s = [];
+
+        numbersData.forEach(entry => {
+            const cleanNumber = entry.number.replace(/\D/g, '');
+            if (cleanNumber.length >= 4) {
+                userPhoneLast4s.push(cleanNumber.slice(-4));
+            }
+        });
+
+        const { data: allOtps, error } = await supabase
+            .from('otps')
+            .select('*')
+            .order('timestamp', { ascending: false });
+
+        if (error) return console.error(error);
+
+        userOtps = allOtps.filter(otp =>
+            userPhoneLast4s.includes(otp.phone_last4)
+        );
+
+        return userOtps;
+
+    } catch (error) {
+        console.log(error);
+        userOtps = [];
+        return [];
+    }
+}
+
+// =============================
+
+function renderTodayOtps() {
+    const today = getTodayStr();
+    const todayOtps = userOtps.filter(o => o.date === today);
+    const tbody = document.getElementById('todayOtpTable');
+    const emptyMsg = document.getElementById('todayEmptyMsg');
+
+    if (!tbody) return;
+
+    if (todayOtps.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
+        return;
+    }
+
+    if (emptyMsg) emptyMsg.classList.add('hidden');
+
+    tbody.innerHTML = todayOtps.map(o => `
+        <tr class="otp-row border-b border-gray-100 hover:bg-amber-50">
+            <td class="px-6 py-3 font-mono">***${escapeHtml(o.phone_last4 || '????')}</td>
+            <td class="px-6 py-3">${escapeHtml(o.sender || 'Bot')}</td>
+            <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td>
+            <td class="px-6 py-3 text-gray-500">${o.time || ''}</td>
+        </tr>
+    `).join('');
+}
+
+// =============================
+
+function updateTotalStats() {
+    const today = getTodayStr();
+    const todayCount = userOtps.filter(o => o.date === today).length;
+
+    document.getElementById('totalOtpCount').textContent = todayCount;
+    document.getElementById('totalEarnings').textContent =
+        `$${(todayCount * 0.005).toFixed(2)}`;
+}
+
+// =============================
+
+function fetchPastOtps() {
+    const start = document.getElementById('startDate').value;
+    const end = document.getElementById('endDate').value;
+    if (!start || !end) return;
+
+    const filtered = userOtps.filter(o => o.date >= start && o.date <= end);
+
+    const tbody = document.getElementById('pastOtpTable');
+    const emptyMsg = document.getElementById('pastEmptyMsg');
+    const totalEarningsSpan = document.getElementById('pastTotalEarnings');
+
+    if (!tbody) return;
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
+        if (totalEarningsSpan) totalEarningsSpan.textContent = '$0.00';
+        return;
+    }
+
+    if (emptyMsg) emptyMsg.classList.add('hidden');
+
+    if (totalEarningsSpan)
+        totalEarningsSpan.textContent = `$${(filtered.length * 0.005).toFixed(2)}`;
+
+    tbody.innerHTML = filtered.map(o => `
+        <tr class="hover:bg-gray-50 border-b">
+            <td class="px-6 py-3 text-gray-600 text-xs">${o.date}</td>
+            <td class="px-6 py-3 font-mono">***${escapeHtml(o.phone_last4 || '????')}</td>
+            <td class="px-6 py-3">${escapeHtml(o.sender || 'Bot')}</td>
+            <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td>
+            <td class="px-6 py-3 text-gray-500 text-xs">${o.time || ''}</td>
+        </tr>
+    `).join('');
+}
+
+// =============================
+
+async function refreshAll() {
+    await loadOtps();
+    renderTodayOtps();
+    updateTotalStats();
+    fetchPastOtps();
+}
+
+// ✅ CHANGED (Supabase)
+async function addTestOtp() {
+    const phoneLast4 = prompt("Enter last 4 digits of phone number:", "4567");
+    const otpCode = prompt("Enter OTP code:", "123456");
+    const sender = prompt("Enter sender name:", "Test");
+
+    if (phoneLast4 && otpCode) {
+        const now = new Date();
+
+        const { error } = await supabase
+            .from('otps')
+            .insert([{
+                otp: otpCode,
+                phone_last4: phoneLast4,
+                sender: sender,
+                timestamp: now.getTime(),
+                date: now.toISOString().slice(0, 10),
+                time: now.toLocaleTimeString()
+            }]);
+
+        if (error) {
+            console.error(error);
+            alert("❌ Failed to save OTP");
+            return;
+        }
+
+        await refreshAll();
+
+        alert(`✅ Test OTP added!\nPhone: ***${phoneLast4}\nOTP: ${otpCode}\nEarned: $0.005`);
+    }
+}
+
+// =============================
+
+document.addEventListener('DOMContentLoaded', async () => {
+    initData();
+
+    document.getElementById('userName').innerText = currentUser.username;
+    document.getElementById('userEmail').innerText = currentUser.email;
+
+    await loadUserNumbers();
+    await loadOtps();
+
+    renderTodayOtps();
+    updateTotalStats();
+    fetchPastOtps();
+
+    document.getElementById('countrySelect').onchange =
+        e => { if (e.target.value) displayNumbers(e.target.value); };
+
+    document.getElementById('fetchBtn').onclick = fetchPastOtps;
+    document.getElementById('addOtpBtn').onclick = addTestOtp;
+});
 </script>
 </body>
 </html>
