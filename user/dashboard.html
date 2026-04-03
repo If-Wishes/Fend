@@ -21,7 +21,7 @@
         <div class="flex justify-between h-16">
             <div class="flex items-center">
                 <div class="h-8 w-8 rounded-lg bg-emerald-600"><i class="fas fa-chart-line text-white"></i></div>
-                <span class="ml-2 text-xl font-bold">MIM<span class="text-emerald-600">Panel</span></span>
+                <span class="ml-2 text-xl font-bold">MIMA<span class="text-emerald-600">Panel</span></span>
                 <span class="ml-3 text-xs bg-emerald-100 text-emerald-600 px-2 py-1 rounded-full">User</span>
             </div>
             <div class="flex items-center gap-4">
@@ -29,7 +29,7 @@
                 <div class="relative">
                     <button id="menuBtn" class="bg-gray-100 rounded-full px-3 py-2"><i class="fas fa-user-circle"></i><i class="fas fa-chevron-down text-xs"></i></button>
                     <div id="dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border hidden-dropdown z-50">
-                        <a href="#" data-page="allocation" class="dropdown-item block px-4 py-2">📌 My Numbers</a>
+                        <a href="allocation.html" class="dropdown-item block px-4 py-2">📌 My Numbers</a>
                         <a href="#" data-page="today" class="dropdown-item block px-4 py-2">📊 Today's OTP</a>
                         <a href="#" data-page="total" class="dropdown-item block px-4 py-2">💰 Total OTP</a>
                         <a href="#" data-page="past" class="dropdown-item block px-4 py-2">📅 Past Records</a>
@@ -45,35 +45,6 @@
 
 <main class="max-w-7xl mx-auto px-4 py-8">
     
-    <!-- MY NUMBERS PAGE (Using working test format) -->
-    <div id="allocationPage" class="page">
-        <h1 class="text-2xl font-bold">📌 My Allocated Numbers</h1>
-        <p class="text-gray-500 mb-4">Select a country to view your numbers</p>
-        
-        <!-- Country Filter -->
-        <div class="mb-6">
-            <select id="countryFilter" class="w-full md:w-64 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50">
-                <option value="">-- Select Country --</option>
-            </select>
-        </div>
-        
-        <!-- Numbers Display -->
-        <div id="numbersContainer" class="bg-white rounded-2xl border border-gray-200 p-6">
-            <div class="text-center py-12 text-gray-400">
-                <i class="fas fa-globe text-4xl mb-2"></i>
-                <p>Select a country to view your numbers</p>
-            </div>
-        </div>
-        
-        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p class="text-sm text-blue-700">
-                <i class="fas fa-info-circle mr-2"></i>
-                <strong>How it works:</strong> Select a country to see your allocated numbers. 
-                Copy a number and use it to request OTPs. You earn $0.005 per OTP received.
-            </p>
-        </div>
-    </div>
-
     <!-- TODAY'S OTP PAGE -->
     <div id="todayPage" class="page">
         <h1 class="text-2xl font-bold">📊 Today's OTP Statistics</h1>
@@ -102,12 +73,39 @@
         <div id="pastEmpty" class="text-center py-8 text-gray-400 hidden">No records</div></div>
     </div>
 
-    <!-- PROFILE PAGE -->
-    <div id="profilePage" class="page">
+    <!-- PROFILE PAGE (Default Landing Page) -->
+    <div id="profilePage" class="page active-page">
         <h1 class="text-2xl font-bold">👤 My Profile</h1>
-        <div class="bg-white rounded-2xl border p-6 max-w-md mt-4"><div class="space-y-4"><div class="flex justify-between"><span class="text-gray-500">Username</span><span class="font-medium" id="profileUsername">-</span></div>
-        <div class="flex justify-between"><span class="text-gray-500">Email</span><span class="font-medium" id="profileEmail">-</span></div>
-        <div class="flex justify-between"><span class="text-gray-500">Member Since</span><span id="profileCreated">-</span></div></div></div>
+        <p class="text-gray-500 mb-4">Your account information</p>
+        <div class="bg-white rounded-2xl border p-6 max-w-md">
+            <div class="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
+                <div class="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
+                    <i class="fas fa-user text-emerald-600 text-2xl"></i>
+                </div>
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800" id="profileName">User</h2>
+                    <p class="text-sm text-gray-500" id="profileRole">Member</p>
+                </div>
+            </div>
+            <div class="space-y-4">
+                <div class="flex justify-between py-2 border-b border-gray-100">
+                    <span class="text-gray-500">Username</span>
+                    <span class="font-medium text-gray-800" id="profileUsername">-</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-gray-100">
+                    <span class="text-gray-500">Email Address</span>
+                    <span class="font-medium text-gray-800" id="profileEmail">-</span>
+                </div>
+                <div class="flex justify-between py-2 border-b border-gray-100">
+                    <span class="text-gray-500">User ID</span>
+                    <span class="font-mono text-sm text-gray-600" id="profileUserId">-</span>
+                </div>
+                <div class="flex justify-between py-2">
+                    <span class="text-gray-500">Member Since</span>
+                    <span class="text-gray-600" id="profileCreated">-</span>
+                </div>
+            </div>
+        </div>
     </div>
 </main>
 
@@ -129,118 +127,28 @@ let userOtps = [];
 document.getElementById('userNameDisplay').innerText = currentUser.username;
 document.getElementById('userEmailDisplay').innerText = currentUser.email;
 
-function getCountryFlag(country) {
-    const flags = {
-        'Jordan': '🇯🇴', 'Tajikistan': '🇹🇯', 'Nigeria': '🇳🇬',
-        'Myanmar': '🇲🇲', 'Hungary': '🇭🇺', 'Slovenia': '🇸🇮',
-        'Venezuela': '🇻🇪', 'Uzbekistan': '🇺🇿'
-    };
-    return flags[country] || '🌍';
-}
-
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
-}
-
-function copyNumber(number) {
-    navigator.clipboard.writeText(number);
-    alert(`✅ Copied: ${number}`);
 }
 
 function getTodayStr() {
     return new Date().toISOString().slice(0, 10);
 }
 
-// ==================== MY NUMBERS PAGE (Working format) ====================
+// Load user's allocated numbers
 async function loadUserNumbers() {
-    const container = document.getElementById('numbersContainer');
-    container.innerHTML = '<div class="text-center py-8 text-gray-400">Loading your numbers...</div>';
-    
     try {
-        // Get user's allocated numbers
         const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=id,number,last3,country&user_id=eq.${currentUser.id}`;
         const res = await fetch(url, { headers: { 'apikey': API_KEY } });
         userNumbers = await res.json();
-        
-        console.log(`Numbers for ${currentUser.username}:`, userNumbers);
-        
-        if (!userNumbers || userNumbers.length === 0) {
-            document.getElementById('countryFilter').innerHTML = '<option value="">-- No numbers allocated --</option>';
-            container.innerHTML = `
-                <div class="text-center py-12 text-gray-400">
-                    <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>No numbers allocated yet</p>
-                    <p class="text-sm mt-1">Contact admin to get numbers assigned to you</p>
-                </div>
-            `;
-            return;
-        }
-        
-        // Populate country dropdown
-        const countries = [...new Set(userNumbers.map(n => n.country))];
-        const filterSelect = document.getElementById('countryFilter');
-        filterSelect.innerHTML = '<option value="">-- Select Country --</option>' + 
-            countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
-        
-        // Auto-select first country and display
-        if (countries.length > 0) {
-            filterSelect.value = countries[0];
-            displayNumbersByCountry(countries[0]);
-        }
-        
     } catch (error) {
-        console.error('Error:', error);
-        container.innerHTML = `
-            <div class="text-center py-12 text-red-400">
-                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
-                <p>Error loading numbers: ${error.message}</p>
-            </div>
-        `;
+        console.error('Error loading numbers:', error);
+        userNumbers = [];
     }
 }
 
-function displayNumbersByCountry(country) {
-    const container = document.getElementById('numbersContainer');
-    const filteredNumbers = userNumbers.filter(n => n.country === country);
-    
-    if (filteredNumbers.length === 0) {
-        container.innerHTML = `<div class="text-center py-8 text-gray-400">No numbers for ${escapeHtml(country)}</div>`;
-        return;
-    }
-    
-    let html = `
-        <div class="border rounded-xl overflow-hidden">
-            <div class="bg-gray-50 px-4 py-3 border-b">
-                <div class="flex items-center gap-2">
-                    <span class="text-xl">${getCountryFlag(country)}</span>
-                    <h2 class="font-semibold text-gray-800">${escapeHtml(country)}</h2>
-                    <span class="text-xs text-gray-400">(${filteredNumbers.length} numbers)</span>
-                </div>
-            </div>
-            <div class="divide-y divide-gray-100">
-    `;
-    
-    for (const num of filteredNumbers) {
-        html += `
-            <div class="px-4 py-3 flex justify-between items-center hover:bg-gray-50">
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-phone text-gray-400"></i>
-                    <span class="font-mono text-sm">${escapeHtml(num.number)}</span>
-                </div>
-                <button onclick="copyNumber('${escapeHtml(num.number)}')" 
-                    class="copy-btn text-xs bg-gray-100 hover:bg-emerald-500 hover:text-white px-3 py-1.5 rounded-full transition">
-                    <i class="fas fa-copy mr-1"></i>Copy
-                </button>
-            </div>
-        `;
-    }
-    
-    html += `</div></div>`;
-    container.innerHTML = html;
-}
-
-// ==================== OTP FUNCTIONS ====================
+// Load OTPs for user
 async function loadUserOtps() {
     const last3List = userNumbers.map(n => n.last3);
     if (last3List.length === 0) {
@@ -248,12 +156,18 @@ async function loadUserOtps() {
         return;
     }
     
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=*&phone_last3=in.(${last3List.join(',')})&order=message_time.desc`, {
-        headers: { 'apikey': API_KEY }
-    });
-    userOtps = await res.json();
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=*&phone_last3=in.(${last3List.join(',')})&order=message_time.desc`, {
+            headers: { 'apikey': API_KEY }
+        });
+        userOtps = await res.json();
+    } catch (error) {
+        console.error('Error loading OTPs:', error);
+        userOtps = [];
+    }
 }
 
+// Render today's OTPs
 function renderTodayOtps() {
     const today = getTodayStr();
     const todayOtps = userOtps.filter(o => o.date === today);
@@ -277,6 +191,7 @@ function renderTodayOtps() {
     `).join('');
 }
 
+// Update total stats
 function updateTotalStats() {
     const today = getTodayStr();
     const todayCount = userOtps.filter(o => o.date === today).length;
@@ -284,6 +199,7 @@ function updateTotalStats() {
     document.getElementById('totalEarn').textContent = `$${(todayCount * 0.005).toFixed(2)}`;
 }
 
+// Fetch past records
 function fetchPastRecords() {
     const start = document.getElementById('startDate').value;
     const end = document.getElementById('endDate').value;
@@ -312,6 +228,7 @@ function fetchPastRecords() {
     `).join('');
 }
 
+// Load profile
 async function loadProfile() {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&id=eq.${currentUser.id}`, {
         headers: { 'apikey': API_KEY }
@@ -319,8 +236,11 @@ async function loadProfile() {
     const userData = await res.json();
     const user = userData[0];
     
+    document.getElementById('profileName').innerText = user.username;
+    document.getElementById('profileRole').innerText = user.role === 'admin' ? 'Administrator' : 'Regular User';
     document.getElementById('profileUsername').innerText = user.username;
     document.getElementById('profileEmail').innerText = user.email;
+    document.getElementById('profileUserId').innerText = user.id;
     document.getElementById('profileCreated').innerText = user.created_at ? new Date(user.created_at).toLocaleDateString() : getTodayStr();
 }
 
@@ -332,14 +252,12 @@ async function refreshAll() {
     fetchPastRecords();
 }
 
-// ==================== PAGE SWITCHING ====================
 function switchPage(pageName) {
-    const pages = ['allocation', 'today', 'total', 'past', 'profile'];
+    const pages = ['today', 'total', 'past', 'profile'];
     pages.forEach(p => document.getElementById(p + 'Page').classList.remove('active-page'));
     document.getElementById(pageName + 'Page').classList.add('active-page');
     document.getElementById('dropdown').classList.add('hidden-dropdown');
     
-    if (pageName === 'allocation') loadUserNumbers();
     if (pageName === 'today') renderTodayOtps();
     if (pageName === 'total') updateTotalStats();
     if (pageName === 'past') fetchPastRecords();
@@ -351,14 +269,14 @@ function logout() {
     window.location.href = '../index.html';
 }
 
-// ==================== EVENT LISTENERS ====================
-document.getElementById('countryFilter').addEventListener('change', (e) => {
-    if (e.target.value) {
-        displayNumbersByCountry(e.target.value);
-    } else {
-        document.getElementById('numbersContainer').innerHTML = '<div class="text-center py-8 text-gray-400">Select a country to view numbers</div>';
-    }
-});
+// Set default dates
+const end = new Date();
+const start = new Date();
+start.setDate(end.getDate() - 6);
+document.getElementById('startDate').value = start.toISOString().slice(0, 10);
+document.getElementById('endDate').value = end.toISOString().slice(0, 10);
+
+// Event listeners
 document.getElementById('fetchBtn').addEventListener('click', fetchPastRecords);
 document.getElementById('menuBtn').addEventListener('click', (e) => {
     e.stopPropagation();
@@ -374,25 +292,14 @@ document.getElementById('logoutBtn').addEventListener('click', (e) => {
 
 document.querySelectorAll('.dropdown-item').forEach(item => {
     item.addEventListener('click', (e) => {
-        e.preventDefault();
         const page = item.getAttribute('data-page');
         if (page) switchPage(page);
     });
 });
 
-// Set default dates
-const end = new Date();
-const start = new Date();
-start.setDate(end.getDate() - 6);
-document.getElementById('startDate').value = start.toISOString().slice(0, 10);
-document.getElementById('endDate').value = end.toISOString().slice(0, 10);
-
-// Make copy function global
-window.copyNumber = copyNumber;
-
-// Initialize
+// Initialize - Profile is default active page
+loadProfile();
 refreshAll();
-switchPage('allocation');
 </script>
 </body>
 </html>
