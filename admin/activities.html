@@ -3,124 +3,427 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MIMA Panel | User Activities</title>
+    <title>NexusPanel | Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>.hidden-dropdown{display:none;}</style>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', system-ui, sans-serif; background-color: #f9fafb; }
+        .page { display: none; }
+        .page.active-page { display: block; }
+        .hidden-dropdown { display: none; }
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 50%;
+            border-top-color: #3b82f6;
+            animation: spin 0.6s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        }
+        .user-select {
+            border: 2px solid #e5e7eb;
+            transition: all 0.3s;
+        }
+        .user-select:focus {
+            border-color: #6366f1;
+            outline: none;
+        }
+        .table-container {
+            overflow-x: auto;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 10px;
+        }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+    </style>
 </head>
 <body class="bg-gray-50">
 
-<nav class="bg-white shadow-sm border-b sticky top-0 z-50">
+<!-- Top Navigation Bar -->
+<nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
-            <div class="flex items-center gap-4">
-                <a href="dashboard.html" class="text-gray-600"><i class="fas fa-arrow-left"></i></a>
-                <div class="h-8 w-8 rounded-lg bg-indigo-600"><i class="fas fa-chart-line text-white"></i></div>
-                <span class="text-xl font-bold">MIMA<span class="text-indigo-600">Panel</span></span>
-                <span class="text-xs bg-red-100 text-red-600 px-2 py-1 rounded-full">Admin</span>
+            <div class="flex items-center">
+                <div class="h-8 w-8 rounded-lg bg-indigo-600 flex items-center justify-center">
+                    <i class="fas fa-chart-line text-white text-sm"></i>
+                </div>
+                <span class="ml-2 text-xl font-bold text-gray-800">Nexus<span class="text-indigo-600">Admin</span></span>
+                <span class="ml-3 text-xs bg-indigo-100 text-indigo-600 px-2 py-1 rounded-full">Admin Panel</span>
             </div>
-            <div class="flex items-center gap-4 relative">
-                <div class="text-right"><p class="text-sm font-medium" id="adminName">Admin</p><p class="text-xs text-gray-500">Activities</p></div>
-                <div class="relative"><button id="menuBtn" class="bg-gray-100 rounded-full px-3 py-2"><i class="fas fa-user-shield"></i><i class="fas fa-chevron-down text-xs"></i></button>
-                <div id="dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border hidden-dropdown z-50">
-                    <a href="dashboard.html" class="block px-4 py-2">Dashboard</a><a href="users.html" class="block px-4 py-2">Users</a>
-                    <a href="analytics.html" class="block px-4 py-2">Number Allocation</a><a href="activities.html" class="block px-4 py-2 bg-indigo-50 text-indigo-600">User Activities</a>
-                    <div class="border-t"></div><a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600">Logout</a>
-                </div></div>
+            <div class="flex items-center gap-4">
+                <div class="text-right hidden sm:block">
+                    <p class="text-sm font-medium text-gray-800" id="adminName">Admin</p>
+                    <p class="text-xs text-gray-500">Administrator</p>
+                </div>
+                <a href="../index.html" class="text-red-600 hover:text-red-700">
+                    <i class="fas fa-sign-out-alt"></i> Logout
+                </a>
             </div>
         </div>
     </div>
 </nav>
 
-<main class="max-w-7xl mx-auto px-4 py-8">
-    <h1 class="text-2xl font-bold">User Activities</h1>
-    <p class="text-gray-500 mb-6">View all users' OTPs and earnings</p>
-    
-    <div class="bg-white rounded-2xl border p-4 mb-6 flex gap-4 items-center">
-        <label class="font-medium">Select Date:</label>
-        <input type="date" id="filterDate" class="border rounded-lg px-3 py-2">
-        <button id="applyFilter" class="bg-indigo-600 text-white px-4 py-2 rounded-lg">View</button>
-        <button id="todayBtn" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg">Today</button>
-    </div>
-    
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-        <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-5"><p class="text-emerald-100">Total OTPs</p><p class="text-white text-3xl font-bold" id="totalOtps">0</p></div>
-        <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-5"><p class="text-amber-100">Total Earnings</p><p class="text-white text-3xl font-bold" id="totalEarnings">$0</p></div>
-        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-5"><p class="text-purple-100">Active Users</p><p class="text-white text-3xl font-bold" id="activeUsers">0</p></div>
-        <div class="bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl p-5"><p class="text-blue-100">Avg per User</p><p class="text-white text-3xl font-bold" id="avgPerUser">$0</p></div>
-    </div>
-    
-    <div class="bg-white rounded-2xl border overflow-hidden">
-        <table class="w-full"><thead class="bg-gray-50"> …
-            <th class="px-6 py-3 text-left">User</th><th class="px-6 py-3 text-left">Email</th><th class="px-6 py-3 text-center">Numbers</th><th class="px-6 py-3 text-center">OTPs</th><th class="px-6 py-3 text-center">Earnings</th><th class="px-6 py-3 text-center">Last Activity</th>
-        </thead><tbody id="activitiesTable"></tbody>
+<main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Dashboard Content -->
+    <div id="dashboardContent">
+        <!-- User Selection Section -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="md:col-span-1">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">👤 Select User</label>
+                    <select id="userSelect" class="user-select w-full border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50">
+                        <option value="">-- Select a User --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">📅 Start Date</label>
+                    <input type="date" id="startDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">📅 End Date</label>
+                    <input type="date" id="endDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
+                </div>
+                <div class="flex items-end">
+                    <button id="applyFilterBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl transition">
+                        <i class="fas fa-filter mr-2"></i>Apply Filter
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-6">
+            <div class="stat-card bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg p-6 text-white">
+                <p class="text-emerald-100 text-sm">Total OTPs</p>
+                <p class="text-3xl font-bold mt-1" id="totalOtps">0</p>
+            </div>
+            <div class="stat-card bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl shadow-lg p-6 text-white">
+                <p class="text-amber-100 text-sm">Total Earnings</p>
+                <p class="text-3xl font-bold mt-1" id="totalEarnings">$0.00</p>
+            </div>
+            <div class="stat-card bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl shadow-lg p-6 text-white">
+                <p class="text-blue-100 text-sm">Unique Numbers</p>
+                <p class="text-3xl font-bold mt-1" id="uniqueNumbers">0</p>
+            </div>
+            <div class="stat-card bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white">
+                <p class="text-purple-100 text-sm">Active Countries</p>
+                <p class="text-3xl font-bold mt-1" id="activeCountries">0</p>
+            </div>
+        </div>
+
+        <!-- OTP Records Table -->
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 bg-gray-50">
+                <h3 class="font-semibold text-gray-800"><i class="fas fa-list mr-2"></i>OTP Records</h3>
+            </div>
+            <div class="table-container">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50 sticky top-0">
+                        <tr>
+                            <th class="px-6 py-3 text-left">Date</th>
+                            <th class="px-6 py-3 text-left">Phone Number</th>
+                            <th class="px-6 py-3 text-left">Service</th>
+                            <th class="px-6 py-3 text-left">OTP Code</th>
+                            <th class="px-6 py-3 text-left">Country</th>
+                            <th class="px-6 py-3 text-left">Time</th>
+                            <th class="px-6 py-3 text-left">Earned</th>
+                        </tr>
+                    </thead>
+                    <tbody id="otpTableBody" class="divide-y divide-gray-100">
+                        <tr><td colspan="7" class="text-center py-8 text-gray-400">Select a user to view OTPs</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
     </div>
 </main>
 
 <script>
+// ================= SUPABASE CONFIGURATION =================
 const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
-const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
+const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
 
-const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
-if (!session || session.role !== 'admin') window.location.href = '../index.html';
-document.getElementById('adminName').innerText = session.username;
+// ================= GLOBAL STATE =================
+let allUsers = [];
+let selectedUserId = null;
+let startDate = '';
+let endDate = '';
+let userNumbers = [];
+let userOtps = [];
+let userPhoneLast3s = [];
 
-function getTodayStr() { return new Date().toISOString().slice(0, 10); }
-
-async function loadActivities() {
-    const filterDate = document.getElementById('filterDate').value || getTodayStr();
-    
-    // Get all users
-    const usersRes = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id,username,email`, { headers: { 'apikey': API_KEY } });
-    const users = await usersRes.json();
-    
-    // Get all numbers
-    const numsRes = await fetch(`${SUPABASE_URL}/rest/v1/user_numbers?select=*`, { headers: { 'apikey': API_KEY } });
-    const numbers = await numsRes.json();
-    
-    // Get OTPs for selected date
-    const otpsRes = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=*,date=eq.${filterDate}`, { headers: { 'apikey': API_KEY } });
-    const otps = await otpsRes.json();
-    
-    let totalOtps = 0, totalEarnings = 0, activeCount = 0;
-    const rows = [];
-    
-    for (const user of users) {
-        const userNumbers = numbers.filter(n => n.user_id === user.id);
-        const userLast3 = userNumbers.map(n => n.last3);
-        const userOtps = otps.filter(o => userLast3.includes(o.phone_last3));
-        const otpCount = userOtps.length;
-        const earnings = otpCount * 0.005;
-        const lastOtp = userOtps.sort((a,b)=>new Date(b.message_time)-new Date(a.message_time))[0];
-        
-        totalOtps += otpCount;
-        totalEarnings += earnings;
-        if (otpCount > 0) activeCount++;
-        
-        rows.push(`<tr class="border-b"><td class="px-6 py-3 font-medium">${escapeHtml(user.username)}Js<td class="px-6 py-3">${escapeHtml(user.email)}Js<td class="px-6 py-3 text-center">${userNumbers.length}Js<td class="px-6 py-3 text-center font-bold text-emerald-600">${otpCount}Js<td class="px-6 py-3 text-center">$${earnings.toFixed(2)}Js<td class="px-6 py-3 text-center text-xs">${lastOtp ? new Date(lastOtp.message_time).toLocaleTimeString() : '—'}Js</tr>`);
-    }
-    
-    document.getElementById('totalOtps').textContent = totalOtps;
-    document.getElementById('totalEarnings').textContent = `$${totalEarnings.toFixed(2)}`;
-    document.getElementById('activeUsers').textContent = activeCount;
-    document.getElementById('avgPerUser').textContent = `$${(activeCount > 0 ? (totalEarnings/activeCount).toFixed(2) : '0.00')}`;
-    document.getElementById('activitiesTable').innerHTML = rows.join('');
+// ================= HELPER FUNCTIONS =================
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
 }
 
-function setToday() { document.getElementById('filterDate').value = getTodayStr(); loadActivities(); }
+function maskPhoneNumber(phoneNumber) {
+    if (!phoneNumber) return '***';
+    const digits = phoneNumber.toString().replace(/\D/g, '');
+    if (digits.length <= 6) return '***' + digits.slice(-3);
+    const start = digits.slice(0, 2);
+    const end = digits.slice(-3);
+    const middleLength = Math.min(7, digits.length - 5);
+    const middle = '•'.repeat(middleLength);
+    return start + middle + end;
+}
 
-function escapeHtml(str) { if(!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m]||m)); }
-function logout() { localStorage.removeItem('mima_session'); window.location.href = '../index.html'; }
+function getLast3Digits(phoneNumber) {
+    const digits = phoneNumber.toString().replace(/\D/g, '');
+    if (digits.length >= 3) return digits.slice(-3);
+    return digits;
+}
 
-document.getElementById('applyFilter').onclick = loadActivities;
-document.getElementById('todayBtn').onclick = setToday;
-document.getElementById('filterDate').value = getTodayStr();
+function formatDateTime(messageTime, date, time) {
+    if (messageTime) {
+        const d = new Date(messageTime);
+        if (!isNaN(d.getTime())) {
+            return d.toLocaleString();
+        }
+    }
+    if (date && time) return `${date} ${time}`;
+    if (date) return date;
+    return 'Unknown';
+}
 
-document.getElementById('menuBtn').onclick = e => { e.stopPropagation(); document.getElementById('dropdown').classList.toggle('hidden-dropdown'); };
-document.addEventListener('click', () => document.getElementById('dropdown').classList.add('hidden-dropdown'));
-document.getElementById('logoutBtn').onclick = e => { e.preventDefault(); logout(); };
+// ================= SUPABASE FETCH FUNCTIONS =================
+async function fetchAllUsers() {
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/users?select=id,username,email,role&role=eq.user&order=username.asc`;
+        const response = await fetch(url, {
+            headers: { 'apikey': SUPABASE_API_KEY }
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data || [];
+    } catch (err) {
+        console.error("Fetch users error:", err);
+        return [];
+    }
+}
 
-loadActivities();
+async function fetchUserAllocatedNumbers(userId) {
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=number,country&user_id=eq.${encodeURIComponent(userId)}`;
+        const response = await fetch(url, {
+            headers: { 'apikey': SUPABASE_API_KEY }
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data || [];
+    } catch (err) {
+        console.error("Fetch numbers error:", err);
+        return [];
+    }
+}
+
+async function fetchAllOtps() {
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/otp_logs?select=*&order=date.desc&limit=1000`;
+        const response = await fetch(url, {
+            headers: { 'apikey': SUPABASE_API_KEY }
+        });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const data = await response.json();
+        return data || [];
+    } catch (err) {
+        console.error("Fetch OTPs error:", err);
+        return [];
+    }
+}
+
+// ================= FILTER OTPs BY USER AND DATE RANGE =================
+function filterOtpsByUserAndDate(otps, phoneLast3s, start, end) {
+    let filtered = otps.filter(otp => phoneLast3s.includes(otp.phone_last3));
+    
+    if (start && end) {
+        filtered = filtered.filter(otp => {
+            const otpDate = otp.date || otp.message_time?.slice(0, 10);
+            return otpDate >= start && otpDate <= end;
+        });
+    }
+    
+    return filtered;
+}
+
+function updateUserPhoneArrays(numbers) {
+    userPhoneLast3s = [];
+    numbers.forEach(item => {
+        if (item.number) {
+            const last3 = getLast3Digits(item.number);
+            if (last3) userPhoneLast3s.push(last3);
+        }
+    });
+    userPhoneLast3s = [...new Set(userPhoneLast3s)];
+}
+
+// ================= UPDATE UI =================
+function updateUserDropdown() {
+    const select = document.getElementById('userSelect');
+    select.innerHTML = '<option value="">-- Select a User --</option>';
+    
+    allUsers.forEach(user => {
+        select.innerHTML += `<option value="${user.id}">${escapeHtml(user.username)} (${escapeHtml(user.email || 'No email')})</option>`;
+    });
+}
+
+async function loadUserData() {
+    if (!selectedUserId) {
+        document.getElementById('otpTableBody').innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">Select a user to view OTPs</td></tr>';
+        document.getElementById('totalOtps').textContent = '0';
+        document.getElementById('totalEarnings').textContent = '$0.00';
+        document.getElementById('uniqueNumbers').textContent = '0';
+        document.getElementById('activeCountries').textContent = '0';
+        return;
+    }
+    
+    // Show loading
+    document.getElementById('otpTableBody').innerHTML = '<tr><td colspan="7" class="text-center py-8"><div class="loading-spinner mx-auto"></div><p class="mt-2">Loading user data...</p></td></tr>';
+    
+    // Fetch user's allocated numbers
+    const numbers = await fetchUserAllocatedNumbers(selectedUserId);
+    userNumbers = numbers;
+    updateUserPhoneArrays(userNumbers);
+    
+    // Fetch all OTPs and filter
+    const allOtps = await fetchAllOtps();
+    userOtps = filterOtpsByUserAndDate(allOtps, userPhoneLast3s, startDate, endDate);
+    
+    // Calculate statistics
+    const totalOtps = userOtps.length;
+    const totalEarnings = totalOtps * 0.005;
+    const uniqueNumbers = [...new Set(userOtps.map(otp => otp.phone_last3))].length;
+    const activeCountries = [...new Set(userOtps.map(otp => otp.country).filter(c => c))].length;
+    
+    // Update stats cards
+    document.getElementById('totalOtps').textContent = totalOtps;
+    document.getElementById('totalEarnings').textContent = `$${totalEarnings.toFixed(2)}`;
+    document.getElementById('uniqueNumbers').textContent = uniqueNumbers;
+    document.getElementById('activeCountries').textContent = activeCountries;
+    
+    // Render table
+    if (userOtps.length === 0) {
+        document.getElementById('otpTableBody').innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">📭 No OTPs found for this user in selected date range</td></tr>';
+        return;
+    }
+    
+    // Build number mapping for display
+    const numberMap = {};
+    userNumbers.forEach(item => {
+        const last3 = getLast3Digits(item.number);
+        numberMap[last3] = item.number;
+    });
+    
+    document.getElementById('otpTableBody').innerHTML = userOtps.map((otp, index) => {
+        const fullNumber = numberMap[otp.phone_last3] || otp.phone_last3;
+        const maskedNumber = maskPhoneNumber(fullNumber);
+        const dateTime = formatDateTime(otp.message_time, otp.date, otp.time);
+        
+        return `
+            <tr class="hover:bg-gray-50 border-b">
+                <td class="px-6 py-3 text-gray-600 text-xs whitespace-nowrap">${otp.date || ''}</td>
+                <td class="px-6 py-3 font-mono text-sm">${escapeHtml(maskedNumber)}</td>
+                <td class="px-6 py-3">${escapeHtml(otp.service || 'Unknown')}</td>
+                <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(otp.otp)}</td>
+                <td class="px-6 py-3">${escapeHtml(otp.country || 'Unknown')}</td>
+                <td class="px-6 py-3 text-gray-500 text-xs whitespace-nowrap">${otp.message_time ? new Date(otp.message_time).toLocaleTimeString() : (otp.time || '')}</td>
+                <td class="px-6 py-3 text-emerald-600 font-semibold">+$0.005</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+// ================= PAGE STATE MANAGEMENT =================
+function saveSelectedUser() {
+    localStorage.setItem('nexus_admin_selected_user', selectedUserId);
+    localStorage.setItem('nexus_admin_start_date', startDate);
+    localStorage.setItem('nexus_admin_end_date', endDate);
+}
+
+function loadSavedState() {
+    selectedUserId = localStorage.getItem('nexus_admin_selected_user') || '';
+    startDate = localStorage.getItem('nexus_admin_start_date') || '';
+    endDate = localStorage.getItem('nexus_admin_end_date') || '';
+    
+    if (startDate) document.getElementById('startDate').value = startDate;
+    if (endDate) document.getElementById('endDate').value = endDate;
+    if (selectedUserId) document.getElementById('userSelect').value = selectedUserId;
+}
+
+// ================= MAIN INITIALIZATION =================
+async function initAdminDashboard() {
+    // Set default date range (last 30 days)
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 30);
+    
+    if (!document.getElementById('startDate').value) {
+        document.getElementById('startDate').value = start.toISOString().slice(0, 10);
+        startDate = start.toISOString().slice(0, 10);
+    }
+    if (!document.getElementById('endDate').value) {
+        document.getElementById('endDate').value = end.toISOString().slice(0, 10);
+        endDate = end.toISOString().slice(0, 10);
+    }
+    
+    // Load saved state
+    loadSavedState();
+    
+    // Fetch all users
+    allUsers = await fetchAllUsers();
+    updateUserDropdown();
+    
+    // Set selected user in dropdown
+    if (selectedUserId) {
+        document.getElementById('userSelect').value = selectedUserId;
+        await loadUserData();
+    }
+}
+
+// ================= EVENT LISTENERS =================
+document.getElementById('userSelect').addEventListener('change', async (e) => {
+    selectedUserId = e.target.value;
+    saveSelectedUser();
+    await loadUserData();
+});
+
+document.getElementById('applyFilterBtn').addEventListener('click', async () => {
+    startDate = document.getElementById('startDate').value;
+    endDate = document.getElementById('endDate').value;
+    saveSelectedUser();
+    await loadUserData();
+});
+
+// Set admin name
+document.getElementById('adminName').innerText = 'Administrator';
+
+// ================= START APP =================
+document.addEventListener('DOMContentLoaded', async () => {
+    await initAdminDashboard();
+});
 </script>
 </body>
 </html>
