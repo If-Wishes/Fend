@@ -458,56 +458,6 @@ async function refreshAll() {
 }
 
 // ================= ADD TEST OTP =================
-async function addTestOtp() {
-    if (!currentUser) {
-        alert('User not logged in');
-        return;
-    }
-    
-    if (userPhoneNumbers.length === 0) {
-        alert('You have no allocated numbers.');
-        return;
-    }
-    
-    const numberOptions = userPhoneNumbers.map((num, idx) => `${idx + 1}. ${num}`).join('\n');
-    const selectedIndex = prompt(`Select a phone number to receive OTP:\n${numberOptions}\n\nEnter number (1-${userPhoneNumbers.length}):`, "1");
-    
-    if (!selectedIndex) return;
-    
-    const idx = parseInt(selectedIndex) - 1;
-    if (isNaN(idx) || idx < 0 || idx >= userPhoneNumbers.length) {
-        alert('Invalid selection');
-        return;
-    }
-    
-    const selectedNumber = userPhoneNumbers[idx];
-    const phoneLast3 = getLast3Digits(selectedNumber);
-    const otpCode = prompt("Enter OTP code:", Math.floor(100000 + Math.random() * 900000).toString());
-    const service = prompt("Enter service name:", "Test Service");
-    const country = prompt("Enter country:", "Nigeria");
-    
-    if (otpCode) {
-        const now = new Date();
-        const newOtp = {
-            id: crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(),
-            otp: otpCode,
-            phone_last3: phoneLast3,
-            service: service || 'Unknown',
-            country: country || 'Unknown',
-            date: now.toISOString().slice(0, 10),
-            message_time: now.toISOString(),
-            created_at: now.toISOString()
-        };
-        
-        const success = await addOtpToSupabase(newOtp);
-        if (success) {
-            await refreshAll();
-            alert(`✅ Test OTP added!\nNumber: ${selectedNumber}\nOTP: ${otpCode}\nEarned: $0.005`);
-        } else {
-            alert('❌ Failed to add OTP.');
-        }
-    }
-}
 
 // ================= GET USER ID FROM URL =================
 function getUserIdFromUrl() {
