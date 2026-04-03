@@ -6,132 +6,27 @@
     <title>MIMA Panel | User Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        .page { display: none; }
-        .page.active-page { display: block; }
-        .hidden-dropdown { display: none; }
-        .copy-btn { cursor: pointer; transition: all 0.2s; }
-        .copy-btn:hover { background-color: #d1fae5; }
-        .stats-card { transition: transform 0.2s; }
-        .stats-card:hover { transform: translateY(-2px); }
-    </style>
 </head>
 <body class="bg-gray-50">
 
 <nav class="bg-white shadow-sm border-b sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex justify-between h-16">
-            <div class="flex items-center">
-                <div class="h-8 w-8 rounded-lg bg-emerald-600"><i class="fas fa-chart-line text-white"></i></div>
-                <span class="ml-2 text-xl font-bold">MIMA<span class="text-emerald-600">Panel</span></span>
-                <span class="ml-3 text-xs bg-emerald-100 text-emerald-600 px-2 py-1 rounded-full">User</span>
+    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+        <div class="flex items-center">
+            <div class="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+                <i class="fas fa-chart-line text-white text-sm"></i>
             </div>
-            <div class="flex items-center gap-4">
-                <div class="text-right"><p class="text-sm font-medium" id="userNameDisplay">User</p><p class="text-xs text-gray-500" id="userEmailDisplay"></p></div>
-                <div class="relative">
-                    <button id="menuBtn" class="bg-gray-100 rounded-full px-3 py-2"><i class="fas fa-user-circle"></i><i class="fas fa-chevron-down text-xs"></i></button>
-                    <div id="dropdown" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border hidden-dropdown z-50">
-                        <a href="#" data-page="allocation" class="dropdown-item block px-4 py-2">📌 My Numbers</a>
-                        <a href="#" data-page="today" class="dropdown-item block px-4 py-2">📊 Today's OTP</a>
-                        <a href="#" data-page="total" class="dropdown-item block px-4 py-2">💰 Total OTP</a>
-                        <a href="#" data-page="past" class="dropdown-item block px-4 py-2">📅 Past Records</a>
-                        <a href="#" data-page="profile" class="dropdown-item block px-4 py-2">👤 Profile</a>
-                        <div class="border-t"></div>
-                        <a href="#" id="logoutBtn" class="block px-4 py-2 text-red-600">Logout</a>
-                    </div>
-                </div>
-            </div>
+            <span class="ml-2 text-xl font-bold">MIMA<span class="text-emerald-600">Panel</span></span>
+            <span class="ml-3 text-xs bg-emerald-100 text-emerald-600 px-2 py-1 rounded-full">User</span>
         </div>
+        <button onclick="logout()" class="text-red-600"><i class="fas fa-sign-out-alt"></i></button>
     </div>
 </nav>
 
 <main class="max-w-7xl mx-auto px-4 py-8">
+    <h1 class="text-2xl font-bold mb-4">📌 My Allocated Numbers</h1>
     
-    <!-- MY NUMBERS PAGE -->
-    <div id="allocationPage" class="page">
-        <h1 class="text-2xl font-bold">📌 My Allocated Numbers</h1>
-        <p class="text-gray-500 mb-4">Select a country to view your numbers</p>
-        
-        <div class="mb-6">
-            <select id="countryFilter" class="w-full md:w-64 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50">
-                <option value="">-- Select Country --</option>
-            </select>
-        </div>
-        
-        <div id="numbersContainer" class="bg-white rounded-2xl border border-gray-200 p-6">
-            <div class="text-center py-8 text-gray-400">Loading your numbers...</div>
-        </div>
-        
-        <div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
-            <p class="text-sm text-blue-700">
-                <i class="fas fa-info-circle mr-2"></i>
-                <strong>How it works:</strong> Select a country to see your allocated numbers. 
-                Copy a number and use it to request OTPs. You earn $0.005 per OTP received.
-            </p>
-        </div>
-    </div>
-
-    <!-- TODAY'S OTP PAGE -->
-    <div id="todayPage" class="page">
-        <h1 class="text-2xl font-bold">📊 Today's OTP Statistics</h1>
-        <p class="text-gray-500 mb-4">OTPs received today from your numbers</p>
-        <div class="bg-white rounded-2xl border overflow-hidden">
-            <table class="w-full"><thead class="bg-gray-50"><tr><th class="px-6 py-3">Number (Last 3 digits)</th><th class="px-6 py-3">Service</th><th class="px-6 py-3">Code</th><th class="px-6 py-3">Time</th> </thead><tbody id="todayTable"></tbody>追赶
-            <div id="todayEmpty" class="text-center py-8 text-gray-400 hidden">No OTPs today</div>
-        </div>
-    </div>
-
-    <!-- TOTAL OTP PAGE -->
-    <div id="totalPage" class="page">
-        <h1 class="text-2xl font-bold">💰 Total OTP Earnings</h1>
-        <p class="text-gray-500 mb-4">Today's OTP summary and earnings</p>
-        <div class="grid grid-cols-2 gap-6"><div class="bg-emerald-600 rounded-2xl p-6"><p class="text-emerald-100">Total OTP Today</p><p class="text-white text-4xl font-bold" id="totalCount">0</p></div>
-        <div class="bg-amber-600 rounded-2xl p-6"><p class="text-amber-100">Earnings</p><p class="text-white text-4xl font-bold" id="totalEarn">$0.00</p><p class="text-amber-100 text-sm">$0.005/OTP</p></div></div>
-    </div>
-
-    <!-- PAST RECORDS PAGE -->
-    <div id="pastPage" class="page">
-        <h1 class="text-2xl font-bold">📅 Past Records</h1>
-        <div class="grid grid-cols-2 gap-4 my-4"><input type="date" id="startDate" class="border rounded-xl px-4 py-2"><input type="date" id="endDate" class="border rounded-xl px-4 py-2"></div>
-        <button id="fetchBtn" class="bg-indigo-600 text-white px-6 py-2 rounded-xl mb-4">Fetch Records</button>
-        <div class="bg-white rounded-2xl border"><div class="p-3 border-b flex justify-between"><span class="font-semibold">Records</span><span id="pastEarn" class="text-emerald-600">$0.00</span></div>
-        <table class="w-full"><thead class="bg-gray-50"><tr><th class="px-4 py-2">Date</th><th class="px-4 py-2">Code</th><th class="px-4 py-2">Time</th> </thead><tbody id="pastTable"></tbody>追赶
-        <div id="pastEmpty" class="text-center py-8 text-gray-400 hidden">No records</div></div>
-    </div>
-
-    <!-- PROFILE PAGE -->
-    <div id="profilePage" class="page">
-        <h1 class="text-2xl font-bold">👤 My Profile</h1>
-        <p class="text-gray-500 mb-4">Your account information</p>
-        <div class="bg-white rounded-2xl border p-6 max-w-md">
-            <div class="flex items-center gap-4 mb-6 pb-4 border-b border-gray-100">
-                <div class="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
-                    <i class="fas fa-user text-emerald-600 text-2xl"></i>
-                </div>
-                <div>
-                    <h2 class="text-xl font-bold text-gray-800" id="profileName">User</h2>
-                    <p class="text-sm text-gray-500" id="profileRole">Member</p>
-                </div>
-            </div>
-            <div class="space-y-4">
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">Username</span>
-                    <span class="font-medium text-gray-800" id="profileUsername">-</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">Email Address</span>
-                    <span class="font-medium text-gray-800" id="profileEmail">-</span>
-                </div>
-                <div class="flex justify-between py-2 border-b border-gray-100">
-                    <span class="text-gray-500">User ID</span>
-                    <span class="font-mono text-sm text-gray-600" id="profileUserId">-</span>
-                </div>
-                <div class="flex justify-between py-2">
-                    <span class="text-gray-500">Member Since</span>
-                    <span class="text-gray-600" id="profileCreated">-</span>
-                </div>
-            </div>
-        </div>
+    <div id="numbersList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="text-center py-8 text-gray-400 col-span-full">Loading...</div>
     </div>
 </main>
 
@@ -139,34 +34,81 @@
 const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
 const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
 
-// Check session - get user from localStorage
+// Get session
 const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
-console.log('Session:', session);
-
 if (!session || session.role !== 'user') {
-    console.log('No valid session, redirecting to login');
     window.location.href = '../index.html';
 }
 
-// Current user - using userId from session
-let currentUser = { 
-    id: session.userId, 
-    username: session.username, 
-    email: session.email 
-};
+const userId = session.userId;
+console.log('User ID:', userId);
 
-console.log('Current User ID:', currentUser.id);
-
-let userNumbers = [];
-let userOtps = [];
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
-}
-
-function getTodayStr() {
-    return new Date().toISOString().slice(0, 10);
+async function loadNumbers() {
+    const container = document.getElementById('numbersList');
+    container.innerHTML = '<div class="text-center py-8 text-gray-400 col-span-full">Loading...</div>';
+    
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=*&user_id=eq.${userId}`;
+        console.log('Fetching:', url);
+        
+        const response = await fetch(url, {
+            headers: { 'apikey': API_KEY }
+        });
+        
+        const numbers = await response.json();
+        console.log('Numbers found:', numbers.length);
+        console.log('Numbers:', numbers);
+        
+        if (numbers.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-8 text-gray-400 col-span-full">
+                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                    <p>No numbers allocated yet</p>
+                    <p class="text-sm mt-1">Contact admin to get numbers assigned to you</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Group by country
+        const grouped = {};
+        numbers.forEach(num => {
+            if (!grouped[num.country]) grouped[num.country] = [];
+            grouped[num.country].push(num);
+        });
+        
+        let html = '';
+        for (const country in grouped) {
+            html += `
+                <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                    <div class="bg-gray-50 px-4 py-2 border-b">
+                        <span class="font-semibold">${getCountryFlag(country)} ${country}</span>
+                        <span class="text-xs text-gray-400 ml-2">${grouped[country].length} numbers</span>
+                    </div>
+                    <div class="divide-y divide-gray-100">
+            `;
+            
+            grouped[country].forEach(num => {
+                html += `
+                    <div class="px-4 py-3 flex justify-between items-center hover:bg-gray-50">
+                        <span class="font-mono text-sm">${escapeHtml(num.number)}</span>
+                        <button onclick="copyNumber('${escapeHtml(num.number)}')" 
+                            class="text-xs bg-gray-100 hover:bg-green-100 px-3 py-1 rounded-full transition">
+                            <i class="fas fa-copy mr-1"></i>Copy
+                        </button>
+                    </div>
+                `;
+            });
+            
+            html += `</div></div>`;
+        }
+        
+        container.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Error:', error);
+        container.innerHTML = '<div class="text-center py-8 text-red-400 col-span-full">Error loading numbers</div>';
+    }
 }
 
 function getCountryFlag(country) {
@@ -178,211 +120,14 @@ function getCountryFlag(country) {
     return flags[country] || '🌍';
 }
 
-function copyToClipboard(text) {
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
+}
+
+function copyNumber(text) {
     navigator.clipboard.writeText(text);
     alert(`✅ Copied: ${text}`);
-}
-
-// ==================== LOAD USER NUMBERS USING USER ID ====================
-async function loadUserNumbers() {
-    console.log('Loading numbers for user ID:', currentUser.id);
-    
-    try {
-        const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=*&user_id=eq.${currentUser.id}`;
-        console.log('Fetching from:', url);
-        
-        const res = await fetch(url, {
-            headers: { 'apikey': API_KEY }
-        });
-        userNumbers = await res.json();
-        
-        console.log('Numbers found:', userNumbers.length);
-        console.log('Numbers data:', userNumbers);
-        
-        const countries = [...new Set(userNumbers.map(n => n.country))];
-        const filterSelect = document.getElementById('countryFilter');
-        
-        if (countries.length === 0) {
-            filterSelect.innerHTML = '<option value="">-- No numbers allocated --</option>';
-            document.getElementById('numbersContainer').innerHTML = `
-                <div class="text-center py-8 text-gray-400">
-                    <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>No numbers allocated yet</p>
-                    <p class="text-sm mt-1">Contact admin to get numbers assigned to you</p>
-                </div>
-            `;
-            return;
-        }
-        
-        filterSelect.innerHTML = '<option value="">-- Select Country --</option>' + 
-            countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
-            
-    } catch (error) {
-        console.error('Error loading numbers:', error);
-        document.getElementById('numbersContainer').innerHTML = `
-            <div class="text-center py-8 text-red-400">
-                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
-                <p>Error loading numbers. Please try again.</p>
-            </div>
-        `;
-    }
-}
-
-function displayNumbersByCountry(country) {
-    const container = document.getElementById('numbersContainer');
-    const filteredNumbers = userNumbers.filter(n => n.country === country);
-    
-    console.log('Displaying numbers for country:', country, 'Count:', filteredNumbers.length);
-    
-    if (filteredNumbers.length === 0) {
-        container.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers for this country</div>';
-        return;
-    }
-    
-    let html = `
-        <div class="border rounded-xl overflow-hidden">
-            <div class="bg-gray-50 px-4 py-2 border-b">
-                <span class="font-semibold">${getCountryFlag(country)} ${country}</span>
-                <span class="text-xs text-gray-400 ml-2">${filteredNumbers.length} numbers</span>
-            </div>
-            <div class="divide-y divide-gray-100">
-    `;
-    
-    for (const num of filteredNumbers) {
-        html += `
-            <div class="px-4 py-3 flex justify-between items-center hover:bg-gray-50">
-                <div>
-                    <span class="font-mono text-sm">${escapeHtml(num.number)}</span>
-                    <span class="text-xs text-gray-400 ml-2">(last3: ${num.last3})</span>
-                </div>
-                <button onclick="copyToClipboard('${escapeHtml(num.number)}')" 
-                    class="copy-btn text-xs bg-gray-100 hover:bg-green-100 px-3 py-1 rounded-full transition">
-                    <i class="fas fa-copy mr-1"></i>Copy
-                </button>
-            </div>
-        `;
-    }
-    
-    html += `</div></div>`;
-    container.innerHTML = html;
-}
-
-// ==================== LOAD OTPS USING USER'S NUMBER LAST3 ====================
-async function loadUserOtps() {
-    const last3List = userNumbers.map(n => n.last3);
-    console.log('Last3 list for OTP matching:', last3List);
-    
-    if (last3List.length === 0) {
-        userOtps = [];
-        return;
-    }
-    
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=*&phone_last3=in.(${last3List.join(',')})&order=message_time.desc`, {
-        headers: { 'apikey': API_KEY }
-    });
-    userOtps = await res.json();
-    console.log('OTPs found:', userOtps.length);
-}
-
-// ==================== RENDER TODAY'S OTPS ====================
-function renderTodayOtps() {
-    const today = getTodayStr();
-    const todayOtps = userOtps.filter(o => o.date === today);
-    const tbody = document.getElementById('todayTable');
-    const empty = document.getElementById('todayEmpty');
-    
-    if (todayOtps.length === 0) {
-        tbody.innerHTML = '';
-        empty.classList.remove('hidden');
-        return;
-    }
-    empty.classList.add('hidden');
-    
-    tbody.innerHTML = todayOtps.map(o => `
-        <tr class="border-b hover:bg-gray-50">
-            <td class="px-6 py-3 font-mono">***${escapeHtml(o.phone_last3)}Js
-            <td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}Js
-            <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}Js
-            <td class="px-6 py-3 text-gray-500 text-sm">${o.time || new Date(o.message_time).toLocaleTimeString()}Js
-        </tr>
-    `).join('');
-}
-
-// ==================== UPDATE TOTAL STATS ====================
-function updateTotalStats() {
-    const today = getTodayStr();
-    const todayCount = userOtps.filter(o => o.date === today).length;
-    document.getElementById('totalCount').textContent = todayCount;
-    document.getElementById('totalEarn').textContent = `$${(todayCount * 0.005).toFixed(2)}`;
-}
-
-// ==================== FETCH PAST RECORDS ====================
-function fetchPastRecords() {
-    const start = document.getElementById('startDate').value;
-    const end = document.getElementById('endDate').value;
-    if (!start || !end) return;
-    
-    const filtered = userOtps.filter(o => o.date >= start && o.date <= end);
-    const tbody = document.getElementById('pastTable');
-    const empty = document.getElementById('pastEmpty');
-    const earnSpan = document.getElementById('pastEarn');
-    
-    if (filtered.length === 0) {
-        tbody.innerHTML = '';
-        empty.classList.remove('hidden');
-        earnSpan.textContent = '$0.00';
-        return;
-    }
-    empty.classList.add('hidden');
-    earnSpan.textContent = `$${(filtered.length * 0.005).toFixed(2)}`;
-    
-    tbody.innerHTML = filtered.map(o => `
-        <tr class="border-b hover:bg-gray-50">
-            <td class="px-4 py-2 text-xs text-gray-600">${o.date}Js
-            <td class="px-4 py-2">${escapeHtml(o.service || 'Unknown')}Js
-            <td class="px-4 py-2 font-bold text-emerald-600">${escapeHtml(o.otp)}Js
-            <td class="px-4 py-2 text-gray-500 text-xs">${o.time || new Date(o.message_time).toLocaleTimeString()}Js
-        </tr>
-    `).join('');
-}
-
-// ==================== LOAD PROFILE ====================
-async function loadProfile() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=*&id=eq.${currentUser.id}`, {
-        headers: { 'apikey': API_KEY }
-    });
-    const userData = await res.json();
-    const user = userData[0];
-    
-    document.getElementById('profileName').innerText = user.username;
-    document.getElementById('profileRole').innerText = user.role === 'admin' ? 'Administrator' : 'Regular User';
-    document.getElementById('profileUsername').innerText = user.username;
-    document.getElementById('profileEmail').innerText = user.email;
-    document.getElementById('profileUserId').innerText = user.id;
-    document.getElementById('profileCreated').innerText = user.created_at ? new Date(user.created_at).toLocaleDateString() : getTodayStr();
-}
-
-// ==================== REFRESH ALL ====================
-async function refreshAll() {
-    await loadUserNumbers();
-    await loadUserOtps();
-    renderTodayOtps();
-    updateTotalStats();
-    fetchPastRecords();
-}
-
-// ==================== PAGE SWITCHING ====================
-function switchPage(pageName) {
-    const pages = ['allocation', 'today', 'total', 'past', 'profile'];
-    pages.forEach(p => document.getElementById(p + 'Page').classList.remove('active-page'));
-    document.getElementById(pageName + 'Page').classList.add('active-page');
-    document.getElementById('dropdown').classList.add('hidden-dropdown');
-    
-    if (pageName === 'allocation') loadUserNumbers();
-    if (pageName === 'today') renderTodayOtps();
-    if (pageName === 'total') updateTotalStats();
-    if (pageName === 'past') fetchPastRecords();
-    if (pageName === 'profile') loadProfile();
 }
 
 function logout() {
@@ -390,50 +135,8 @@ function logout() {
     window.location.href = '../index.html';
 }
 
-// ==================== INITIALIZE ====================
-document.getElementById('userNameDisplay').innerText = currentUser.username;
-document.getElementById('userEmailDisplay').innerText = currentUser.email;
-
-const end = new Date();
-const start = new Date();
-start.setDate(end.getDate() - 6);
-document.getElementById('startDate').value = start.toISOString().slice(0, 10);
-document.getElementById('endDate').value = end.toISOString().slice(0, 10);
-
-// Event listeners
-document.getElementById('countryFilter').addEventListener('change', (e) => {
-    if (e.target.value) {
-        displayNumbersByCountry(e.target.value);
-    } else {
-        document.getElementById('numbersContainer').innerHTML = '<div class="text-center py-8 text-gray-400">Select a country to view numbers</div>';
-    }
-});
-document.getElementById('fetchBtn').addEventListener('click', fetchPastRecords);
-document.getElementById('menuBtn').addEventListener('click', (e) => {
-    e.stopPropagation();
-    document.getElementById('dropdown').classList.toggle('hidden-dropdown');
-});
-document.addEventListener('click', () => {
-    document.getElementById('dropdown').classList.add('hidden-dropdown');
-});
-document.getElementById('logoutBtn').addEventListener('click', (e) => {
-    e.preventDefault();
-    logout();
-});
-
-document.querySelectorAll('.dropdown-item').forEach(item => {
-    item.addEventListener('click', (e) => {
-        e.preventDefault();
-        const page = item.getAttribute('data-page');
-        if (page) switchPage(page);
-    });
-});
-
-window.copyToClipboard = copyToClipboard;
-
-// Load everything
-refreshAll();
-switchPage('allocation');
+// Load numbers when page loads
+loadNumbers();
 </script>
 </body>
 </html>
