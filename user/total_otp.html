@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusPanel | Total OTP Earnings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center">
+                    <div class="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+                        <i class="fas fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="ml-2 text-xl font-bold text-gray-800">Nexus<span class="text-emerald-600">Panel</span></span>
+                </div>
+                <a href="profile.html" class="text-gray-600 hover:text-emerald-600">
+                    <i class="fas fa-arrow-left mr-1"></i> Back to Profile
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">💰 Total OTP Earnings</h1>
+            <p class="text-gray-500 mt-1">Today's OTP summary and earnings</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg p-6">
+                <p class="text-emerald-100 text-sm">Total OTP Today</p>
+                <p class="text-white text-4xl font-bold mt-1" id="totalOtpCount">0</p>
+            </div>
+            <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl shadow-lg p-6">
+                <p class="text-amber-100 text-sm">Total Earnings</p>
+                <p class="text-white text-4xl font-bold mt-1" id="totalEarnings">$0.00</p>
+                <p class="text-amber-100 text-sm mt-1">($0.005 per OTP)</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
+        const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
+
+        function getUserIdFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('id');
+        }
+
+        function getTodayStr() {
+            return new Date().toISOString().slice(0, 10);
+        }
+
+        async function fetchUserOtps(userId) {
+            try {
+                const url = `${SUPABASE_URL}/rest/v1/otp_logs?select=*&user_id=eq.${encodeURIComponent(userId)}`;
+                const response = await fetch(url, { headers: { 'apikey': SUPABASE_API_KEY } });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                return data || [];
+            } catch (err) {
+                console.error("Fetch OTPs error:", err);
+                return [];
+            }
+        }
+
+        async function loadTotalStats() {
+            const userId = getUserIdFromUrl();
+            if (!userId) {
+                document.getElementById('totalOtpCount').textContent = '?';
+                document.getElementById('totalEarnings').textContent = 'Login required';
+                return;
+            }
+
+            const userOtps = await fetchUserOtps(userId);
+            const today = getTodayStr();
+            const todayCount = userOtps.filter(o => o.date === today).length;
+            document.getElementById('totalOtpCount').textContent = todayCount;
+            document.getElementById('totalEarnings').textContent = `$${(todayCount * 0.005).toFixed(2)}`;
+        }
+
+        loadTotalStats();
+    </script>
+</body>
+</html>
