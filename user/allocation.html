@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIMA Panel | My Numbers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-100">
+
+<div class="max-w-4xl mx-auto px-4 py-8">
+    <!-- Header with back button -->
+    <div class="bg-white rounded-2xl shadow-sm border p-4 mb-6">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <a href="dashboard.html" class="text-gray-600 hover:text-gray-800">
+                    <i class="fas fa-arrow-left text-lg"></i>
+                </a>
+                <div>
+                    <h1 class="text-2xl font-bold text-gray-800">MIMA<span class="text-emerald-600">Panel</span></h1>
+                    <p class="text-gray-500 text-sm">My Allocated Numbers</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-sm font-medium text-gray-800" id="userName">Loading...</p>
+                <p class="text-xs text-gray-500" id="userEmail"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- User Info Display -->
+    <div id="userInfo" class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-check-circle text-green-600"></i>
+            <span class="font-medium">Logged in as:</span>
+            <span id="loggedUsername" class="font-mono"></span>
+        </div>
+    </div>
+
+    <!-- Country Filter -->
+    <div class="bg-white rounded-2xl shadow-sm border p-4 mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Select Country</label>
+        <select id="countryFilter" class="w-full md:w-64 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50">
+            <option value="">-- Select Country --</option>
+        </select>
+    </div>
+
+    <!-- Numbers Display -->
+    <div id="numbersContainer" class="bg-white rounded-2xl shadow-sm border p-6">
+        <div class="text-center py-12 text-gray-400">
+            <i class="fas fa-globe text-4xl mb-2"></i>
+            <p>Select a country to view your numbers</p>
+        </div>
+    </div>
+
+    <div class="mt-6 text-center text-xs text-gray-400">
+        Each OTP earns $0.005 | <a href="dashboard.html" class="text-indigo-600">Back to Dashboard</a>
+    </div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
+const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
+
+// Get logged-in user from session
+const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
+if (!session || session.role !== 'user') {
+    window.location.href = '../index.html';
+}
+
+let currentUserId = session.userId;
+let currentUsername = session.username;
+let userNumbers = [];
+
+// Display user info
+document.getElementById('userName').innerText = currentUsername;
+document.getElementById('userEmail').innerText = session.email || 'user@example.com';
+document.getElementById('loggedUsername').innerText = currentUsername;
+
+function getCountryFlag(country) {
+    const flags = {
+        'Jordan': '🇯🇴', 'Tajikistan': '🇹🇯', 'Nigeria': '🇳🇬',
+        'Myanmar': '🇲🇲', 'Hungary': '🇭🇺', 'Slovenia': '🇸🇮',
+        'Venezuela': '🇻🇪', 'Uzbekistan': '🇺🇿'
+    };
+    return flags[country] || '🌍';
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
+}
+
+function copyNumber(number) {
+    navigator.clipboard.writeText(number);
+    alert(`✅ Copied: ${number}`);
+}
+
+async function loadUserNumbers() {
+    const container = document.getElementById('numbersContainer');
+    container.innerHTML = '<div class="text-center py-8 text-gray-400">Loading your numbers...</div>';
+    
+    try {
+        const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=id,number,last3,country&user_id=eq.${currentUserId}`;
+        const res = await fetch(url, { headers: { 'apikey': API_KEY } });
+        userNumbers = await res.json();
+        
+        console.log(`Numbers for ${currentUsername}:`, userNumbers);
+        
+        if (!userNumbers || userNumbers.length === 0) {
+            document.getElementById('countryFilter').innerHTML = '<option value="">-- No numbers allocated --</option>';
+            container.innerHTML = `
+                <div class="text-center py-12 text-gray-400">
+                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                    <p>No numbers allocated yet</p>
+                    <p class="text-sm mt-1">Contact admin to get numbers assigned to you</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Populate country dropdown
+        const countries = [...new Set(userNumbers.map(n => n.country))];
+        const filterSelect = document.getElementById('countryFilter');
+        filterSelect.innerHTML = '<option value="">-- Select Country --</option>' + 
+            countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
+        
+        // Auto-select first country and display
+        if (countries.length > 0) {
+            filterSelect.value = countries[0];
+            displayNumbersByCountry(countries[0]);
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        container.innerHTML = `
+            <div class="text-center py-12 text-red-400">
+                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                <p>Error loading numbers: ${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+function displayNumbersByCountry(country) {
+    const container = document.getElementById('numbersContainer');
+    const filteredNumbers = userNumbers.filter(n => n.country === country);
+    
+    if (filteredNumbers.length === 0) {
+        container.innerHTML = `<div class="text-center py-8 text-gray-400">No numbers for ${escapeHtml(country)}</div>`;
+        return;
+    }
+    
+    let html = `
+        <div class="border rounded-xl overflow-hidden">
+            <div class="bg-gray-50 px-4 py-3 border-b">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">${getCountryFlag(country)}</span>
+                    <h2 class="font-semibold text-gray-800">${escapeHtml(country)}</h2>
+                    <span class="text-xs text-gray-400">(${filteredNumbers.length} numbers)</span>
+                </div>
+            </div>
+            <div class="divide-y divide-gray-100">
+    `;
+    
+    for (const num of filteredNumbers) {
+        html += `
+            <div class="px-4 py-3 flex justify-between items-center hover:bg-gray-50">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-phone text-gray-400"></i>
+                    <span class="font-mono text-sm">${escapeHtml(num.number)}</span>
+                </div>
+                <button onclick="copyNumber('${escapeHtml(num.number)}')" 
+                    class="copy-btn text-xs bg-gray-100 hover:bg-emerald-500 hover:text-white px-3 py-1.5 rounded-full transition">
+                    <i class="fas fa-copy mr-1"></i>Copy
+                </button>
+            </div>
+        `;
+    }
+    
+    html += `</div></div>`;
+    container.innerHTML = html;
+}
+
+// Event listeners
+document.getElementById('countryFilter').addEventListener('change', (e) => {
+    if (e.target.value) {
+        displayNumbersByCountry(e.target.value);
+    }
+});
+
+// Load numbers
+loadUserNumbers();
+</script>
+</body>
+</html>
