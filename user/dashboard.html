@@ -14,8 +14,7 @@
         .hidden-dropdown { display: none; }
         .otp-row:hover { background: #fef3c7; }
         .loading-spinner {
-            display: inline-block;
-            width: 20px;
+            inline-size: 20px;
             height: 20px;
             border: 2px solid #e2e8f0;
             border-radius: 50%;
@@ -61,6 +60,10 @@
                         <a href="#" data-page="today" class="nav-link block px-4 py-2 hover:bg-gray-50">📊 Today's Stat</a>
                         <a href="#" data-page="total" class="nav-link block px-4 py-2 hover:bg-gray-50">💰 Total OTP</a>
                         <a href="#" data-page="past" class="nav-link block px-4 py-2 hover:bg-gray-50">📅 Past Records</a>
+                        <div class="border-t border-gray-100"></div>
+                        <a href="https://wa.me/2348113903584" target="_blank" class="block px-4 py-2 hover:bg-gray-50 text-green-600">
+                            <i class="fab fa-whatsapp mr-2"></i>Contact Support
+                        </a>
                         <div class="border-t border-gray-100"></div>
                         <a href="../index.html" id="logoutBtn" class="block px-4 py-2 text-red-600 hover:bg-red-50">Logout</a>
                     </div>
@@ -176,10 +179,6 @@
     </div>
 </main>
 
-<button id="addOtpBtn" class="fixed bottom-6 right-6 bg-emerald-600 text-white p-4 rounded-full shadow-lg hover:bg-emerald-700 transition z-20">
-    <i class="fas fa-plus text-xl"></i>
-</button>
-
 <script>
 // ================= SUPABASE CONFIGURATION =================
 const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
@@ -283,26 +282,6 @@ async function fetchAllOtps() {
     } catch (err) {
         console.error("Fetch OTPs error:", err);
         return [];
-    }
-}
-
-async function addOtpToSupabase(otpRecord) {
-    try {
-        const url = `${SUPABASE_URL}/rest/v1/otp_logs`;
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'apikey': SUPABASE_API_KEY,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify(otpRecord)
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return true;
-    } catch (err) {
-        console.error("Add OTP error:", err);
-        return false;
     }
 }
 
@@ -457,8 +436,6 @@ async function refreshAll() {
     fetchPastOtps();
 }
 
-// ================= ADD TEST OTP =================
-
 // ================= GET USER ID FROM URL =================
 function getUserIdFromUrl() {
     const params = new URLSearchParams(window.location.search);
@@ -534,7 +511,6 @@ async function initDashboard() {
     
     document.getElementById('countrySelect').onchange = e => { if (e.target.value) displayNumbers(e.target.value); };
     document.getElementById('fetchBtn').onclick = fetchPastOtps;
-    document.getElementById('addOtpBtn').onclick = addTestOtp;
     
     renderTodayOtps();
     updateTotalStats();
