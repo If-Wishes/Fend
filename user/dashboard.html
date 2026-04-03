@@ -14,7 +14,7 @@
         .hidden-dropdown { display: none; }
         .otp-row:hover { background: #fef3c7; }
         .loading-spinner {
-            inline-size: 20px;
+            width: 20px;
             height: 20px;
             border: 2px solid #e2e8f0;
             border-radius: 50%;
@@ -29,6 +29,11 @@
             border-radius: 20px;
             font-size: 11px;
             font-weight: 500;
+        }
+        .used-number {
+            text-decoration: line-through;
+            opacity: 0.5;
+            background: #fef2f2;
         }
     </style>
 </head>
@@ -74,7 +79,6 @@
 </nav>
 
 <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Dashboard Content -->
     <div id="dashboardContent">
         <!-- Allocation Page -->
         <div id="allocationPage" class="page">
@@ -96,20 +100,12 @@
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left font-semibold text-gray-600">Phone Number</th>
-                                <th class="px-6 py-3 text-left font-semibold text-gray-600">Service</th>
-                                <th class="px-6 py-3 text-left font-semibold text-gray-600">OTP Code</th>
-                                <th class="px-6 py-3 text-left font-semibold text-gray-600">Time</th>
-                            </tr>
+                            <tr><th class="px-6 py-3 text-left">Phone Number</th><th class="px-6 py-3 text-left">Service</th><th class="px-6 py-3 text-left">OTP Code</th><th class="px-6 py-3 text-left">Time</th></tr>
                         </thead>
                         <tbody id="todayOtpTable" class="divide-y divide-gray-100"></tbody>
                     </table>
                 </div>
-                <div id="todayEmptyMsg" class="text-center py-8 text-gray-400 hidden">
-                    <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>No OTP received today on your numbers</p>
-                </div>
+                <div id="todayEmptyMsg" class="text-center py-8 text-gray-400 hidden">No OTP received today</div>
             </div>
         </div>
 
@@ -136,434 +132,169 @@
             <p class="text-gray-500 mt-1 mb-4">View OTP history by date range</p>
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
-                        <input type="date" id="startDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
-                        <input type="date" id="endDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
-                    </div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label><input type="date" id="startDate" class="w-full border rounded-xl px-4 py-2.5"></div>
+                    <div><label class="block text-sm font-medium text-gray-700 mb-2">End Date</label><input type="date" id="endDate" class="w-full border rounded-xl px-4 py-2.5"></div>
                 </div>
                 <button id="fetchBtn" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl transition">Fetch Records</button>
             </div>
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
                     <h3 class="font-semibold text-gray-800">OTP Records</h3>
-                    <div class="text-sm">
-                        <span class="font-bold text-emerald-600" id="pastTotalEarnings">$0.00</span>
-                        <span class="text-gray-500 ml-2">total earnings</span>
-                    </div>
+                    <div class="text-sm"><span class="font-bold text-emerald-600" id="pastTotalEarnings">$0.00</span><span class="text-gray-500 ml-2">total earnings</span></div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
-                        <thead class="bg-gray-50">
-                            <tr>
-                                <th class="px-6 py-3 text-left">Date</th>
-                                <th class="px-6 py-3 text-left">Phone Number</th>
-                                <th class="px-6 py-3 text-left">Service</th>
-                                <th class="px-6 py-3 text-left">OTP Code</th>
-                                <th class="px-6 py-3 text-left">Country</th>
-                                <th class="px-6 py-3 text-left">Time</th>
-                            </tr>
-                        </thead>
+                        <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left">Date</th><th class="px-6 py-3 text-left">Phone Number</th><th class="px-6 py-3 text-left">Service</th><th class="px-6 py-3 text-left">OTP Code</th><th class="px-6 py-3 text-left">Country</th><th class="px-6 py-3 text-left">Time</th></tr></thead>
                         <tbody id="pastOtpTable" class="divide-y divide-gray-100"></tbody>
                     </table>
                 </div>
-                <div id="pastEmptyMsg" class="text-center py-8 text-gray-400 hidden">
-                    <i class="fas fa-calendar-times text-4xl mb-2"></i>
-                    <p>No OTP records in this date range</p>
-                </div>
+                <div id="pastEmptyMsg" class="text-center py-8 text-gray-400 hidden">No OTP records in this date range</div>
             </div>
         </div>
     </div>
 </main>
 
 <script>
-// ================= SUPABASE CONFIGURATION =================
 const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
 const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
 
-// ================= GLOBAL STATE =================
 let currentUser = null;
 let userNumbers = [];
 let userPhoneNumbers = [];
 let userPhoneLast3s = [];
 let userOtps = [];
 
-// ================= HELPER FUNCTIONS =================
-function getTodayStr() {
-    return new Date().toISOString().slice(0, 10);
-}
+function getTodayStr() { return new Date().toISOString().slice(0, 10); }
+function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m)); }
+function getCountryFlag(c) { const f = {'Nigeria':'🇳🇬','Uzbekistan':'🇺🇿','USA':'🇺🇸','UK':'🇬🇧','Jordan':'🇯🇴','Tajikistan':'🇹🇯','Myanmar':'🇲🇲','Hungary':'🇭🇺','Slovenia':'🇸🇮','Venezuela':'🇻🇪','India':'🇮🇳','Germany':'🇩🇪','France':'🇫🇷'}; return f[c] || '🌍'; }
+function showToast(m) { const t = document.createElement('div'); t.className = 'fixed bottom-24 right-6 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm z-50 shadow-lg'; t.innerHTML = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2500); }
+function getLast3Digits(p) { const d = p.toString().replace(/\D/g, ''); return d.length >= 3 ? d.slice(-3) : d; }
+function maskPhoneNumber(p) { if (!p) return '***'; const d = p.toString().replace(/\D/g, ''); if (d.length <= 6) return '***' + d.slice(-3); return d.slice(0,2) + '•'.repeat(Math.min(7, d.length-5)) + d.slice(-3); }
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
+async function fetchUserById(id) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id,username,email&id=eq.${encodeURIComponent(id)}`, { headers: { 'apikey': SUPABASE_API_KEY } });
+    const d = await r.json(); return d?.[0] || null;
 }
-
-function getCountryFlag(country) {
-    const flags = {
-        'Jordan': '🇯🇴', 'Tajikistan': '🇹🇯', 'Nigeria': '🇳🇬',
-        'Myanmar': '🇲🇲', 'Hungary': '🇭🇺', 'Slovenia': '🇸🇮',
-        'Venezuela': '🇻🇪', 'Uzbekistan': '🇺🇿', 'USA': '🇺🇸', 'Canada': '🇨🇦',
-        'UK': '🇬🇧', 'Germany': '🇩🇪', 'France': '🇫🇷', 'India': '🇮🇳'
-    };
-    return flags[country] || '🌍';
+async function fetchUserAllocatedNumbers(id) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/allocated_numbers?select=number,country&user_id=eq.${encodeURIComponent(id)}`, { headers: { 'apikey': SUPABASE_API_KEY } });
+    return await r.json() || [];
 }
-
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.className = 'fixed bottom-24 right-6 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm z-50 shadow-lg';
-    toast.innerHTML = message;
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2500);
-}
-
-function getLast3Digits(phoneNumber) {
-    const digits = phoneNumber.toString().replace(/\D/g, '');
-    if (digits.length >= 3) {
-        return digits.slice(-3);
-    }
-    return digits;
-}
-
-function maskPhoneNumber(phoneNumber) {
-    if (!phoneNumber) return '***';
-    const digits = phoneNumber.toString().replace(/\D/g, '');
-    if (digits.length <= 6) return '***' + digits.slice(-3);
-    const start = digits.slice(0, 2);
-    const end = digits.slice(-3);
-    const middleLength = Math.min(7, digits.length - 5);
-    const middle = '•'.repeat(middleLength);
-    return start + middle + end;
-}
-
-// ================= SUPABASE FETCH FUNCTIONS =================
-async function fetchUserById(userId) {
-    try {
-        const url = `${SUPABASE_URL}/rest/v1/users?select=id,username,email,role&id=eq.${encodeURIComponent(userId)}`;
-        const response = await fetch(url, {
-            headers: { 'apikey': SUPABASE_API_KEY }
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        if (data && data.length > 0) return data[0];
-        return null;
-    } catch (err) {
-        console.error("Fetch user error:", err);
-        return null;
-    }
-}
-
-async function fetchUserAllocatedNumbers(userId) {
-    try {
-        const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=id,number,country&user_id=eq.${encodeURIComponent(userId)}`;
-        const response = await fetch(url, {
-            headers: { 'apikey': SUPABASE_API_KEY }
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        return data || [];
-    } catch (err) {
-        console.error("Fetch numbers error:", err);
-        return [];
-    }
-}
-
 async function fetchAllOtps() {
-    try {
-        const url = `${SUPABASE_URL}/rest/v1/otp_logs?select=*&order=date.desc&limit=500`;
-        const response = await fetch(url, {
-            headers: { 'apikey': SUPABASE_API_KEY }
-        });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        const data = await response.json();
-        return data || [];
-    } catch (err) {
-        console.error("Fetch OTPs error:", err);
-        return [];
-    }
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=*&order=date.desc&limit=1000`, { headers: { 'apikey': SUPABASE_API_KEY } });
+    return await r.json() || [];
 }
-
-function filterOtpsByUserNumbers(allOtps) {
-    if (!userPhoneLast3s.length) return [];
-    return allOtps.filter(otp => userPhoneLast3s.includes(otp.phone_last3));
-}
-
+function filterOtpsByUser() { if (!userPhoneLast3s.length) return []; return userOtps.filter(o => userPhoneLast3s.includes(o.phone_last3)); }
 function updateUserPhoneArrays() {
-    userPhoneNumbers = [];
-    userPhoneLast3s = [];
-    
-    userNumbers.forEach(item => {
-        if (item.number) {
-            userPhoneNumbers.push(item.number);
-            const last3 = getLast3Digits(item.number);
-            if (last3) {
-                userPhoneLast3s.push(last3);
-            }
-        }
-    });
-    
+    userPhoneNumbers = []; userPhoneLast3s = [];
+    userNumbers.forEach(i => { if (i.number) { userPhoneNumbers.push(i.number); const l3 = getLast3Digits(i.number); if (l3) userPhoneLast3s.push(l3); } });
     userPhoneLast3s = [...new Set(userPhoneLast3s)];
-    console.log(`User has ${userPhoneNumbers.length} numbers, matching last3s:`, userPhoneLast3s);
 }
+function processAllocatedNumbers(raw) { const g = {}; raw.forEach(i => { const c = i.country || 'Other'; if (!g[c]) g[c] = { country: c, numbers: [] }; g[c].numbers.push(i.number); }); return Object.values(g); }
 
-// ================= PROCESS NUMBER ALLOCATION =================
-function processAllocatedNumbers(rawNumbers) {
-    const grouped = {};
-    rawNumbers.forEach(item => {
-        const country = item.country || 'Other';
-        if (!grouped[country]) {
-            grouped[country] = { country, numbers: [] };
-        }
-        grouped[country].numbers.push(item.number);
-    });
-    return Object.values(grouped);
-}
-
-// ================= UI RENDER FUNCTIONS =================
 function loadUserNumbersUI() {
     const processed = processAllocatedNumbers(userNumbers);
-    const countries = processed.map(g => g.country);
+    const usedLast3s = new Set(userOtps.map(o => o.phone_last3));
+    const countries = processed.map(g => {
+        const available = g.numbers.filter(n => !usedLast3s.has(getLast3Digits(n))).length;
+        return { country: g.country, available, total: g.numbers.length };
+    });
     const sel = document.getElementById('countrySelect');
-    if (sel) {
-        sel.innerHTML = '<option value="">-- Select Country --</option>' +
-            countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
-    }
+    if (sel) sel.innerHTML = '<option value="">-- Select Country --</option>' + countries.map(c => `<option value="${c.country}">${getCountryFlag(c.country)} ${c.country} (${c.available}/${c.total} available)</option>`).join('');
 }
 
 function displayNumbers(country) {
     const processed = processAllocatedNumbers(userNumbers);
     const countryData = processed.find(g => g.country === country);
     const div = document.getElementById('numbersDisplay');
-    if (!countryData || !countryData.numbers || countryData.numbers.length === 0) {
-        div.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers for this country</div>';
+    if (!countryData || !countryData.numbers.length) { div.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers for this country</div>'; return; }
+    
+    const usedLast3s = new Set(userOtps.map(o => o.phone_last3));
+    const availableNumbers = countryData.numbers.filter(n => !usedLast3s.has(getLast3Digits(n)));
+    
+    if (availableNumbers.length === 0) {
+        div.innerHTML = '<div class="text-center py-8 text-green-600">✅ All numbers have been used! Contact admin for more numbers.</div>';
         return;
     }
-    div.innerHTML = `
-        <div class="border rounded-xl overflow-hidden">
-            <div class="bg-gray-50 px-4 py-3 font-semibold border-b">${getCountryFlag(country)} ${country}</div>
-            <div class="divide-y divide-gray-100">
-                ${countryData.numbers.map(num => `<div class="px-4 py-3 font-mono text-sm">📞 ${escapeHtml(num)}</div>`).join('')}
-            </div>
-        </div>
-    `;
+    
+    div.innerHTML = `<div class="border rounded-xl overflow-hidden"><div class="bg-gray-50 px-4 py-3 font-semibold border-b">${getCountryFlag(country)} ${country} (${availableNumbers.length} available)</div><div class="divide-y divide-gray-100">${availableNumbers.map(n => `<div class="px-4 py-3 font-mono text-sm">📞 ${escapeHtml(n)}</div>`).join('')}</div></div>`;
 }
 
 function renderTodayOtps() {
     const today = getTodayStr();
     const todayOtps = userOtps.filter(o => o.date === today);
-    const tbody = document.getElementById('todayOtpTable');
-    const emptyMsg = document.getElementById('todayEmptyMsg');
-
+    const tbody = document.getElementById('todayOtpTable'), empty = document.getElementById('todayEmptyMsg');
     if (!tbody) return;
-    if (todayOtps.length === 0) {
-        tbody.innerHTML = '';
-        if (emptyMsg) emptyMsg.classList.remove('hidden');
-        return;
-    }
-    if (emptyMsg) emptyMsg.classList.add('hidden');
-
-    tbody.innerHTML = todayOtps.map(o => {
-        const matchingNumber = userPhoneNumbers.find(num => getLast3Digits(num) === o.phone_last3);
-        const displayNumber = matchingNumber ? maskPhoneNumber(matchingNumber) : `***${o.phone_last3 || '???'}`;
-        
-        return `
-            <tr class="otp-row border-b border-gray-100 hover:bg-amber-50">
-                <td class="px-6 py-3 font-mono text-sm">${escapeHtml(displayNumber)}</td>
-                <td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}</td>
-                <td class="px-6 py-3 font-bold text-emerald-600 text-lg">${escapeHtml(o.otp)}</td>
-                <td class="px-6 py-3 text-gray-500">${o.message_time ? new Date(o.message_time).toLocaleTimeString() : (o.time || '')}</td>
-            </tr>
-        `;
-    }).join('');
+    if (!todayOtps.length) { tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); return; }
+    if (empty) empty.classList.add('hidden');
+    tbody.innerHTML = todayOtps.map(o => { const m = userPhoneNumbers.find(n => getLast3Digits(n) === o.phone_last3); return `<tr class="otp-row border-b"><td class="px-6 py-3 font-mono">${escapeHtml(m ? maskPhoneNumber(m) : '***'+o.phone_last3)}</td><td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}</td><td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td><td class="px-6 py-3">${o.message_time ? new Date(o.message_time).toLocaleTimeString() : ''}</td></tr>`; }).join('');
 }
 
-function updateTotalStats() {
-    const today = getTodayStr();
-    const todayCount = userOtps.filter(o => o.date === today).length;
-    document.getElementById('totalOtpCount').textContent = todayCount;
-    document.getElementById('totalEarnings').textContent = `$${(todayCount * 0.005).toFixed(2)}`;
-}
+function updateTotalStats() { const todayCount = userOtps.filter(o => o.date === getTodayStr()).length; document.getElementById('totalOtpCount').textContent = todayCount; document.getElementById('totalEarnings').textContent = `$${(todayCount * 0.005).toFixed(2)}`; }
 
 function fetchPastOtps() {
-    const start = document.getElementById('startDate').value;
-    const end = document.getElementById('endDate').value;
-    if (!start || !end) return;
-
-    const filtered = userOtps.filter(o => o.date >= start && o.date <= end);
-    const tbody = document.getElementById('pastOtpTable');
-    const emptyMsg = document.getElementById('pastEmptyMsg');
-    const totalEarningsSpan = document.getElementById('pastTotalEarnings');
-
+    const s = document.getElementById('startDate').value, e = document.getElementById('endDate').value;
+    if (!s || !e) return;
+    const f = userOtps.filter(o => o.date >= s && o.date <= e);
+    const tbody = document.getElementById('pastOtpTable'), empty = document.getElementById('pastEmptyMsg'), earnSpan = document.getElementById('pastTotalEarnings');
     if (!tbody) return;
-    if (filtered.length === 0) {
-        tbody.innerHTML = '';
-        if (emptyMsg) emptyMsg.classList.remove('hidden');
-        if (totalEarningsSpan) totalEarningsSpan.textContent = '$0.00';
-        return;
-    }
-    if (emptyMsg) emptyMsg.classList.add('hidden');
-    if (totalEarningsSpan) totalEarningsSpan.textContent = `$${(filtered.length * 0.005).toFixed(2)}`;
-
-    tbody.innerHTML = filtered.map(o => {
-        const matchingNumber = userPhoneNumbers.find(num => getLast3Digits(num) === o.phone_last3);
-        const displayNumber = matchingNumber ? maskPhoneNumber(matchingNumber) : `***${o.phone_last3 || '???'}`;
-        
-        return `
-            <tr class="hover:bg-gray-50 border-b">
-                <td class="px-6 py-3 text-gray-600 text-xs">${o.date || ''}</td>
-                <td class="px-6 py-3 font-mono text-sm">${escapeHtml(displayNumber)}</td>
-                <td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}</td>
-                <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td>
-                <td class="px-6 py-3">${escapeHtml(o.country || 'Unknown')}</td>
-                <td class="px-6 py-3 text-gray-500 text-xs">${o.message_time ? new Date(o.message_time).toLocaleTimeString() : (o.time || '')}</td>
-            </tr>
-        `;
-    }).join('');
+    if (!f.length) { tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); if (earnSpan) earnSpan.textContent = '$0.00'; return; }
+    if (empty) empty.classList.add('hidden');
+    if (earnSpan) earnSpan.textContent = `$${(f.length * 0.005).toFixed(2)}`;
+    tbody.innerHTML = f.map(o => { const m = userPhoneNumbers.find(n => getLast3Digits(n) === o.phone_last3); return `<tr class="hover:bg-gray-50 border-b"><td class="px-6 py-3 text-gray-600 text-xs">${o.date || ''}</td><td class="px-6 py-3 font-mono">${escapeHtml(m ? maskPhoneNumber(m) : '***'+o.phone_last3)}</td><td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}</td><td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td><td class="px-6 py-3">${escapeHtml(o.country || 'Unknown')}</td><td class="px-6 py-3 text-gray-500">${o.message_time ? new Date(o.message_time).toLocaleTimeString() : ''}</td></tr>`; }).join('');
 }
 
-async function refreshAll() {
-    if (!currentUser) return;
-    
-    document.getElementById('todayOtpTable').innerHTML = '<tr><td colspan="4" class="text-center py-4"><div class="loading-spinner"></div> Loading...</td></tr>';
-    
-    const allOtps = await fetchAllOtps();
-    userOtps = filterOtpsByUserNumbers(allOtps);
-    
-    renderTodayOtps();
-    updateTotalStats();
-    fetchPastOtps();
-}
+async function refreshAll() { if (!currentUser) return; const all = await fetchAllOtps(); userOtps = all.filter(o => userPhoneLast3s.includes(o.phone_last3)); renderTodayOtps(); updateTotalStats(); fetchPastOtps(); loadUserNumbersUI(); if (document.getElementById('allocationPage').classList.contains('active-page') && document.getElementById('countrySelect').value) displayNumbers(document.getElementById('countrySelect').value); }
 
-// ================= GET USER ID FROM URL =================
-function getUserIdFromUrl() {
-    const params = new URLSearchParams(window.location.search);
-    return params.get('id');
-}
+function getUserIdFromUrl() { return new URLSearchParams(window.location.search).get('id'); }
+function saveCurrentPage(p) { localStorage.setItem('nexus_current_page', p); }
+function getSavedPage() { return localStorage.getItem('nexus_current_page') || 'allocation'; }
+function loadSavedPage() { const s = getSavedPage(); ['allocation','today','total','past'].forEach(p => document.getElementById(p+'Page').classList.remove('active-page')); document.getElementById(s+'Page').classList.add('active-page'); if (s === 'allocation') loadUserNumbersUI(); if (s === 'today') renderTodayOtps(); if (s === 'total') updateTotalStats(); if (s === 'past') fetchPastOtps(); }
 
-// ================= PAGE STATE MANAGEMENT (FIXES REFRESH ISSUE) =================
-function saveCurrentPage(pageName) {
-    localStorage.setItem('nexus_current_page', pageName);
-}
-
-function getSavedPage() {
-    return localStorage.getItem('nexus_current_page') || 'allocation';
-}
-
-function loadSavedPage() {
-    const savedPage = getSavedPage();
-    const pages = ['allocation', 'today', 'total', 'past'];
-    
-    pages.forEach(p => {
-        document.getElementById(p + 'Page').classList.remove('active-page');
-    });
-    document.getElementById(savedPage + 'Page').classList.add('active-page');
-    
-    // Refresh the data for the saved page
-    if (savedPage === 'allocation') loadUserNumbersUI();
-    if (savedPage === 'today') renderTodayOtps();
-    if (savedPage === 'total') updateTotalStats();
-    if (savedPage === 'past') fetchPastOtps();
-}
-
-// ================= MAIN INITIALIZATION =================
 async function initDashboard() {
     const userId = getUserIdFromUrl();
-    
-    if (!userId) {
-        window.location.href = '../index.html';
-        return;
-    }
-    
-    document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-12"><div class="loading-spinner"></div><p class="mt-2">Loading user data...</p></div>';
-    
+    if (!userId) { window.location.href = '../index.html'; return; }
+    document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-12"><div class="loading-spinner mx-auto"></div><p>Loading...</p></div>';
     const user = await fetchUserById(userId);
-    if (!user) {
-        document.getElementById('numbersDisplay').innerHTML = `
-            <div class="text-center py-12 text-red-500">
-                <i class="fas fa-user-slash text-5xl mb-3"></i>
-                <p class="font-medium">User not found</p>
-                <a href="../index.html" class="mt-4 inline-block bg-emerald-600 text-white px-4 py-2 rounded-xl">Go to Login</a>
-            </div>
-        `;
-        return;
-    }
-    
+    if (!user) { document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-12 text-red-500">User not found</div>'; return; }
     currentUser = user;
     document.getElementById('userName').innerText = currentUser.username || 'User';
     document.getElementById('userEmail').innerText = currentUser.email || '';
-    
-    const numbersData = await fetchUserAllocatedNumbers(currentUser.id);
-    userNumbers = numbersData;
+    userNumbers = await fetchUserAllocatedNumbers(currentUser.id);
     updateUserPhoneArrays();
-    
-    loadUserNumbersUI();
-    
-    const allOtps = await fetchAllOtps();
-    userOtps = filterOtpsByUserNumbers(allOtps);
-    
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - 6);
-    document.getElementById('startDate').value = start.toISOString().slice(0, 10);
-    document.getElementById('endDate').value = end.toISOString().slice(0, 10);
-    
+    const all = await fetchAllOtps();
+    userOtps = all.filter(o => userPhoneLast3s.includes(o.phone_last3));
+    const end = new Date(), start = new Date(); start.setDate(end.getDate() - 6);
+    document.getElementById('startDate').value = start.toISOString().slice(0,10);
+    document.getElementById('endDate').value = end.toISOString().slice(0,10);
     document.getElementById('countrySelect').onchange = e => { if (e.target.value) displayNumbers(e.target.value); };
     document.getElementById('fetchBtn').onclick = fetchPastOtps;
-    
-    renderTodayOtps();
-    updateTotalStats();
-    fetchPastOtps();
-    
+    renderTodayOtps(); updateTotalStats(); fetchPastOtps();
+    loadUserNumbersUI();
     document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-8 text-gray-400">Select a country to view numbers</div>';
-    
-    // Load the saved page after dashboard loads
     loadSavedPage();
-    
-    showToast(`✅ Welcome ${currentUser.username}! You have ${userPhoneNumbers.length} active numbers.`);
+    showToast(`✅ Welcome ${currentUser.username}!`);
 }
 
-// ================= PAGE NAVIGATION =================
 function setupNavigation() {
-    const pages = ['allocation', 'today', 'total', 'past'];
-    pages.forEach(page => {
-        const links = document.querySelectorAll(`[data-page="${page}"]`);
-        links.forEach(link => {
+    ['allocation','today','total','past'].forEach(p => {
+        document.querySelectorAll(`[data-page="${p}"]`).forEach(link => {
             link.onclick = (e) => {
                 e.preventDefault();
-                pages.forEach(p => document.getElementById(p + 'Page').classList.remove('active-page'));
-                document.getElementById(page + 'Page').classList.add('active-page');
+                ['allocation','today','total','past'].forEach(pg => document.getElementById(pg+'Page').classList.remove('active-page'));
+                document.getElementById(p+'Page').classList.add('active-page');
                 document.getElementById('dropdownMenu').classList.add('hidden-dropdown');
-                
-                // Save current page to localStorage
-                saveCurrentPage(page);
-                
-                if (page === 'allocation') loadUserNumbersUI();
-                if (page === 'today') renderTodayOtps();
-                if (page === 'total') updateTotalStats();
-                if (page === 'past') fetchPastOtps();
+                saveCurrentPage(p);
+                if (p === 'allocation') { loadUserNumbersUI(); if (document.getElementById('countrySelect').value) displayNumbers(document.getElementById('countrySelect').value); }
+                if (p === 'today') renderTodayOtps();
+                if (p === 'total') updateTotalStats();
+                if (p === 'past') fetchPastOtps();
             };
         });
     });
 }
 
-// ================= DROPDOWN MENU =================
-function setupDropdown() {
-    const menuBtn = document.getElementById('menuButton');
-    const dropdown = document.getElementById('dropdownMenu');
-    if (menuBtn) {
-        menuBtn.onclick = (e) => { e.stopPropagation(); dropdown.classList.toggle('hidden-dropdown'); };
-        document.addEventListener('click', () => dropdown.classList.add('hidden-dropdown'));
-    }
-}
-
-// ================= START APP =================
-document.addEventListener('DOMContentLoaded', async () => {
-    setupNavigation();
-    setupDropdown();
-    await initDashboard();
-});
+function setupDropdown() { const btn = document.getElementById('menuButton'), drop = document.getElementById('dropdownMenu'); if (btn) { btn.onclick = (e) => { e.stopPropagation(); drop.classList.toggle('hidden-dropdown'); }; document.addEventListener('click', () => drop.classList.add('hidden-dropdown')); } }
+document.addEventListener('DOMContentLoaded', async () => { setupNavigation(); setupDropdown(); await initDashboard(); });
 </script>
 </body>
 </html>
