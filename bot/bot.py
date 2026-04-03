@@ -1,125 +1,49 @@
 #!/usr/bin/env python3
-import re
-import os
-import requests
-import time
-import threading
+import re, os, requests, time, threading
 from datetime import datetime
-from flask import Flask
+from http.server import HTTPServer, BaseHTTPRequestHandler
 
-BOT_TOKEN = "YOUR_BOT_TOKEN"
-SUPABASE_URL = "YOUR_SUPABASE_URL"
-API_KEY = "YOUR_SUPABASE_API_KEY"
+BOT_TOKEN = "7941038643:AAFFM8jv2RkFyyxzgdzuyqy6UiCHNZhIlWo"
+SUPABASE_URL = "https://zubkwzsnpdjtndlvqfqf.supabase.co"
+API_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo"
 
-app = Flask(__name__)
-TELEGRAM_API_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
-last_update_id = 0
+last_id = 0
 
+class Handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b'OK')
+    def log_message(self, *args): pass
 
-def save_to_supabase(otp, phone_last3, country, service, time_raw):
-    try:
-        data = {
-            "otp": str(otp),
-            "phone_last3": str(phone_last3),
-            "country": str(country) if country else None,
-            "service": str(service) if service else None,
-            "time_raw": str(time_raw) if time_raw else None,
-            "date": datetime.now().strftime("%Y-%m-%d"),
-            "message_time": datetime.now().isoformat()
-        }
-
-        headers = {
-            "apikey": API_KEY,
-            "Authorization": f"Bearer {API_KEY}",
-            "Content-Type": "application/json"
-        }
-
-        response = requests.post(
-            f"{SUPABASE_URL}/rest/v1/otp_logs",
-            headers=headers,
-            json=data,
-            timeout=10
-        )
-
-        return response.status_code in [200, 201]
-
-    except Exception:
-        return False
-
-
-def process_updates():
-    global last_update_id
-
-    try:
-        url = f"{TELEGRAM_API_URL}/getUpdates"
-        params = {
-            "offset": last_update_id + 1,
-            "timeout": 30
-        }
-
-        response = requests.get(url, params=params, timeout=35)
-
-        if not response.ok:
-            return
-
-        result = response.json().get("result", [])
-
-        for update in result:
-            last_update_id = update["update_id"]
-
-            if "message" not in update:
-                continue
-
-            msg = update["message"]
-            text = msg.get("text", "")
-
-            otp_match = re.search(r"\b\d{4,6}\b", text)
-            if not otp_match:
-                continue
-
-            otp = otp_match.group()
-
-            number_match = re.search(r"☎️ Number:\s*(.+)", text)
-            phone_last3 = "???"
-            if number_match:
-                number = number_match.group(1).strip()
-                digits = re.sub(r"\D", "", number)
-                if len(digits) >= 3:
-                    phone_last3 = digits[-3:]
-
-            country_match = re.search(r"🌍 Country:\s*(.+)", text)
-            country = country_match.group(1).strip() if country_match else None
-
-            service_match = re.search(r"⚙️ Service:\s*(.+)", text)
-            service = service_match.group(1).strip() if service_match else None
-
-            time_match = re.search(r"⏰ Time:\s*(.+)", text)
-            time_raw = time_match.group(1).strip() if time_match else None
-
-            save_to_supabase(otp, phone_last3, country, service, time_raw)
-
-    except Exception:
-        pass
-
-
-def poll_loop():
+def poll():
+    global last_id
     while True:
         try:
-            process_updates()
-        except Exception:
-            pass
-        time.sleep(1)
-
-
-@app.route("/")
-def health():
-    return "MIMA Bot Running", 200
-
+            r = requests.get(f'https://api.telegram.org/bot{BOT_TOKEN}/getUpdates?offset={last_id+1}&timeout=25', timeout=30)
+            for u in r.json().get('result', []):
+                last_id = u['update_id']
+                t = u.get('message',{}).get('text','')
+                otp = re.search(r'\b\d{4,6}\b', t)
+                if otp:
+                    num = re.search(r'☎️ Number:\s*(.+)', t)
+                    phone = (re.sub(r'\D', '', num.group(1))[-3:]) if num else '???'
+                    c = re.search(r'🌍 Country:\s*(\w+)', t)
+                    s = re.search(r'⚙️ Service:\s*(.+)', t)
+                    tm = re.search(r'⏰ Time:\s*(.+)', t)
+                    try:
+                        requests.post(f'{SUPABASE_URL}/rest/v1/otp_logs',
+                            headers={'apikey': API_KEY, 'Content-Type': 'application/json'},
+                            json={'otp':otp.group(), 'phone_last3':phone,
+                                  'country':c.group(1) if c else None,
+                                  'service':s.group(1).strip() if s else None,
+                                  'time_raw':tm.group(1).strip() if tm else None,
+                                  'date':datetime.now().strftime('%Y-%m-%d'),
+                                  'message_time':datetime.now().isoformat()}, timeout=5)
+                    except: pass
+        except: pass
+        time.sleep(2)
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-
-    poll_thread = threading.Thread(target=poll_loop, daemon=True)
-    poll_thread.start()
-
-    app.run(host="0.0.0.0", port=port, debug=False)
+    threading.Thread(target=poll, daemon=True).start()
+    HTTPServer(('0.0.0.0', int(os.environ.get('PORT', 5000))), Handler).serve_forever()
