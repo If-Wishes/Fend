@@ -43,7 +43,7 @@
                 <div class="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
                     <i class="fas fa-chart-line text-white text-sm"></i>
                 </div>
-                <span class="ml-2 text-xl font-bold text-gray-800">Nexus<span class="text-emerald-600">Panel</span></span>
+                <span class="ml-2 text-xl font-bold text-gray-800">Mima<span class="text-emerald-600">Panel</span></span>
                 <span class="ml-3 text-xs bg-emerald-100 text-emerald-600 px-2 py-1 rounded-full">User</span>
             </div>
             <div class="flex items-center gap-4 relative">
@@ -220,7 +220,6 @@ function showToast(message) {
     setTimeout(() => toast.remove(), 2500);
 }
 
-// Extract last 3 digits from a phone number
 function getLast3Digits(phoneNumber) {
     const digits = phoneNumber.toString().replace(/\D/g, '');
     if (digits.length >= 3) {
@@ -229,7 +228,6 @@ function getLast3Digits(phoneNumber) {
     return digits;
 }
 
-// Format phone number with masking (e.g., 99•••••••119)
 function maskPhoneNumber(phoneNumber) {
     if (!phoneNumber) return '***';
     const digits = phoneNumber.toString().replace(/\D/g, '');
@@ -308,13 +306,9 @@ async function addOtpToSupabase(otpRecord) {
     }
 }
 
-// ================= OTP FILTERING BASED ON USER'S NUMBERS (Last 3 Digits) =================
 function filterOtpsByUserNumbers(allOtps) {
     if (!userPhoneLast3s.length) return [];
-    
-    return allOtps.filter(otp => {
-        return userPhoneLast3s.includes(otp.phone_last3);
-    });
+    return allOtps.filter(otp => userPhoneLast3s.includes(otp.phone_last3));
 }
 
 function updateUserPhoneArrays() {
@@ -521,6 +515,31 @@ function getUserIdFromUrl() {
     return params.get('id');
 }
 
+// ================= PAGE STATE MANAGEMENT (FIXES REFRESH ISSUE) =================
+function saveCurrentPage(pageName) {
+    localStorage.setItem('nexus_current_page', pageName);
+}
+
+function getSavedPage() {
+    return localStorage.getItem('nexus_current_page') || 'allocation';
+}
+
+function loadSavedPage() {
+    const savedPage = getSavedPage();
+    const pages = ['allocation', 'today', 'total', 'past'];
+    
+    pages.forEach(p => {
+        document.getElementById(p + 'Page').classList.remove('active-page');
+    });
+    document.getElementById(savedPage + 'Page').classList.add('active-page');
+    
+    // Refresh the data for the saved page
+    if (savedPage === 'allocation') loadUserNumbersUI();
+    if (savedPage === 'today') renderTodayOtps();
+    if (savedPage === 'total') updateTotalStats();
+    if (savedPage === 'past') fetchPastOtps();
+}
+
 // ================= MAIN INITIALIZATION =================
 async function initDashboard() {
     const userId = getUserIdFromUrl();
@@ -572,7 +591,9 @@ async function initDashboard() {
     fetchPastOtps();
     
     document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-8 text-gray-400">Select a country to view numbers</div>';
-    document.getElementById('allocationPage').classList.add('active-page');
+    
+    // Load the saved page after dashboard loads
+    loadSavedPage();
     
     showToast(`✅ Welcome ${currentUser.username}! You have ${userPhoneNumbers.length} active numbers.`);
 }
@@ -588,6 +609,10 @@ function setupNavigation() {
                 pages.forEach(p => document.getElementById(p + 'Page').classList.remove('active-page'));
                 document.getElementById(page + 'Page').classList.add('active-page');
                 document.getElementById('dropdownMenu').classList.add('hidden-dropdown');
+                
+                // Save current page to localStorage
+                saveCurrentPage(page);
+                
                 if (page === 'allocation') loadUserNumbersUI();
                 if (page === 'today') renderTodayOtps();
                 if (page === 'total') updateTotalStats();
