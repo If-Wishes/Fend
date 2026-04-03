@@ -8,8 +8,9 @@ from flask import Flask
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters
 
+# Suppress logging
 import logging
-logging.basicConfig(level=logging.INFO)
+logging.getLogger().setLevel(logging.ERROR)
 
 BOT_TOKEN = "7941038643:AAFFM8jv2RkFyyxzgdzuyqy6UiCHNZhIlWo"
 SUPABASE_URL = "https://zubkwzsnpdjtndlvqfqf.supabase.co"
@@ -19,23 +20,23 @@ app = Flask(__name__)
 
 @app.route('/')
 def health():
-    return 'OK', 200
+    return 'Bot Running', 200
 
-def save_to_supabase(otp, phone_last3):
+def save_to_supabase(otp, phone_last3, country, service, time_raw):
     try:
         data = {
             'otp': otp,
             'phone_last3': phone_last3,
+            'country': country,
+            'service': service,
+            'time_raw': time_raw,
             'date': datetime.now().strftime('%Y-%m-%d'),
             'message_time': datetime.now().isoformat()
         }
         headers = {'apikey': API_KEY, 'Content-Type': 'application/json'}
-        r = requests.post(f'{SUPABASE_URL}/rest/v1/otp_logs', headers=headers, json=data)
-        print(f"✅ Saved to Supabase: {r.status_code}")
-        return True
-    except Exception as e:
-        print(f"❌ Supabase error: {e}")
-        return False
+        requests.post(f'{SUPABASE_URL}/rest/v1/otp_logs', headers=headers, json=data)
+    except:
+        pass
 
 async def handle(update, context):
     msg = update.message
@@ -43,32 +44,47 @@ async def handle(update, context):
         return
     
     text = msg.text
-    print(f"📨 Received: {text[:100]}")
+    
+    # Extract Time
+    time_match = re.search(r'⏰ Time:\s*(.+)', text)
+    time_raw = time_match.group(1).strip() if time_match else None
+    
+    # Extract Country
+    country_match = re.search(r'🌍 Country:\s*(\w+)', text)
+    country = country_match.group(1) if country_match else None
+    
+    # Extract Service
+    service_match = re.search(r'⚙️ Service:\s*(.+)', text)
+    service = service_match.group(1).strip() if service_match else None
+    
+    # Extract Number (get last 3 digits)
+    number_match = re.search(r'☎️ Number:\s*(.+)', text)
+    phone_last3 = "???"
+    if number_match:
+        number = number_match.group(1).strip()
+        clean_number = re.sub(r'[\*\s]', '', number)
+        digits = re.sub(r'\D', '', clean_number)
+        if len(digits) >= 3:
+            phone_last3 = digits[-3:]
     
     # Extract OTP
     otp_match = re.search(r'\b\d{4,6}\b', text)
     if not otp_match:
-        print("No OTP found")
         return
     
     otp = otp_match.group()
-    print(f"🔑 Found OTP: {otp}")
-    
-    # Extract phone last 3 digits
-    phone_match = re.search(r'(\d{3})(?=\D|$)', text)
-    phone_last3 = phone_match.group(1) if phone_match else "???"
-    print(f"📱 Phone last3: {phone_last3}")
-    
-    # Save to Supabase
-    save_to_supabase(otp, phone_last3)
+    save_to_supabase(otp, phone_last3, country, service, time_raw)
 
 def run_bot():
     bot_app = Application.builder().token(BOT_TOKEN).build()
     bot_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
-    print("🤖 Bot started...")
     bot_app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
-    threading.Thread(target=run_bot, daemon=True).start()
+    # Start bot in background
+    bot_thread = threading.Thread(target=run_bot, daemon=True)
+    bot_thread.start()
+    
+    # Start Flask server
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)
