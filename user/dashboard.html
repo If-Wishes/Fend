@@ -94,13 +94,16 @@
         <!-- Allocation Page -->
         <div id="allocationPage" class="page">
             <h1 class="text-2xl font-bold text-gray-900">📌 Number Allocation</h1>
-            <p class="text-gray-500 mt-1 mb-4">Select a country to view numbers assigned to you</p>
+            <p class="text-gray-500 mt-1 mb-4">Select a country to view numbers assigned to you (numbers that received OTPs are hidden)</p>
             <select id="countrySelect" class="w-full md:w-64 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 mb-4">
                 <option value="">-- Select Country --</option>
             </select>
             <div id="numbersDisplay" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center text-gray-400">
                 Select a country to view numbers
             </div>
+            <p class="text-xs text-gray-400 mt-4 text-center">
+                <i class="fas fa-info-circle mr-1"></i> Numbers that have received OTPs are hidden from this list, but continue to receive OTPs normally.
+            </p>
         </div>
 
         <!-- Today's Stat Page -->
@@ -120,7 +123,7 @@
             </div>
         </div>
 
-        <!-- Today's OTP Page (renamed from Total OTP) -->
+        <!-- Today's OTP Page -->
         <div id="totalPage" class="page">
             <h1 class="text-2xl font-bold text-gray-900">📅 Today's OTP Earnings</h1>
             <p class="text-gray-500 mt-1 mb-4">Today's OTP summary and earnings (resets daily at 1:00 AM)</p>
@@ -178,18 +181,8 @@ let userPhoneNumbers = [];
 let userPhoneLast3s = [];
 let userOtps = [];
 
-// Get today's date string
 function getTodayStr() { 
     return new Date().toISOString().slice(0, 10); 
-}
-
-// Get current date for reset timer (1 AM reset)
-function getDisplayDate() {
-    const now = new Date();
-    if (now.getHours() < 1) {
-        now.setDate(now.getDate() - 1);
-    }
-    return now.toISOString().slice(0, 10);
 }
 
 function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m)); }
@@ -207,7 +200,7 @@ async function fetchUserAllocatedNumbers(id) {
     return await r.json() || [];
 }
 async function fetchAllOtps() {
-    const r = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=*&order=date.desc&limit=1000`, { headers: { 'apikey': SUPABASE_API_KEY } });
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=*&order=date.desc&limit=2000`, { headers: { 'apikey': SUPABASE_API_KEY } });
     return await r.json() || [];
 }
 function filterOtpsByUser() { if (!userPhoneLast3s.length) return []; return userOtps.filter(o => userPhoneLast3s.includes(o.phone_last3)); }
@@ -256,14 +249,12 @@ function renderTodayOtps() {
     tbody.innerHTML = todayOtps.map(o => { const m = userPhoneNumbers.find(n => getLast3Digits(n) === o.phone_last3); return `<tr class="otp-row border-b"><td class="px-6 py-3 font-mono">${escapeHtml(m ? maskPhoneNumber(m) : '***'+o.phone_last3)}</td><td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}</td><td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td><td class="px-6 py-3">${o.message_time ? new Date(o.message_time).toLocaleTimeString() : ''}</td></tr>`; }).join('');
 }
 
-// Today's OTP - uses current date (resets at 1 AM)
 function updateTodayStats() { 
     const todayCount = userOtps.filter(o => o.date === getTodayStr()).length; 
     document.getElementById('totalOtpCount').textContent = todayCount; 
     document.getElementById('totalEarnings').textContent = `$${(todayCount * 0.005).toFixed(2)}`; 
 }
 
-// Past Records - uses date range filter, does NOT reset
 function fetchPastOtps() {
     const s = document.getElementById('startDate').value, e = document.getElementById('endDate').value;
     if (!s || !e) return;
@@ -288,7 +279,6 @@ async function refreshAll() {
         displayNumbers(document.getElementById('countrySelect').value); 
 }
 
-// Reset timer for 1 AM
 function updateResetTimer() {
     const now = new Date();
     const resetTime = new Date();
@@ -309,23 +299,18 @@ function updateResetTimer() {
     }
 }
 
-// Check if date changed and show notification
 let lastDate = getTodayStr();
 function checkDateChange() {
     const currentDate = getTodayStr();
     if (currentDate !== lastDate) {
         lastDate = currentDate;
         refreshAll();
-        showNotification("📅 Today's OTP stats have been reset at 1:00 AM");
+        const notif = document.createElement('div');
+        notif.className = 'reset-notification';
+        notif.innerHTML = `<i class="fas fa-sync-alt mr-2"></i>📅 Today's OTP stats have been reset at 1:00 AM`;
+        document.body.appendChild(notif);
+        setTimeout(() => notif.remove(), 3000);
     }
-}
-
-function showNotification(msg) {
-    const notif = document.createElement('div');
-    notif.className = 'reset-notification';
-    notif.innerHTML = `<i class="fas fa-sync-alt mr-2"></i>${msg}`;
-    document.body.appendChild(notif);
-    setTimeout(() => notif.remove(), 3000);
 }
 
 function getUserIdFromUrl() { return new URLSearchParams(window.location.search).get('id'); }
@@ -357,7 +342,6 @@ async function initDashboard() {
     loadSavedPage();
     showToast(`✅ Welcome ${currentUser.username}!`);
     
-    // Start reset timer
     updateResetTimer();
     setInterval(updateResetTimer, 1000);
     setInterval(checkDateChange, 60000);
