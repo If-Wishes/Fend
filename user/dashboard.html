@@ -45,19 +45,24 @@
 
 <main class="max-w-7xl mx-auto px-4 py-8">
     
-    <!-- MY NUMBERS PAGE -->
+    <!-- MY NUMBERS PAGE (Using working test format) -->
     <div id="allocationPage" class="page">
         <h1 class="text-2xl font-bold">📌 My Allocated Numbers</h1>
         <p class="text-gray-500 mb-4">Select a country to view your numbers</p>
         
+        <!-- Country Filter -->
         <div class="mb-6">
             <select id="countryFilter" class="w-full md:w-64 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50">
                 <option value="">-- Select Country --</option>
             </select>
         </div>
         
+        <!-- Numbers Display -->
         <div id="numbersContainer" class="bg-white rounded-2xl border border-gray-200 p-6">
-            <div class="text-center py-8 text-gray-400">Select a country to view numbers</div>
+            <div class="text-center py-12 text-gray-400">
+                <i class="fas fa-globe text-4xl mb-2"></i>
+                <p>Select a country to view your numbers</p>
+            </div>
         </div>
         
         <div class="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
@@ -120,14 +125,9 @@ let currentUser = { id: session.userId, username: session.username, email: sessi
 let userNumbers = [];
 let userOtps = [];
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
-}
-
-function getTodayStr() {
-    return new Date().toISOString().slice(0, 10);
-}
+// Display user info in top bar
+document.getElementById('userNameDisplay').innerText = currentUser.username;
+document.getElementById('userEmailDisplay').innerText = currentUser.email;
 
 function getCountryFlag(country) {
     const flags = {
@@ -138,25 +138,37 @@ function getCountryFlag(country) {
     return flags[country] || '🌍';
 }
 
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text);
-    alert(`✅ Copied: ${text}`);
+function escapeHtml(str) {
+    if (!str) return '';
+    return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
 }
 
-// ==================== MY NUMBERS PAGE ====================
+function copyNumber(number) {
+    navigator.clipboard.writeText(number);
+    alert(`✅ Copied: ${number}`);
+}
+
+function getTodayStr() {
+    return new Date().toISOString().slice(0, 10);
+}
+
+// ==================== MY NUMBERS PAGE (Working format) ====================
 async function loadUserNumbers() {
+    const container = document.getElementById('numbersContainer');
+    container.innerHTML = '<div class="text-center py-8 text-gray-400">Loading your numbers...</div>';
+    
     try {
+        // Get user's allocated numbers
         const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=id,number,last3,country&user_id=eq.${currentUser.id}`;
         const res = await fetch(url, { headers: { 'apikey': API_KEY } });
         userNumbers = await res.json();
         
-        const countries = [...new Set(userNumbers.map(n => n.country))];
-        const filterSelect = document.getElementById('countryFilter');
+        console.log(`Numbers for ${currentUser.username}:`, userNumbers);
         
-        if (countries.length === 0) {
-            filterSelect.innerHTML = '<option value="">-- No numbers allocated --</option>';
-            document.getElementById('numbersContainer').innerHTML = `
-                <div class="text-center py-8 text-gray-400">
+        if (!userNumbers || userNumbers.length === 0) {
+            document.getElementById('countryFilter').innerHTML = '<option value="">-- No numbers allocated --</option>';
+            container.innerHTML = `
+                <div class="text-center py-12 text-gray-400">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
                     <p>No numbers allocated yet</p>
                     <p class="text-sm mt-1">Contact admin to get numbers assigned to you</p>
@@ -165,15 +177,26 @@ async function loadUserNumbers() {
             return;
         }
         
+        // Populate country dropdown
+        const countries = [...new Set(userNumbers.map(n => n.country))];
+        const filterSelect = document.getElementById('countryFilter');
         filterSelect.innerHTML = '<option value="">-- Select Country --</option>' + 
             countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
         
+        // Auto-select first country and display
         if (countries.length > 0) {
             filterSelect.value = countries[0];
             displayNumbersByCountry(countries[0]);
         }
+        
     } catch (error) {
-        console.error('Error loading numbers:', error);
+        console.error('Error:', error);
+        container.innerHTML = `
+            <div class="text-center py-12 text-red-400">
+                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                <p>Error loading numbers: ${error.message}</p>
+            </div>
+        `;
     }
 }
 
@@ -182,15 +205,18 @@ function displayNumbersByCountry(country) {
     const filteredNumbers = userNumbers.filter(n => n.country === country);
     
     if (filteredNumbers.length === 0) {
-        container.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers for this country</div>';
+        container.innerHTML = `<div class="text-center py-8 text-gray-400">No numbers for ${escapeHtml(country)}</div>`;
         return;
     }
     
     let html = `
         <div class="border rounded-xl overflow-hidden">
-            <div class="bg-gray-50 px-4 py-2 border-b">
-                <span class="font-semibold">${getCountryFlag(country)} ${country}</span>
-                <span class="text-xs text-gray-400 ml-2">${filteredNumbers.length} numbers</span>
+            <div class="bg-gray-50 px-4 py-3 border-b">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">${getCountryFlag(country)}</span>
+                    <h2 class="font-semibold text-gray-800">${escapeHtml(country)}</h2>
+                    <span class="text-xs text-gray-400">(${filteredNumbers.length} numbers)</span>
+                </div>
             </div>
             <div class="divide-y divide-gray-100">
     `;
@@ -198,9 +224,12 @@ function displayNumbersByCountry(country) {
     for (const num of filteredNumbers) {
         html += `
             <div class="px-4 py-3 flex justify-between items-center hover:bg-gray-50">
-                <span class="font-mono text-sm">${escapeHtml(num.number)}</span>
-                <button onclick="copyToClipboard('${escapeHtml(num.number)}')" 
-                    class="copy-btn text-xs bg-gray-100 hover:bg-emerald-500 hover:text-white px-3 py-1 rounded-full transition">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-phone text-gray-400"></i>
+                    <span class="font-mono text-sm">${escapeHtml(num.number)}</span>
+                </div>
+                <button onclick="copyNumber('${escapeHtml(num.number)}')" 
+                    class="copy-btn text-xs bg-gray-100 hover:bg-emerald-500 hover:text-white px-3 py-1.5 rounded-full transition">
                     <i class="fas fa-copy mr-1"></i>Copy
                 </button>
             </div>
@@ -303,6 +332,7 @@ async function refreshAll() {
     fetchPastRecords();
 }
 
+// ==================== PAGE SWITCHING ====================
 function switchPage(pageName) {
     const pages = ['allocation', 'today', 'total', 'past', 'profile'];
     pages.forEach(p => document.getElementById(p + 'Page').classList.remove('active-page'));
@@ -321,16 +351,7 @@ function logout() {
     window.location.href = '../index.html';
 }
 
-// Initialize
-document.getElementById('userNameDisplay').innerText = currentUser.username;
-document.getElementById('userEmailDisplay').innerText = currentUser.email;
-
-const end = new Date();
-const start = new Date();
-start.setDate(end.getDate() - 6);
-document.getElementById('startDate').value = start.toISOString().slice(0, 10);
-document.getElementById('endDate').value = end.toISOString().slice(0, 10);
-
+// ==================== EVENT LISTENERS ====================
 document.getElementById('countryFilter').addEventListener('change', (e) => {
     if (e.target.value) {
         displayNumbersByCountry(e.target.value);
@@ -359,8 +380,17 @@ document.querySelectorAll('.dropdown-item').forEach(item => {
     });
 });
 
-window.copyToClipboard = copyToClipboard;
+// Set default dates
+const end = new Date();
+const start = new Date();
+start.setDate(end.getDate() - 6);
+document.getElementById('startDate').value = start.toISOString().slice(0, 10);
+document.getElementById('endDate').value = end.toISOString().slice(0, 10);
 
+// Make copy function global
+window.copyNumber = copyNumber;
+
+// Initialize
 refreshAll();
 switchPage('allocation');
 </script>
