@@ -3,18 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MIM Panel | My Numbers</title>
+    <title>MIMA Panel | My Numbers</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        .number-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .number-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .copy-btn {
+            transition: all 0.2s;
+        }
+        .copy-btn:hover {
+            background-color: #10b981;
+            color: white;
+        }
+    </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-50">
 
-<div class="max-w-4xl mx-auto px-4 py-8">
+<div class="max-w-6xl mx-auto px-4 py-8">
     <!-- Header -->
     <div class="bg-white rounded-2xl shadow-sm border p-6 mb-6">
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold text-gray-800">MIM<span class="text-emerald-600">Panel</span></h1>
+                <h1 class="text-2xl font-bold text-gray-800">MIMA<span class="text-emerald-600">Panel</span></h1>
                 <p class="text-gray-500 mt-1">Your Allocated Numbers</p>
             </div>
             <div class="text-right">
@@ -25,9 +41,12 @@
         </div>
     </div>
 
-    <!-- Numbers Display -->
-    <div id="numbersContainer" class="bg-white rounded-2xl shadow-sm border p-6">
-        <div class="text-center py-8 text-gray-400">Loading your numbers...</div>
+    <!-- Numbers Display - Like Admin Panel -->
+    <div id="numbersContainer" class="space-y-4">
+        <div class="text-center py-12 text-gray-400">
+            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+            <p>Loading your numbers...</p>
+        </div>
     </div>
 
     <div class="mt-6 text-center text-xs text-gray-400">
@@ -64,14 +83,20 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
 }
 
-function copyNumber(number) {
-    navigator.clipboard.writeText(number);
-    alert(`✅ Copied: ${number}`);
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text);
+    const btn = event.target.closest('button');
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<i class="fas fa-check mr-1"></i>Copied!';
+    btn.classList.add('bg-green-500', 'text-white');
+    setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        btn.classList.remove('bg-green-500', 'text-white');
+    }, 1500);
 }
 
 async function loadUserNumbers() {
     const container = document.getElementById('numbersContainer');
-    container.innerHTML = '<div class="text-center py-8 text-gray-400">Loading your numbers...</div>';
     
     try {
         const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=id,number,last3,country&user_id=eq.${session.userId}`;
@@ -84,53 +109,68 @@ async function loadUserNumbers() {
         
         if (!numbers || numbers.length === 0) {
             container.innerHTML = `
-                <div class="text-center py-8 text-gray-400">
-                    <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>No numbers allocated yet</p>
-                    <p class="text-sm mt-1">Contact admin to get numbers assigned to you</p>
+                <div class="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+                    <i class="fas fa-inbox text-5xl text-gray-300 mb-3"></i>
+                    <p class="text-gray-400">No numbers allocated yet</p>
+                    <p class="text-sm text-gray-400 mt-1">Contact admin to get numbers assigned to you</p>
                 </div>
             `;
             return;
         }
         
-        // Build HTML for each number
-        let html = '<div class="space-y-3">';
+        // Group by country like admin panel
+        const grouped = {};
+        numbers.forEach(num => {
+            if (!grouped[num.country]) grouped[num.country] = [];
+            grouped[num.country].push(num);
+        });
         
-        for (let i = 0; i < numbers.length; i++) {
-            const num = numbers[i];
-            const flag = getCountryFlag(num.country);
+        let html = '';
+        
+        for (const country in grouped) {
+            const numbersList = grouped[country];
             html += `
-                <div class="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition">
-                    <div class="bg-gray-50 px-4 py-2 border-b">
+                <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+                    <div class="bg-gray-50 px-6 py-3 border-b border-gray-200">
                         <div class="flex items-center gap-2">
-                            <span class="text-xl">${flag}</span>
-                            <span class="font-semibold text-gray-800">${escapeHtml(num.country)}</span>
+                            <span class="text-xl">${getCountryFlag(country)}</span>
+                            <h2 class="font-semibold text-gray-800">${escapeHtml(country)}</h2>
+                            <span class="text-xs text-gray-400">(${numbersList.length} numbers)</span>
                         </div>
                     </div>
-                    <div class="px-4 py-3 flex justify-between items-center">
-                        <div>
-                            <span class="font-mono text-sm">${escapeHtml(num.number)}</span>
-                            <span class="text-xs text-gray-400 ml-2">(last3: ${num.last3})</span>
+                    <div class="divide-y divide-gray-100">
+            `;
+            
+            for (const num of numbersList) {
+                html += `
+                    <div class="px-6 py-4 flex justify-between items-center hover:bg-gray-50 transition">
+                        <div class="flex items-center gap-3">
+                            <i class="fas fa-phone text-gray-400"></i>
+                            <div>
+                                <span class="font-mono text-sm font-medium text-gray-800">${escapeHtml(num.number)}</span>
+                                <span class="text-xs text-gray-400 ml-2">(last3: ${num.last3})</span>
+                            </div>
                         </div>
-                        <button onclick="copyNumber('${escapeHtml(num.number)}')" 
-                            class="text-xs bg-gray-100 hover:bg-emerald-100 px-3 py-1.5 rounded-full transition">
+                        <button onclick="copyToClipboard('${escapeHtml(num.number)}')" 
+                            class="copy-btn text-xs bg-gray-100 hover:bg-emerald-500 hover:text-white px-3 py-1.5 rounded-full transition">
                             <i class="fas fa-copy mr-1"></i>Copy
                         </button>
                     </div>
-                </div>
-            `;
+                `;
+            }
+            
+            html += `</div></div>`;
         }
         
-        html += '</div>';
         container.innerHTML = html;
         
     } catch (error) {
         console.error('Error:', error);
         container.innerHTML = `
-            <div class="text-center py-8 text-red-400">
-                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
-                <p>Error loading numbers</p>
-                <p class="text-sm mt-1">Please try again later</p>
+            <div class="bg-white rounded-2xl border border-red-200 p-12 text-center">
+                <i class="fas fa-exclamation-triangle text-5xl text-red-400 mb-3"></i>
+                <p class="text-red-500">Error loading numbers</p>
+                <p class="text-sm text-gray-400 mt-1">Please refresh the page</p>
             </div>
         `;
     }
@@ -141,6 +181,7 @@ function logout() {
     window.location.href = '../index.html';
 }
 
+// Load numbers when page loads
 loadUserNumbers();
 </script>
 </body>
