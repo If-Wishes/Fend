@@ -43,7 +43,7 @@
     </div>
 
     <!-- Numbers Display -->
-    <div id="numbersContainer" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+    <div id="allocationsList" class="space-y-4">
         <div class="text-center py-12 text-gray-400">
             <i class="fas fa-globe text-4xl mb-2"></i>
             <p>Select a country to view your numbers</p>
@@ -70,7 +70,7 @@ if (!session || session.role !== 'user') {
 document.getElementById('userName').innerText = session.username;
 document.getElementById('userEmail').innerText = session.email || 'user@example.com';
 
-let allNumbers = [];
+let userNumbers = [];
 
 function getCountryFlag(country) {
     const flags = {
@@ -88,52 +88,53 @@ function escapeHtml(str) {
 
 function copyToClipboard(text) {
     navigator.clipboard.writeText(text);
-    const btn = event.target.closest('button');
-    const originalHtml = btn.innerHTML;
-    btn.innerHTML = '<i class="fas fa-check mr-1"></i>Copied!';
-    btn.classList.add('bg-green-500', 'text-white');
-    setTimeout(() => {
-        btn.innerHTML = originalHtml;
-        btn.classList.remove('bg-green-500', 'text-white');
-    }, 1500);
+    alert(`✅ Copied: ${text}`);
 }
 
-function displayNumbersByCountry(country) {
-    const container = document.getElementById('numbersContainer');
-    const filteredNumbers = allNumbers.filter(n => n.country === country);
+// Load and display allocated numbers - Same format as admin panel
+async function loadAllocatedNumbers() {
+    const filterCountry = document.getElementById('countryFilter').value;
     
-    if (filteredNumbers.length === 0) {
-        container.innerHTML = `
+    if (!filterCountry) {
+        document.getElementById('allocationsList').innerHTML = `
             <div class="text-center py-12 text-gray-400">
-                <i class="fas fa-inbox text-4xl mb-2"></i>
-                <p>No numbers for ${escapeHtml(country)}</p>
+                <i class="fas fa-globe text-4xl mb-2"></i>
+                <p>Select a country to view your numbers</p>
             </div>
         `;
         return;
     }
     
+    // Filter by user ID and country
+    const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=id,number,last3,country&user_id=eq.${session.userId}&country=eq.${filterCountry}`;
+    
+    const res = await fetch(url, { headers: { 'apikey': API_KEY } });
+    const allocations = await res.json();
+    const container = document.getElementById('allocationsList');
+    
+    if (allocations.length === 0) {
+        container.innerHTML = `<div class="text-center py-8 text-gray-400">No numbers for ${escapeHtml(filterCountry)}</div>`;
+        return;
+    }
+    
+    // Build HTML - Same style as admin panel
     let html = `
         <div class="border rounded-xl overflow-hidden">
-            <div class="bg-gray-50 px-4 py-3 border-b">
-                <div class="flex items-center gap-2">
-                    <span class="text-xl">${getCountryFlag(country)}</span>
-                    <h2 class="font-semibold text-gray-800">${escapeHtml(country)}</h2>
-                    <span class="text-xs text-gray-400">(${filteredNumbers.length} numbers)</span>
+            <div class="bg-gray-50 px-4 py-2 flex justify-between items-center">
+                <div>
+                    <span class="font-semibold">${getCountryFlag(filterCountry)} ${escapeHtml(filterCountry)}</span>
+                    <span class="ml-2 text-sm text-gray-500">${allocations.length} numbers</span>
                 </div>
             </div>
-            <div class="divide-y divide-gray-100">
+            <div class="p-3 flex flex-wrap gap-2">
     `;
     
-    for (const num of filteredNumbers) {
+    for (const item of allocations) {
         html += `
-            <div class="px-4 py-3 flex justify-between items-center hover:bg-gray-50 transition">
-                <div class="flex items-center gap-3">
-                    <i class="fas fa-phone text-gray-400"></i>
-                    <span class="font-mono text-sm font-medium text-gray-800">${escapeHtml(num.number)}</span>
-                </div>
-                <button onclick="copyToClipboard('${escapeHtml(num.number)}')" 
-                    class="copy-btn text-xs bg-gray-100 hover:bg-emerald-500 hover:text-white px-3 py-1.5 rounded-full transition">
-                    <i class="fas fa-copy mr-1"></i>Copy
+            <div class="bg-gray-100 rounded-lg px-3 py-1.5 flex items-center gap-2">
+                <span class="font-mono text-sm">${escapeHtml(item.number)}</span>
+                <button onclick="copyToClipboard('${escapeHtml(item.number)}')" class="text-green-600 hover:text-green-800">
+                    <i class="fas fa-copy"></i>
                 </button>
             </div>
         `;
@@ -143,19 +144,20 @@ function displayNumbersByCountry(country) {
     container.innerHTML = html;
 }
 
-async function loadUserNumbers() {
+// Load countries for dropdown
+async function loadCountries() {
     try {
-        const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=id,number,last3,country&user_id=eq.${session.userId}`;
-        const response = await fetch(url, {
-            headers: { 'apikey': API_KEY }
-        });
+        const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=country&user_id=eq.${session.userId}`;
+        const res = await fetch(url, { headers: { 'apikey': API_KEY } });
+        const data = await res.json();
         
-        allNumbers = await response.json();
-        console.log('Numbers loaded:', allNumbers);
+        // Get unique countries
+        const countries = [...new Set(data.map(item => item.country))];
+        const filterSelect = document.getElementById('countryFilter');
         
-        if (!allNumbers || allNumbers.length === 0) {
-            document.getElementById('countryFilter').innerHTML = '<option value="">-- No numbers allocated --</option>';
-            document.getElementById('numbersContainer').innerHTML = `
+        if (countries.length === 0) {
+            filterSelect.innerHTML = '<option value="">-- No numbers allocated --</option>';
+            document.getElementById('allocationsList').innerHTML = `
                 <div class="text-center py-12 text-gray-400">
                     <i class="fas fa-inbox text-4xl mb-2"></i>
                     <p>No numbers allocated yet</p>
@@ -165,28 +167,11 @@ async function loadUserNumbers() {
             return;
         }
         
-        // Get unique countries for dropdown
-        const countries = [...new Set(allNumbers.map(n => n.country))];
-        const filterSelect = document.getElementById('countryFilter');
-        
         filterSelect.innerHTML = '<option value="">-- Select Country --</option>' + 
             countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
         
-        // Auto-select first country
-        if (countries.length > 0) {
-            filterSelect.value = countries[0];
-            displayNumbersByCountry(countries[0]);
-        }
-        
     } catch (error) {
-        console.error('Error:', error);
-        document.getElementById('numbersContainer').innerHTML = `
-            <div class="text-center py-12 text-red-400">
-                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
-                <p>Error loading numbers</p>
-                <p class="text-sm mt-1">Please refresh the page</p>
-            </div>
-        `;
+        console.error('Error loading countries:', error);
     }
 }
 
@@ -197,20 +182,11 @@ function logout() {
 
 // Event listener for country filter
 document.getElementById('countryFilter').addEventListener('change', (e) => {
-    if (e.target.value) {
-        displayNumbersByCountry(e.target.value);
-    } else {
-        document.getElementById('numbersContainer').innerHTML = `
-            <div class="text-center py-12 text-gray-400">
-                <i class="fas fa-globe text-4xl mb-2"></i>
-                <p>Select a country to view your numbers</p>
-            </div>
-        `;
-    }
+    loadAllocatedNumbers();
 });
 
-// Load numbers when page loads
-loadUserNumbers();
+// Initialize
+loadCountries();
 </script>
 </body>
 </html>
