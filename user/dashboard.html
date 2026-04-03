@@ -3,39 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MIMA Panel | My Numbers</title>
+    <title>MIMA Panel | Test User Numbers</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        .copy-btn {
-            transition: all 0.2s;
-        }
-        .copy-btn:hover {
-            background-color: #10b981;
-            color: white;
-        }
-    </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-100">
 
-<div class="max-w-6xl mx-auto px-4 py-8">
+<div class="max-w-4xl mx-auto px-4 py-8">
     <!-- Header -->
     <div class="bg-white rounded-2xl shadow-sm border p-6 mb-6">
         <div class="flex items-center justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-gray-800">MIMA<span class="text-emerald-600">Panel</span></h1>
-                <p class="text-gray-500 mt-1">Your Allocated Numbers</p>
-            </div>
-            <div class="text-right">
-                <p class="text-sm font-medium text-gray-800" id="userName">Loading...</p>
-                <p class="text-xs text-gray-500" id="userEmail"></p>
-                <button onclick="logout()" class="mt-2 text-xs text-red-600 hover:text-red-800">Logout</button>
+                <p class="text-gray-500 mt-1">Test User Numbers - Login to view allocated numbers</p>
             </div>
         </div>
     </div>
 
-    <!-- Country Filter Dropdown -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 mb-6">
+    <!-- Login Form -->
+    <div class="bg-white rounded-2xl shadow-sm border p-6 mb-6">
+        <h2 class="text-lg font-semibold mb-4">🔐 Login as User</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input type="text" id="loginUsername" placeholder="Username" class="border border-gray-200 rounded-xl px-4 py-2">
+            <input type="password" id="loginPassword" placeholder="Password" class="border border-gray-200 rounded-xl px-4 py-2">
+            <button id="loginBtn" class="bg-indigo-600 text-white px-4 py-2 rounded-xl hover:bg-indigo-700">Login</button>
+        </div>
+        <div id="loginError" class="mt-3 text-sm text-red-600 hidden"></div>
+    </div>
+
+    <!-- User Info Display -->
+    <div id="userInfo" class="bg-green-50 border border-green-200 rounded-xl p-4 mb-6 hidden">
+        <div class="flex items-center gap-2">
+            <i class="fas fa-check-circle text-green-600"></i>
+            <span class="font-medium">Logged in as:</span>
+            <span id="loggedUsername" class="font-mono"></span>
+            <span class="text-gray-400">|</span>
+            <span id="loggedUserId" class="text-xs text-gray-500"></span>
+        </div>
+    </div>
+
+    <!-- Country Filter -->
+    <div class="bg-white rounded-2xl shadow-sm border p-4 mb-6 hidden" id="filterSection">
         <label class="block text-sm font-medium text-gray-700 mb-2">Select Country</label>
         <select id="countryFilter" class="w-full md:w-64 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50">
             <option value="">-- Select Country --</option>
@@ -43,15 +51,15 @@
     </div>
 
     <!-- Numbers Display -->
-    <div id="allocationsList" class="space-y-4">
+    <div id="numbersContainer" class="bg-white rounded-2xl shadow-sm border p-6">
         <div class="text-center py-12 text-gray-400">
-            <i class="fas fa-globe text-4xl mb-2"></i>
-            <p>Select a country to view your numbers</p>
+            <i class="fas fa-lock text-4xl mb-2"></i>
+            <p>Login to see your allocated numbers</p>
         </div>
     </div>
 
     <div class="mt-6 text-center text-xs text-gray-400">
-        Each OTP earns $0.005 | Contact admin for support
+        Test users: Gold / gold123 | emily / emily123 | admin1 / pass123
     </div>
 </div>
 
@@ -59,17 +67,8 @@
 const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
 const API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
 
-// Get logged-in user from session
-const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
-
-if (!session || session.role !== 'user') {
-    window.location.href = '../index.html';
-}
-
-// Display user info
-document.getElementById('userName').innerText = session.username;
-document.getElementById('userEmail').innerText = session.email || 'user@example.com';
-
+let currentUserId = null;
+let currentUsername = null;
 let userNumbers = [];
 
 function getCountryFlag(country) {
@@ -86,55 +85,132 @@ function escapeHtml(str) {
     return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
 }
 
-function copyToClipboard(text) {
-    navigator.clipboard.writeText(text);
-    alert(`✅ Copied: ${text}`);
+function copyNumber(number) {
+    navigator.clipboard.writeText(number);
+    alert(`✅ Copied: ${number}`);
 }
 
-// Load and display allocated numbers - Same format as admin panel
-async function loadAllocatedNumbers() {
-    const filterCountry = document.getElementById('countryFilter').value;
+async function login() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const errorDiv = document.getElementById('loginError');
     
-    if (!filterCountry) {
-        document.getElementById('allocationsList').innerHTML = `
-            <div class="text-center py-12 text-gray-400">
-                <i class="fas fa-globe text-4xl mb-2"></i>
-                <p>Select a country to view your numbers</p>
+    if (!username || !password) {
+        errorDiv.textContent = 'Please enter username and password';
+        errorDiv.classList.remove('hidden');
+        return;
+    }
+    
+    errorDiv.classList.add('hidden');
+    
+    try {
+        // Login - get user info
+        const loginUrl = `${SUPABASE_URL}/rest/v1/users?select=id,username,email,role&username=eq.${username}&password=eq.${password}`;
+        const res = await fetch(loginUrl, { headers: { 'apikey': API_KEY } });
+        const users = await res.json();
+        
+        if (!users || users.length === 0) {
+            errorDiv.textContent = 'Invalid username or password';
+            errorDiv.classList.remove('hidden');
+            return;
+        }
+        
+        const user = users[0];
+        currentUserId = user.id;
+        currentUsername = user.username;
+        
+        // Show user info
+        document.getElementById('loggedUsername').innerText = currentUsername;
+        document.getElementById('loggedUserId').innerText = currentUserId;
+        document.getElementById('userInfo').classList.remove('hidden');
+        document.getElementById('filterSection').classList.remove('hidden');
+        
+        // Load user's numbers
+        await loadUserNumbers();
+        
+    } catch (error) {
+        errorDiv.textContent = 'Login error: ' + error.message;
+        errorDiv.classList.remove('hidden');
+    }
+}
+
+async function loadUserNumbers() {
+    const container = document.getElementById('numbersContainer');
+    container.innerHTML = '<div class="text-center py-8 text-gray-400">Loading numbers...</div>';
+    
+    try {
+        // Get user's allocated numbers
+        const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=id,number,last3,country&user_id=eq.${currentUserId}`;
+        const res = await fetch(url, { headers: { 'apikey': API_KEY } });
+        userNumbers = await res.json();
+        
+        console.log(`Numbers for ${currentUsername}:`, userNumbers);
+        
+        if (!userNumbers || userNumbers.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-12 text-gray-400">
+                    <i class="fas fa-inbox text-4xl mb-2"></i>
+                    <p>No numbers allocated to ${escapeHtml(currentUsername)}</p>
+                    <p class="text-sm mt-1">Contact admin to get numbers assigned</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Populate country dropdown
+        const countries = [...new Set(userNumbers.map(n => n.country))];
+        const filterSelect = document.getElementById('countryFilter');
+        filterSelect.innerHTML = '<option value="">-- Select Country --</option>' + 
+            countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
+        
+        // Auto-select first country and display
+        if (countries.length > 0) {
+            filterSelect.value = countries[0];
+            displayNumbersByCountry(countries[0]);
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        container.innerHTML = `
+            <div class="text-center py-12 text-red-400">
+                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                <p>Error loading numbers: ${error.message}</p>
             </div>
         `;
+    }
+}
+
+function displayNumbersByCountry(country) {
+    const container = document.getElementById('numbersContainer');
+    const filteredNumbers = userNumbers.filter(n => n.country === country);
+    
+    if (filteredNumbers.length === 0) {
+        container.innerHTML = `<div class="text-center py-8 text-gray-400">No numbers for ${escapeHtml(country)}</div>`;
         return;
     }
     
-    // Filter by user ID and country
-    const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=id,number,last3,country&user_id=eq.${session.userId}&country=eq.${filterCountry}`;
-    
-    const res = await fetch(url, { headers: { 'apikey': API_KEY } });
-    const allocations = await res.json();
-    const container = document.getElementById('allocationsList');
-    
-    if (allocations.length === 0) {
-        container.innerHTML = `<div class="text-center py-8 text-gray-400">No numbers for ${escapeHtml(filterCountry)}</div>`;
-        return;
-    }
-    
-    // Build HTML - Same style as admin panel
     let html = `
         <div class="border rounded-xl overflow-hidden">
-            <div class="bg-gray-50 px-4 py-2 flex justify-between items-center">
-                <div>
-                    <span class="font-semibold">${getCountryFlag(filterCountry)} ${escapeHtml(filterCountry)}</span>
-                    <span class="ml-2 text-sm text-gray-500">${allocations.length} numbers</span>
+            <div class="bg-gray-50 px-4 py-3 border-b">
+                <div class="flex items-center gap-2">
+                    <span class="text-xl">${getCountryFlag(country)}</span>
+                    <h2 class="font-semibold text-gray-800">${escapeHtml(country)}</h2>
+                    <span class="text-xs text-gray-400">(${filteredNumbers.length} numbers)</span>
                 </div>
             </div>
-            <div class="p-3 flex flex-wrap gap-2">
+            <div class="divide-y divide-gray-100">
     `;
     
-    for (const item of allocations) {
+    for (const num of filteredNumbers) {
         html += `
-            <div class="bg-gray-100 rounded-lg px-3 py-1.5 flex items-center gap-2">
-                <span class="font-mono text-sm">${escapeHtml(item.number)}</span>
-                <button onclick="copyToClipboard('${escapeHtml(item.number)}')" class="text-green-600 hover:text-green-800">
-                    <i class="fas fa-copy"></i>
+            <div class="px-4 py-3 flex justify-between items-center hover:bg-gray-50">
+                <div class="flex items-center gap-3">
+                    <i class="fas fa-phone text-gray-400"></i>
+                    <span class="font-mono text-sm">${escapeHtml(num.number)}</span>
+                </div>
+                <button onclick="copyNumber('${escapeHtml(num.number)}')" 
+                    class="text-xs bg-gray-100 hover:bg-emerald-500 hover:text-white px-3 py-1.5 rounded-full transition">
+                    <i class="fas fa-copy mr-1"></i>Copy
                 </button>
             </div>
         `;
@@ -144,49 +220,18 @@ async function loadAllocatedNumbers() {
     container.innerHTML = html;
 }
 
-// Load countries for dropdown
-async function loadCountries() {
-    try {
-        const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=country&user_id=eq.${session.userId}`;
-        const res = await fetch(url, { headers: { 'apikey': API_KEY } });
-        const data = await res.json();
-        
-        // Get unique countries
-        const countries = [...new Set(data.map(item => item.country))];
-        const filterSelect = document.getElementById('countryFilter');
-        
-        if (countries.length === 0) {
-            filterSelect.innerHTML = '<option value="">-- No numbers allocated --</option>';
-            document.getElementById('allocationsList').innerHTML = `
-                <div class="text-center py-12 text-gray-400">
-                    <i class="fas fa-inbox text-4xl mb-2"></i>
-                    <p>No numbers allocated yet</p>
-                    <p class="text-sm mt-1">Contact admin to get numbers assigned to you</p>
-                </div>
-            `;
-            return;
-        }
-        
-        filterSelect.innerHTML = '<option value="">-- Select Country --</option>' + 
-            countries.map(c => `<option value="${c}">${getCountryFlag(c)} ${c}</option>`).join('');
-        
-    } catch (error) {
-        console.error('Error loading countries:', error);
-    }
-}
-
-function logout() {
-    localStorage.removeItem('mima_session');
-    window.location.href = '../index.html';
-}
-
-// Event listener for country filter
+// Event listeners
+document.getElementById('loginBtn').addEventListener('click', login);
 document.getElementById('countryFilter').addEventListener('change', (e) => {
-    loadAllocatedNumbers();
+    if (e.target.value) {
+        displayNumbersByCountry(e.target.value);
+    }
 });
 
-// Initialize
-loadCountries();
+// Allow Enter key to login
+document.getElementById('loginPassword').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') login();
+});
 </script>
 </body>
 </html>
