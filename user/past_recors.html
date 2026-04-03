@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexusPanel | Past Records</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body class="bg-gray-50">
+    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center">
+                    <div class="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+                        <i class="fas fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="ml-2 text-xl font-bold text-gray-800">Nexus<span class="text-emerald-600">Panel</span></span>
+                </div>
+                <a href="profile.html" class="text-gray-600 hover:text-emerald-600">
+                    <i class="fas fa-arrow-left mr-1"></i> Back to Profile
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-900">📅 Past OTP Records</h1>
+            <p class="text-gray-500 mt-1">View OTP history by date range</p>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                    <input type="date" id="startDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                    <input type="date" id="endDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
+                </div>
+            </div>
+            <button id="fetchBtn" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl transition">Fetch Records</button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+                <h3 class="font-semibold text-gray-800">OTP Records</h3>
+                <div class="text-sm">
+                    <span class="font-bold text-emerald-600" id="pastTotalEarnings">$0.00</span>
+                    <span class="text-gray-500 ml-2">total earnings</span>
+                </div>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left">Date</th>
+                            <th class="px-6 py-3 text-left">Number</th>
+                            <th class="px-6 py-3 text-left">Sender</th>
+                            <th class="px-6 py-3 text-left">Code</th>
+                            <th class="px-6 py-3 text-left">Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pastOtpTable" class="divide-y divide-gray-100"></tbody>
+                </table>
+            </div>
+            <div id="pastEmptyMsg" class="text-center py-8 text-gray-400 hidden">
+                <i class="fas fa-calendar-times text-4xl mb-2"></i>
+                <p>No OTP records in this date range</p>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const SUPABASE_URL = 'https://zubkwzsnpdjtndlvqfqf.supabase.co';
+        const SUPABASE_API_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1Ymt3enNucGRqdG5kbHZxZnFmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNDgyMjMsImV4cCI6MjA5MDcyNDIyM30.6fcSUpeuBONYGsWCG9lmOaf0lOPq9CDt2Ud9jXsvbSo';
+
+        let currentUserId = null;
+        let allOtps = [];
+
+        function getUserIdFromUrl() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('id');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m));
+        }
+
+        async function fetchUserOtps(userId) {
+            try {
+                const url = `${SUPABASE_URL}/rest/v1/otp_logs?select=*&user_id=eq.${encodeURIComponent(userId)}&order=timestamp.desc`;
+                const response = await fetch(url, { headers: { 'apikey': SUPABASE_API_KEY } });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+                return data || [];
+            } catch (err) {
+                console.error("Fetch OTPs error:", err);
+                return [];
+            }
+        }
+
+        function fetchPastOtps() {
+            const start = document.getElementById('startDate').value;
+            const end = document.getElementById('endDate').value;
+            if (!start || !end) return;
+
+            const filtered = allOtps.filter(o => o.date >= start && o.date <= end);
+            const tbody = document.getElementById('pastOtpTable');
+            const emptyMsg = document.getElementById('pastEmptyMsg');
+            const totalEarningsSpan = document.getElementById('pastTotalEarnings');
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = '';
+                emptyMsg.classList.remove('hidden');
+                totalEarningsSpan.textContent = '$0.00';
+                return;
+            }
+            emptyMsg.classList.add('hidden');
+            totalEarningsSpan.textContent = `$${(filtered.length * 0.005).toFixed(2)}`;
+
+            tbody.innerHTML = filtered.map(o => `
+                <tr class="hover:bg-gray-50 border-b">
+                    <td class="px-6 py-3 text-gray-600 text-xs">${o.date}</td>
+                    <td class="px-6 py-3 font-mono">***${escapeHtml(o.phone_last4 || '????')}</td>
+                    <td class="px-6 py-3">${escapeHtml(o.sender || 'Bot')}</td>
+                    <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td>
+                    <td class="px-6 py-3 text-gray-500 text-xs">${o.time || ''}</td>
+                </tr>
+            `).join('');
+        }
+
+        async function init() {
+            currentUserId = getUserIdFromUrl();
+            if (!currentUserId) {
+                document.getElementById('pastOtpTable').innerHTML = '<tr><td colspan="5" class="text-center py-8 text-red-500">No User ID provided. Please go to Profile first.</td></tr>';
+                return;
+            }
+
+            allOtps = await fetchUserOtps(currentUserId);
+            
+            const end = new Date();
+            const start = new Date();
+            start.setDate(end.getDate() - 6);
+            document.getElementById('startDate').value = start.toISOString().slice(0, 10);
+            document.getElementById('endDate').value = end.toISOString().slice(0, 10);
+            
+            fetchPastOtps();
+            document.getElementById('fetchBtn').onclick = fetchPastOtps;
+        }
+
+        init();
+    </script>
+</body>
+</html>
