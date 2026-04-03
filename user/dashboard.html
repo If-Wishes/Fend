@@ -54,7 +54,7 @@
                         <a href="#" data-page="total" class="nav-link block px-4 py-2 hover:bg-gray-50">💰 Total OTP</a>
                         <a href="#" data-page="past" class="nav-link block px-4 py-2 hover:bg-gray-50">📅 Past Records</a>
                         <div class="border-t border-gray-100"></div>
-                        <a href="index.html" id="logoutBtn" class="block px-4 py-2 text-red-600 hover:bg-red-50">Logout</a>
+                        <a href="../index.html" id="logoutBtn" class="block px-4 py-2 text-red-600 hover:bg-red-50">Logout</a>
                     </div>
                 </div>
             </div>
@@ -441,7 +441,7 @@ async function initDashboard() {
     
     if (!userId) {
         // No user ID, redirect to login
-        window.location.href = 'index.html';
+        window.location.href = '../index.html';
         return;
     }
     
@@ -456,7 +456,7 @@ async function initDashboard() {
                 <i class="fas fa-user-slash text-5xl mb-3"></i>
                 <p class="font-medium">User not found</p>
                 <p class="text-sm mt-1">Invalid user ID. Please login again.</p>
-                <a href="index.html" class="mt-4 inline-block bg-emerald-600 text-white px-4 py-2 rounded-xl">Go to Login</a>
+                <a href="../index.html" class="mt-4 inline-block bg-emerald-600 text-white px-4 py-2 rounded-xl">Go to Login</a>
             </div>
         `;
         return;
