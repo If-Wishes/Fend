@@ -49,15 +49,24 @@ async function loadNumbers() {
     
     try {
         const url = `${SUPABASE_URL}/rest/v1/allocated_numbers?select=*&user_id=eq.${userId}`;
-        console.log('Fetching:', url);
+        console.log('Fetching URL:', url);
         
         const response = await fetch(url, {
-            headers: { 'apikey': API_KEY }
+            method: 'GET',
+            headers: {
+                'apikey': API_KEY,
+                'Content-Type': 'application/json'
+            }
         });
+        
+        console.log('Response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
         
         const numbers = await response.json();
         console.log('Numbers found:', numbers.length);
-        console.log('Numbers:', numbers);
         
         if (numbers.length === 0) {
             container.innerHTML = `
@@ -106,8 +115,14 @@ async function loadNumbers() {
         container.innerHTML = html;
         
     } catch (error) {
-        console.error('Error:', error);
-        container.innerHTML = '<div class="text-center py-8 text-red-400 col-span-full">Error loading numbers</div>';
+        console.error('Error details:', error);
+        container.innerHTML = `
+            <div class="text-center py-8 text-red-400 col-span-full">
+                <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                <p>Error loading numbers: ${error.message}</p>
+                <p class="text-sm mt-1">Check console for details</p>
+            </div>
+        `;
     }
 }
 
