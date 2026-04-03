@@ -40,17 +40,59 @@
     <h1 class="text-2xl font-bold">Admin Dashboard</h1>
     <p class="text-gray-500 mb-6">Welcome to MIMA Panel Admin</p>
 
+    <!-- Date Range Filter Section -->
+    <div class="bg-white rounded-2xl border border-gray-200 p-6 mb-8">
+        <h3 class="font-semibold text-gray-800 mb-4"><i class="fas fa-calendar-alt mr-2"></i>Filter OTPs by Date Range</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                <input type="date" id="startDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                <input type="date" id="endDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5">
+            </div>
+            <div class="flex items-end">
+                <button id="filterBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl transition">
+                    <i class="fas fa-filter mr-2"></i>Filter OTPs
+                </button>
+            </div>
+        </div>
+        <div id="filterResult" class="mt-4 text-sm text-gray-600 hidden">
+            <i class="fas fa-chart-line mr-1"></i>Showing OTPs from <span id="filterStartDate"></span> to <span id="filterEndDate"></span>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div class="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-2xl p-6"><p class="text-indigo-100">Total Users</p><p class="text-white text-3xl font-bold" id="statUsers">0</p></div>
         <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl p-6"><p class="text-emerald-100">Total Numbers</p><p class="text-white text-3xl font-bold" id="statNumbers">0</p></div>
-        <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-6"><p class="text-amber-100">OTPs Today</p><p class="text-white text-3xl font-bold" id="statOtps">0</p></div>
-        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6"><p class="text-purple-100">Earnings Today</p><p class="text-white text-3xl font-bold" id="statEarnings">$0</p></div>
+        <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl p-6"><p class="text-amber-100">OTPs (Filtered)</p><p class="text-white text-3xl font-bold" id="statOtps">0</p></div>
+        <div class="bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl p-6"><p class="text-purple-100">Earnings (Filtered)</p><p class="text-white text-3xl font-bold" id="statEarnings">$0</p></div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <a href="users.html" class="bg-white rounded-2xl border p-6 hover:shadow-md"><i class="fas fa-users text-2xl text-indigo-500"></i><h3 class="font-semibold mt-2">User Management</h3><p class="text-sm text-gray-500">Create and manage users</p></a>
-        <a href="analytics.html" class="bg-white rounded-2xl border p-6 hover:shadow-md"><i class="fas fa-phone-alt text-2xl text-emerald-500"></i><h3 class="font-semibold mt-2">Number Allocation</h3><p class="text-sm text-gray-500">Assign numbers to users</p></a>
-        <a href="activities.html" class="bg-white rounded-2xl border p-6 hover:shadow-md"><i class="fas fa-chart-line text-2xl text-purple-500"></i><h3 class="font-semibold mt-2">User Activities</h3><p class="text-sm text-gray-500">View earnings & OTPs</p></a>
+    <!-- Recent OTPs Table -->
+    <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <div class="p-4 border-b border-gray-200 bg-gray-50">
+            <h3 class="font-semibold text-gray-800"><i class="fas fa-list mr-2"></i>Recent OTP Records</h3>
+        </div>
+        <div class="overflow-x-auto max-h-96 overflow-y-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th class="px-6 py-3 text-left">Date</th>
+                        <th class="px-6 py-3 text-left">Phone</th>
+                        <th class="px-6 py-3 text-left">OTP</th>
+                        <th class="px-6 py-3 text-left">Service</th>
+                        <th class="px-6 py-3 text-left">Country</th>
+                        <th class="px-6 py-3 text-left">Time</th>
+                        <th class="px-6 py-3 text-left">Earned</th>
+                    </tr>
+                </thead>
+                <tbody id="otpTableBody" class="divide-y divide-gray-100">
+                    <tr><td colspan="7" class="text-center py-8 text-gray-400">Click "Filter OTPs" to load data</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 </main>
 
@@ -62,42 +104,109 @@ const session = JSON.parse(localStorage.getItem('mima_session') || 'null');
 if (!session || session.role !== 'admin') window.location.href = '../index.html';
 document.getElementById('adminName').innerText = session.username;
 
+// Set default dates (last 7 days)
+function setDefaultDates() {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 7);
+    document.getElementById('startDate').value = start.toISOString().slice(0, 10);
+    document.getElementById('endDate').value = end.toISOString().slice(0, 10);
+}
+
 async function getUsers() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id`, { headers: { 'apikey': API_KEY } });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id&role=eq.user`, { headers: { 'apikey': API_KEY } });
     const data = await res.json();
     return data || [];
 }
 
 async function getNumbers() {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/user_numbers?select=id`, { headers: { 'apikey': API_KEY } });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/allocated_numbers?select=id`, { headers: { 'apikey': API_KEY } });
     const data = await res.json();
     return data || [];
 }
 
-async function getOtps() {
-    const today = new Date().toISOString().slice(0, 10);
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=id&date=eq.${today}`, { headers: { 'apikey': API_KEY } });
+async function getOtpsByDateRange(startDate, endDate) {
+    let url = `${SUPABASE_URL}/rest/v1/otp_logs?select=*&order=date.desc&limit=500`;
+    if (startDate && endDate) {
+        url = `${SUPABASE_URL}/rest/v1/otp_logs?select=*&date=gte.${startDate}&date=lte.${endDate}&order=date.desc&limit=500`;
+    }
+    const res = await fetch(url, { headers: { 'apikey': API_KEY } });
     const data = await res.json();
     return data || [];
+}
+
+function maskPhone(phoneNumber) {
+    if (!phoneNumber) return '***';
+    const digits = phoneNumber.toString().replace(/\D/g, '');
+    if (digits.length <= 6) return '***' + digits.slice(-3);
+    const start = digits.slice(0, 2);
+    const end = digits.slice(-3);
+    const middle = '•'.repeat(Math.min(7, digits.length - 5));
+    return start + middle + end;
 }
 
 async function loadStats() {
     const users = await getUsers();
     const numbers = await getNumbers();
-    const otps = await getOtps();
     document.getElementById('statUsers').textContent = users.length;
     document.getElementById('statNumbers').textContent = numbers.length;
+}
+
+async function loadFilteredOtps() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+    
+    if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return;
+    }
+    
+    // Show loading
+    document.getElementById('otpTableBody').innerHTML = '<tr><td colspan="7" class="text-center py-8"><div class="loading-spinner inline-block w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin"></div> Loading...</td></tr>';
+    
+    const otps = await getOtpsByDateRange(startDate, endDate);
+    
+    // Update stats
     document.getElementById('statOtps').textContent = otps.length;
     document.getElementById('statEarnings').textContent = `$${(otps.length * 0.005).toFixed(2)}`;
+    
+    // Show filter result message
+    document.getElementById('filterStartDate').textContent = startDate;
+    document.getElementById('filterEndDate').textContent = endDate;
+    document.getElementById('filterResult').classList.remove('hidden');
+    
+    // Render table
+    if (otps.length === 0) {
+        document.getElementById('otpTableBody').innerHTML = '<tr><td colspan="7" class="text-center py-8 text-gray-400">📭 No OTPs found in this date range</td></tr>';
+        return;
+    }
+    
+    document.getElementById('otpTableBody').innerHTML = otps.map(otp => `
+        <tr class="hover:bg-gray-50 border-b">
+            <td class="px-6 py-3 text-gray-600 text-xs whitespace-nowrap">${otp.date || ''}</td>
+            <td class="px-6 py-3 font-mono text-sm">${maskPhone(otp.phone_last3 || otp.phone_last4 || '???')}</td>
+            <td class="px-6 py-3 font-bold text-emerald-600">${otp.otp || '???'}</td>
+            <td class="px-6 py-3">${otp.service || 'Unknown'}</td>
+            <td class="px-6 py-3">${otp.country || 'Unknown'}</td>
+            <td class="px-6 py-3 text-gray-500 text-xs">${otp.message_time ? new Date(otp.message_time).toLocaleTimeString() : (otp.time || '')}</td>
+            <td class="px-6 py-3 text-emerald-600 font-semibold">+$0.005</td>
+        </tr>
+    `).join('');
 }
 
 function logout() { localStorage.removeItem('mima_session'); window.location.href = '../index.html'; }
 
+// Event Listeners
 document.getElementById('menuBtn').onclick = e => { e.stopPropagation(); document.getElementById('dropdown').classList.toggle('hidden-dropdown'); };
 document.addEventListener('click', () => document.getElementById('dropdown').classList.add('hidden-dropdown'));
 document.getElementById('logoutBtn').onclick = e => { e.preventDefault(); logout(); };
+document.getElementById('filterBtn').onclick = () => loadFilteredOtps();
 
+// Initialize
+setDefaultDates();
 loadStats();
+// Load default filtered OTPs on page load
+loadFilteredOtps();
 </script>
 </body>
 </html>
