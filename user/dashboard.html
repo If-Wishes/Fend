@@ -8,84 +8,196 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Inter', system-ui, sans-serif; background-color: #f9fafb; }
+        body { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; 
+            background: linear-gradient(135deg, #f5f7fa 0%, #eef2f6 100%);
+            min-height: 100vh;
+        }
+        
+        /* Professional Card Design */
         .page { display: none; }
         .page.active-page { display: block; }
         .hidden-dropdown { display: none; }
-        .otp-row:hover { background: #fef3c7; }
+        
+        /* Modern Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #a8a8a8; }
+        
+        /* Loading Animation */
         .loading-spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #e2e8f0;
+            width: 24px;
+            height: 24px;
+            border: 3px solid #e2e8f0;
             border-radius: 50%;
             border-top-color: #3b82f6;
             animation: spin 0.6s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+        
+        /* OTP Row Hover Effect */
+        .otp-row { transition: all 0.2s ease; }
+        .otp-row:hover { background: #fef3c7; transform: translateX(2px); }
+        
+        /* Professional Table Styling */
+        .data-table {
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+        .data-table th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #1e293b;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        .data-table td {
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .data-table tr:hover td {
+            background-color: #faf5ff;
+        }
+        
+        /* Reset Timer Styling */
         .reset-timer {
             font-size: 12px;
-            color: #6b7280;
-            margin-top: 8px;
+            color: #64748b;
+            margin-top: 12px;
             text-align: center;
+            padding: 8px;
+            background: #f8fafc;
+            border-radius: 12px;
+            display: inline-block;
+            width: auto;
+            margin-left: auto;
+            margin-right: auto;
         }
+        
+        /* Notification Animation */
         .reset-notification {
             position: fixed;
-            top: 70px;
+            top: 80px;
             left: 50%;
             transform: translateX(-50%);
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
             color: white;
-            padding: 10px 20px;
+            padding: 12px 24px;
             border-radius: 50px;
             font-size: 14px;
+            font-weight: 500;
             z-index: 1000;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.02);
             animation: slideDown 0.3s ease;
+            backdrop-filter: blur(8px);
         }
         @keyframes slideDown {
-            from { top: -50px; opacity: 0; }
-            to { top: 70px; opacity: 1; }
+            from { top: -50px; opacity: 0; transform: translateX(-50%) scale(0.95); }
+            to { top: 80px; opacity: 1; transform: translateX(-50%) scale(1); }
         }
+        
+        /* Button Hover Effects */
+        .btn-primary {
+            transition: all 0.2s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+        }
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+        
+        /* Card Hover Effect */
+        .stat-card {
+            transition: all 0.3s ease;
+        }
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -12px rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Select Dropdown Styling */
+        .custom-select {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3E%3Cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3E%3C/svg%3E");
+            background-position: right 12px center;
+            background-repeat: no-repeat;
+            background-size: 20px;
+            appearance: none;
+        }
+        
+        /* Number Badge */
+        .number-badge {
+            background: #eef2ff;
+            color: #1e40af;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        
+        /* Filter Active State */
         .filter-active {
             background-color: #dbeafe;
             border-color: #3b82f6;
         }
+        
+        /* Smooth Transitions */
+        .nav-link {
+            transition: all 0.2s ease;
+        }
+        .nav-link:hover {
+            background-color: #f3f4f6;
+            transform: translateX(4px);
+        }
     </style>
 </head>
-<body class="bg-gray-50">
+<body>
 
-<!-- Top Navigation Bar -->
-<nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
+<!-- Top Navigation Bar - Professional Design -->
+<nav class="bg-white/80 backdrop-blur-md shadow-sm border-b border-gray-100 sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
-            <div class="flex items-center">
-                <div class="h-8 w-8 rounded-lg bg-emerald-600 flex items-center justify-center">
+            <div class="flex items-center space-x-3">
+                <div class="h-9 w-9 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center shadow-md">
                     <i class="fas fa-chart-line text-white text-sm"></i>
                 </div>
-                <span class="ml-2 text-xl font-bold text-gray-800">Mima<span class="text-emerald-600">Panel</span></span>
-                <span class="ml-3 text-xs bg-emerald-100 text-emerald-600 px-2 py-1 rounded-full">User</span>
+                <div>
+                    <span class="text-xl font-bold text-gray-800">Mima<span class="text-emerald-600">Panel</span></span>
+                    <span class="ml-2 text-xs bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-medium">User Portal</span>
+                </div>
             </div>
             <div class="flex items-center gap-4 relative">
                 <div class="text-right hidden sm:block">
-                    <p class="text-sm font-medium text-gray-800" id="userName">Loading...</p>
+                    <p class="text-sm font-semibold text-gray-800" id="userName">Loading...</p>
                     <p class="text-xs text-gray-500" id="userEmail"></p>
                 </div>
                 <div class="relative">
-                    <button id="menuButton" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-2 transition">
-                        <i class="fas fa-user-circle text-gray-600"></i>
+                    <button id="menuButton" class="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-full px-3 py-2 transition duration-200">
+                        <i class="fas fa-user-circle text-gray-600 text-lg"></i>
                         <i class="fas fa-chevron-down text-gray-500 text-xs"></i>
                     </button>
-                    <div id="dropdownMenu" class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-gray-200 hidden-dropdown z-50">
-                        <a href="#" data-page="allocation" class="nav-link block px-4 py-2 hover:bg-gray-50">📌 Allocation</a>
-                        <a href="#" data-page="today" class="nav-link block px-4 py-2 hover:bg-gray-50">📊 Today's Stat</a>
-                        <a href="#" data-page="total" class="nav-link block px-4 py-2 hover:bg-gray-50">📅 Today's OTP</a>
-                        <a href="#" data-page="past" class="nav-link block px-4 py-2 hover:bg-gray-50">📋 Past Records</a>
-                        <div class="border-t border-gray-100"></div>
-                        <a href="https://wa.me/2348113903584" target="_blank" class="block px-4 py-2 hover:bg-gray-50 text-green-600">
-                            <i class="fab fa-whatsapp mr-2"></i>Contact Support
+                    <div id="dropdownMenu" class="absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-lg border border-gray-100 hidden-dropdown z-50 overflow-hidden">
+                        <a href="#" data-page="allocation" class="nav-link flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-gray-700">
+                            <i class="fas fa-phone-alt w-5 text-emerald-500"></i> Allocation
                         </a>
-                        <div class="border-t border-gray-100"></div>
-                        <a href="../index.html" id="logoutBtn" class="block px-4 py-2 text-red-600 hover:bg-red-50">Logout</a>
+                        <a href="#" data-page="today" class="nav-link flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-gray-700">
+                            <i class="fas fa-chart-bar w-5 text-blue-500"></i> Today's Stat
+                        </a>
+                        <a href="#" data-page="total" class="nav-link flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-gray-700">
+                            <i class="fas fa-dollar-sign w-5 text-amber-500"></i> Today's OTP
+                        </a>
+                        <a href="#" data-page="past" class="nav-link flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-gray-700">
+                            <i class="fas fa-history w-5 text-purple-500"></i> Past Records
+                        </a>
+                        <div class="border-t border-gray-100 my-1"></div>
+                        <a href="https://wa.me/2348113903584" target="_blank" class="nav-link flex items-center gap-3 px-4 py-2.5 hover:bg-gray-50 text-green-600">
+                            <i class="fab fa-whatsapp w-5"></i> Contact Support
+                        </a>
+                        <div class="border-t border-gray-100 my-1"></div>
+                        <a href="../index.html" id="logoutBtn" class="nav-link flex items-center gap-3 px-4 py-2.5 hover:bg-red-50 text-red-600">
+                            <i class="fas fa-sign-out-alt w-5"></i> Logout
+                        </a>
                     </div>
                 </div>
             </div>
@@ -97,107 +209,138 @@
     <div id="dashboardContent">
         <!-- Allocation Page -->
         <div id="allocationPage" class="page">
-            <h1 class="text-2xl font-bold text-gray-900">📌 Number Allocation</h1>
-            <p class="text-gray-500 mt-1 mb-4">Select a country to view numbers assigned to you (numbers that received OTPs are hidden)</p>
-            <select id="countrySelect" class="w-full md:w-64 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 mb-4">
-                <option value="">-- Select Country --</option>
-            </select>
-            <div id="numbersDisplay" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 text-center text-gray-400">
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-900">📌 Number Allocation</h1>
+                <p class="text-gray-500 text-sm mt-1">Select a country to view numbers assigned to you</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">🌍 Select Country</label>
+                <select id="countrySelect" class="custom-select w-full md:w-80 border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition">
+                    <option value="">-- Select Country --</option>
+                </select>
+            </div>
+            <div id="numbersDisplay" class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 text-center text-gray-400">
                 Select a country to view numbers
             </div>
-            <p class="text-xs text-gray-400 mt-4 text-center">
-                <i class="fas fa-info-circle mr-1"></i> Numbers that have received OTPs are hidden from this list, but continue to receive OTPs normally.
-            </p>
+            <div class="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400">
+                <i class="fas fa-info-circle"></i>
+                <span>Numbers that have received OTPs are hidden from this list, but continue to receive OTPs normally.</span>
+            </div>
         </div>
 
         <!-- Today's Stat Page -->
         <div id="todayPage" class="page">
-            <h1 class="text-2xl font-bold text-gray-900">📊 Today's OTP Statistics</h1>
-            <p class="text-gray-500 mt-1 mb-4">OTP received today on your numbers</p>
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-900">📊 Today's OTP Statistics</h1>
+                <p class="text-gray-500 text-sm mt-1">OTP received today on your numbers</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="bg-gray-50">
-                            <tr><th class="px-6 py-3 text-left">Phone Number</th><th class="px-6 py-3 text-left">Service</th><th class="px-6 py-3 text-left">OTP Code</th><th class="px-6 py-3 text-left">Time</th></tr>
+                    <table class="data-table w-full text-sm">
+                        <thead>
+                            <tr>
+                                <th class="px-6 py-4 text-left font-semibold text-gray-600">Phone Number</th>
+                                <th class="px-6 py-4 text-left font-semibold text-gray-600">Service</th>
+                                <th class="px-6 py-4 text-left font-semibold text-gray-600">OTP Code</th>
+                                <th class="px-6 py-4 text-left font-semibold text-gray-600">Time</th>
+                            </tr>
                         </thead>
                         <tbody id="todayOtpTable" class="divide-y divide-gray-100"></tbody>
                     </table>
                 </div>
-                <div id="todayEmptyMsg" class="text-center py-8 text-gray-400 hidden">No OTP received today</div>
+                <div id="todayEmptyMsg" class="text-center py-12 text-gray-400 hidden">
+                    <i class="fas fa-inbox text-4xl mb-3 opacity-50"></i>
+                    <p>No OTP received today</p>
+                </div>
             </div>
         </div>
 
         <!-- Today's OTP Page -->
         <div id="totalPage" class="page">
-            <h1 class="text-2xl font-bold text-gray-900">📅 Today's OTP Earnings</h1>
-            <p class="text-gray-500 mt-1 mb-4">Today's OTP summary and earnings (resets daily at 1:00 AM)</p>
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-900">📅 Today's OTP Earnings</h1>
+                <p class="text-gray-500 text-sm mt-1">Today's OTP summary and earnings <span class="text-amber-600">(resets daily at 1:00 AM)</span></p>
+            </div>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl shadow-lg p-6">
-                    <p class="text-emerald-100 text-sm">Today's OTP Count</p>
-                    <p class="text-white text-4xl font-bold mt-1" id="totalOtpCount">0</p>
+                <div class="stat-card bg-gradient-to-br from-emerald-500 to-emerald-700 rounded-2xl shadow-lg p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <p class="text-emerald-100 text-sm font-medium">Today's OTP Count</p>
+                        <i class="fas fa-key text-emerald-200 text-2xl opacity-50"></i>
+                    </div>
+                    <p class="text-white text-4xl font-bold mt-3" id="totalOtpCount">0</p>
                 </div>
-                <div class="bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl shadow-lg p-6">
-                    <p class="text-amber-100 text-sm">Today's Earnings</p>
-                    <p class="text-white text-4xl font-bold mt-1" id="totalEarnings">$0.00</p>
-                    <p class="text-amber-100 text-sm mt-1">($0.005 per OTP)</p>
+                <div class="stat-card bg-gradient-to-br from-amber-500 to-amber-700 rounded-2xl shadow-lg p-6 text-white">
+                    <div class="flex items-center justify-between">
+                        <p class="text-amber-100 text-sm font-medium">Today's Earnings</p>
+                        <i class="fas fa-coins text-amber-200 text-2xl opacity-50"></i>
+                    </div>
+                    <p class="text-white text-4xl font-bold mt-3" id="totalEarnings">$0.00</p>
+                    <p class="text-amber-100 text-xs mt-2">($0.005 per OTP)</p>
                 </div>
             </div>
-            <div class="reset-timer" id="resetTimer">
-                <i class="fas fa-clock mr-1"></i> Resets in --h --m --s
+            <div class="flex justify-center mt-6">
+                <div class="reset-timer" id="resetTimer">
+                    <i class="fas fa-clock mr-2"></i> Resets in --h --m --s
+                </div>
             </div>
         </div>
 
-        <!-- Past Records Page - FIXED DATE FILTERING -->
+        <!-- Past Records Page -->
         <div id="pastPage" class="page">
-            <h1 class="text-2xl font-bold text-gray-900">📋 Past OTP Records</h1>
-            <p class="text-gray-500 mt-1 mb-4">View OTP history by date range (all-time records)</p>
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
+            <div class="mb-6">
+                <h1 class="text-2xl font-bold text-gray-900">📋 Past OTP Records</h1>
+                <p class="text-gray-500 text-sm mt-1">View OTP history by date range</p>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">📅 Start Date</label>
-                        <input type="date" id="startDate" class="w-full border rounded-xl px-4 py-2.5 bg-gray-50">
+                        <input type="date" id="startDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none transition">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">📅 End Date</label>
-                        <input type="date" id="endDate" class="w-full border rounded-xl px-4 py-2.5 bg-gray-50">
+                        <input type="date" id="endDate" class="w-full border border-gray-200 rounded-xl px-4 py-2.5 bg-gray-50 focus:ring-2 focus:ring-indigo-500 outline-none transition">
                     </div>
                     <div class="flex items-end gap-2">
-                        <button id="fetchBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl transition">
+                        <button id="fetchBtn" class="btn-primary flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl transition shadow-sm">
                             <i class="fas fa-search mr-2"></i>Filter
                         </button>
-                        <button id="resetFilterBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2.5 rounded-xl transition">
+                        <button id="resetFilterBtn" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl transition">
                             <i class="fas fa-undo-alt mr-2"></i>Reset
                         </button>
                     </div>
                 </div>
-                <div id="filterInfo" class="mt-3 text-xs text-gray-500 hidden">
-                    <i class="fas fa-filter mr-1"></i> Showing OTPs from <span id="filterStartDisplay"></span> to <span id="filterEndDisplay"></span>
+                <div id="filterInfo" class="mt-3 text-xs text-gray-500 hidden bg-blue-50 p-2 rounded-lg">
+                    <i class="fas fa-filter mr-1 text-blue-500"></i> Showing OTPs from <span id="filterStartDisplay" class="font-medium"></span> to <span id="filterEndDisplay" class="font-medium"></span>
                 </div>
             </div>
-            <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-                <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                    <h3 class="font-semibold text-gray-800"><i class="fas fa-list mr-2"></i>OTP Records</h3>
-                    <div class="text-sm">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white flex justify-between items-center">
+                    <h3 class="font-semibold text-gray-800"><i class="fas fa-list mr-2 text-indigo-500"></i>OTP Records</h3>
+                    <div class="text-sm bg-emerald-50 px-3 py-1.5 rounded-lg">
                         <span class="font-bold text-emerald-600" id="pastTotalEarnings">$0.00</span>
-                        <span class="text-gray-500 ml-2">total earnings (selected range)</span>
+                        <span class="text-gray-500 ml-1">total earnings</span>
                     </div>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead class="bg-gray-50 sticky top-0">
+                <div class="overflow-x-auto max-h-[500px] overflow-y-auto">
+                    <table class="data-table w-full text-sm">
+                        <thead class="sticky top-0 bg-gray-50">
                             <tr>
-                                <th class="px-6 py-3 text-left">📅 Date</th>
-                                <th class="px-6 py-3 text-left">📞 Phone Number</th>
-                                <th class="px-6 py-3 text-left">⚙️ Service</th>
-                                <th class="px-6 py-3 text-left">🔐 OTP Code</th>
-                                <th class="px-6 py-3 text-left">🌍 Country</th>
-                                <th class="px-6 py-3 text-left">⏰ Time</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-600">📅 Date</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-600">📞 Phone Number</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-600">⚙️ Service</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-600">🔐 OTP Code</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-600">🌍 Country</th>
+                                <th class="px-6 py-3 text-left font-semibold text-gray-600">⏰ Time</th>
                             </tr>
                         </thead>
                         <tbody id="pastOtpTable" class="divide-y divide-gray-100"></tbody>
                     </table>
                 </div>
-                <div id="pastEmptyMsg" class="text-center py-8 text-gray-400 hidden">No OTP records in this date range</div>
+                <div id="pastEmptyMsg" class="text-center py-12 text-gray-400 hidden">
+                    <i class="fas fa-calendar-times text-4xl mb-3 opacity-50"></i>
+                    <p>No OTP records in this date range</p>
+                </div>
             </div>
         </div>
     </div>
@@ -213,13 +356,10 @@ let userPhoneNumbers = [];
 let userPhoneLast3s = [];
 let userOtps = [];
 
-function getTodayStr() { 
-    return new Date().toISOString().slice(0, 10); 
-}
-
+function getTodayStr() { return new Date().toISOString().slice(0, 10); }
 function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m)); }
 function getCountryFlag(c) { const f = {'Nigeria':'🇳🇬','Uzbekistan':'🇺🇿','USA':'🇺🇸','UK':'🇬🇧','Jordan':'🇯🇴','Tajikistan':'🇹🇯','Myanmar':'🇲🇲','Hungary':'🇭🇺','Slovenia':'🇸🇮','Venezuela':'🇻🇪','India':'🇮🇳','Germany':'🇩🇪','France':'🇫🇷'}; return f[c] || '🌍'; }
-function showToast(m) { const t = document.createElement('div'); t.className = 'fixed bottom-24 right-6 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm z-50 shadow-lg'; t.innerHTML = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2500); }
+function showToast(m) { const t = document.createElement('div'); t.className = 'fixed bottom-6 right-6 bg-gray-800 text-white px-4 py-2 rounded-lg text-sm z-50 shadow-lg'; t.innerHTML = m; document.body.appendChild(t); setTimeout(() => t.remove(), 3000); }
 function getLast3Digits(p) { const d = p.toString().replace(/\D/g, ''); return d.length >= 3 ? d.slice(-3) : d; }
 function maskPhoneNumber(p) { if (!p) return '***'; const d = p.toString().replace(/\D/g, ''); if (d.length <= 6) return '***' + d.slice(-3); return d.slice(0,2) + '•'.repeat(Math.min(7, d.length-5)) + d.slice(-3); }
 
@@ -257,17 +397,17 @@ function displayNumbers(country) {
     const processed = processAllocatedNumbers(userNumbers);
     const countryData = processed.find(g => g.country === country);
     const div = document.getElementById('numbersDisplay');
-    if (!countryData || !countryData.numbers.length) { div.innerHTML = '<div class="text-center py-8 text-gray-400">No numbers for this country</div>'; return; }
+    if (!countryData || !countryData.numbers.length) { div.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fas fa-phone-slash text-4xl mb-3 opacity-50"></i><p>No numbers for this country</p></div>'; return; }
     
     const usedLast3s = new Set(userOtps.map(o => o.phone_last3));
     const availableNumbers = countryData.numbers.filter(n => !usedLast3s.has(getLast3Digits(n)));
     
     if (availableNumbers.length === 0) {
-        div.innerHTML = '<div class="text-center py-8 text-green-600">✅ All numbers have been used! Contact admin for more numbers.</div>';
+        div.innerHTML = '<div class="text-center py-12 text-emerald-600"><i class="fas fa-check-circle text-4xl mb-3"></i><p class="font-medium">All numbers have been used!</p><p class="text-sm mt-1">Contact admin for more numbers.</p></div>';
         return;
     }
     
-    div.innerHTML = `<div class="border rounded-xl overflow-hidden"><div class="bg-gray-50 px-4 py-3 font-semibold border-b">${getCountryFlag(country)} ${country} (${availableNumbers.length} available)</div><div class="divide-y divide-gray-100">${availableNumbers.map(n => `<div class="px-4 py-3 font-mono text-sm">📞 ${escapeHtml(n)}</div>`).join('')}</div></div>`;
+    div.innerHTML = `<div class="border border-gray-100 rounded-xl overflow-hidden"><div class="bg-gray-50 px-5 py-3 font-semibold text-gray-700 border-b border-gray-100">${getCountryFlag(country)} ${country} <span class="text-xs font-normal text-gray-500 ml-2">(${availableNumbers.length} available)</span></div><div class="divide-y divide-gray-100">${availableNumbers.map(n => `<div class="px-5 py-3 font-mono text-sm text-gray-700 hover:bg-gray-50 transition">📞 ${escapeHtml(n)}</div>`).join('')}</div></div>`;
 }
 
 function renderTodayOtps() {
@@ -277,137 +417,44 @@ function renderTodayOtps() {
     if (!tbody) return;
     if (!todayOtps.length) { tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); return; }
     if (empty) empty.classList.add('hidden');
-    tbody.innerHTML = todayOtps.map(o => { const m = userPhoneNumbers.find(n => getLast3Digits(n) === o.phone_last3); return `<tr class="otp-row border-b"><td class="px-6 py-3 font-mono">${escapeHtml(m ? maskPhoneNumber(m) : '***'+o.phone_last3)}<\/td><td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}<\/td><td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}<\/td><td class="px-6 py-3">${o.message_time ? new Date(o.message_time).toLocaleTimeString() : ''}<\/td><\/tr>`; }).join('');
+    tbody.innerHTML = todayOtps.map(o => { const m = userPhoneNumbers.find(n => getLast3Digits(n) === o.phone_last3); return `<tr class="otp-row border-b border-gray-100"><td class="px-6 py-3 font-mono text-sm">${escapeHtml(m ? maskPhoneNumber(m) : '***'+o.phone_last3)}<\/td><td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}<\/td><td class="px-6 py-3"><span class="font-mono font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">${escapeHtml(o.otp)}<\/span><\/td><td class="px-6 py-3 text-gray-500 text-xs">${o.message_time ? new Date(o.message_time).toLocaleTimeString() : ''}<\/td><\/tr>`; }).join('');
 }
 
-function updateTodayStats() { 
-    const todayCount = userOtps.filter(o => o.date === getTodayStr()).length; 
-    document.getElementById('totalOtpCount').textContent = todayCount; 
-    document.getElementById('totalEarnings').textContent = `$${(todayCount * 0.005).toFixed(2)}`; 
-}
+function updateTodayStats() { const todayCount = userOtps.filter(o => o.date === getTodayStr()).length; document.getElementById('totalOtpCount').textContent = todayCount; document.getElementById('totalEarnings').textContent = `$${(todayCount * 0.005).toFixed(2)}`; }
 
-// FIXED: Past OTP filtering function
 function fetchPastOtps() {
     let start = document.getElementById('startDate').value;
     let end = document.getElementById('endDate').value;
-    
-    // Get all user's OTPs
     let filtered = [...userOtps];
-    
-    // Apply date filter if both dates are selected
     if (start && end) {
-        filtered = userOtps.filter(o => {
-            if (!o.date) return false;
-            return o.date >= start && o.date <= end;
-        });
-        
-        // Show filter info
+        filtered = userOtps.filter(o => { if (!o.date) return false; return o.date >= start && o.date <= end; });
         document.getElementById('filterInfo').classList.remove('hidden');
         document.getElementById('filterStartDisplay').innerText = start;
         document.getElementById('filterEndDisplay').innerText = end;
-    } else {
-        document.getElementById('filterInfo').classList.add('hidden');
-    }
-    
-    const tbody = document.getElementById('pastOtpTable');
-    const emptyMsg = document.getElementById('pastEmptyMsg');
-    const earnSpan = document.getElementById('pastTotalEarnings');
-    
+    } else { document.getElementById('filterInfo').classList.add('hidden'); }
+    const tbody = document.getElementById('pastOtpTable'), empty = document.getElementById('pastEmptyMsg'), earnSpan = document.getElementById('pastTotalEarnings');
     if (!tbody) return;
-    
-    if (filtered.length === 0) {
-        tbody.innerHTML = '';
-        if (emptyMsg) emptyMsg.classList.remove('hidden');
-        if (earnSpan) earnSpan.textContent = '$0.00';
-        return;
-    }
-    
-    if (emptyMsg) emptyMsg.classList.add('hidden');
+    if (filtered.length === 0) { tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); if (earnSpan) earnSpan.textContent = '$0.00'; return; }
+    if (empty) empty.classList.add('hidden');
     if (earnSpan) earnSpan.textContent = `$${(filtered.length * 0.005).toFixed(2)}`;
-    
-    tbody.innerHTML = filtered.map((o, index) => {
-        const m = userPhoneNumbers.find(n => getLast3Digits(n) === o.phone_last3);
-        const displayNumber = m ? maskPhoneNumber(m) : `***${o.phone_last3 || '???'}`;
-        const timeStr = o.message_time ? new Date(o.message_time).toLocaleTimeString() : (o.time || '');
-        
-        return `
-            <tr class="hover:bg-gray-50 border-b">
-                <td class="px-6 py-3 text-gray-600 text-xs whitespace-nowrap">${o.date || 'N/A'}<\/td>
-                <td class="px-6 py-3 font-mono text-sm">${escapeHtml(displayNumber)}<\/td>
-                <td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}<\/td>
-                <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}<\/td>
-                <td class="px-6 py-3">${escapeHtml(o.country || 'Unknown')}<\/td>
-                <td class="px-6 py-3 text-gray-500 text-xs">${timeStr}<\/td>
-            <\/tr>
-        `;
-    }).join('');
+    tbody.innerHTML = filtered.map(o => { const m = userPhoneNumbers.find(n => getLast3Digits(n) === o.phone_last3); return `<tr class="hover:bg-gray-50 border-b border-gray-100"><td class="px-6 py-3 text-gray-500 text-xs whitespace-nowrap">${o.date || 'N/A'}<\/td><td class="px-6 py-3 font-mono text-sm">${escapeHtml(m ? maskPhoneNumber(m) : '***'+o.phone_last3)}<\/td><td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}<\/td><td class="px-6 py-3"><span class="font-mono font-bold text-emerald-600">${escapeHtml(o.otp)}<\/span><\/td><td class="px-6 py-3">${escapeHtml(o.country || 'Unknown')}<\/td><td class="px-6 py-3 text-gray-500 text-xs">${o.message_time ? new Date(o.message_time).toLocaleTimeString() : ''}<\/td><\/tr>`; }).join('');
 }
 
-// Reset filter function
-function resetFilter() {
-    document.getElementById('startDate').value = '';
-    document.getElementById('endDate').value = '';
-    document.getElementById('filterInfo').classList.add('hidden');
-    fetchPastOtps();
-}
-
-async function refreshAll() { 
-    if (!currentUser) return; 
-    const all = await fetchAllOtps(); 
-    userOtps = all.filter(o => userPhoneLast3s.includes(o.phone_last3)); 
-    renderTodayOtps(); 
-    updateTodayStats(); 
-    fetchPastOtps(); 
-    loadUserNumbersUI(); 
-    if (document.getElementById('allocationPage').classList.contains('active-page') && document.getElementById('countrySelect').value) 
-        displayNumbers(document.getElementById('countrySelect').value); 
-}
-
-function updateResetTimer() {
-    const now = new Date();
-    const resetTime = new Date();
-    resetTime.setHours(1, 0, 0, 0);
-    
-    if (now >= resetTime) {
-        resetTime.setDate(resetTime.getDate() + 1);
-    }
-    
-    const diff = resetTime - now;
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-    
-    const timerElement = document.getElementById('resetTimer');
-    if (timerElement) {
-        timerElement.innerHTML = `<i class="fas fa-clock mr-1"></i> Resets in ${hours}h ${minutes}m ${seconds}s`;
-    }
-}
-
+function resetFilter() { document.getElementById('startDate').value = ''; document.getElementById('endDate').value = ''; document.getElementById('filterInfo').classList.add('hidden'); fetchPastOtps(); }
+async function refreshAll() { if (!currentUser) return; const all = await fetchAllOtps(); userOtps = all.filter(o => userPhoneLast3s.includes(o.phone_last3)); renderTodayOtps(); updateTodayStats(); fetchPastOtps(); loadUserNumbersUI(); if (document.getElementById('allocationPage').classList.contains('active-page') && document.getElementById('countrySelect').value) displayNumbers(document.getElementById('countrySelect').value); }
+function updateResetTimer() { const now = new Date(); const resetTime = new Date(); resetTime.setHours(1, 0, 0, 0); if (now >= resetTime) resetTime.setDate(resetTime.getDate() + 1); const diff = resetTime - now; const hours = Math.floor(diff / (1000 * 60 * 60)); const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)); const seconds = Math.floor((diff % (1000 * 60)) / 1000); const timerElement = document.getElementById('resetTimer'); if (timerElement) timerElement.innerHTML = `<i class="fas fa-clock mr-2"></i> Resets in ${hours}h ${minutes}m ${seconds}s`; }
 let lastDate = getTodayStr();
-function checkDateChange() {
-    const currentDate = getTodayStr();
-    if (currentDate !== lastDate) {
-        lastDate = currentDate;
-        refreshAll();
-        const notif = document.createElement('div');
-        notif.className = 'reset-notification';
-        notif.innerHTML = `<i class="fas fa-sync-alt mr-2"></i>📅 Today's OTP stats have been reset at 1:00 AM`;
-        document.body.appendChild(notif);
-        setTimeout(() => notif.remove(), 3000);
-    }
-}
-
+function checkDateChange() { const currentDate = getTodayStr(); if (currentDate !== lastDate) { lastDate = currentDate; refreshAll(); const notif = document.createElement('div'); notif.className = 'reset-notification'; notif.innerHTML = `<i class="fas fa-sync-alt mr-2"></i> Today's OTP stats have been reset at 1:00 AM`; document.body.appendChild(notif); setTimeout(() => notif.remove(), 3000); } }
 function getUserIdFromUrl() { return new URLSearchParams(window.location.search).get('id'); }
 function saveCurrentPage(p) { localStorage.setItem('nexus_current_page', p); }
 function getSavedPage() { return localStorage.getItem('nexus_current_page') || 'allocation'; }
 function loadSavedPage() { const s = getSavedPage(); ['allocation','today','total','past'].forEach(p => document.getElementById(p+'Page').classList.remove('active-page')); document.getElementById(s+'Page').classList.add('active-page'); if (s === 'allocation') loadUserNumbersUI(); if (s === 'today') renderTodayOtps(); if (s === 'total') updateTodayStats(); if (s === 'past') fetchPastOtps(); }
-
 async function initDashboard() {
     const userId = getUserIdFromUrl();
     if (!userId) { window.location.href = '../index.html'; return; }
-    document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-12"><div class="loading-spinner mx-auto"></div><p>Loading...</p></div>';
+    document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-12"><div class="loading-spinner mx-auto"></div><p class="mt-3 text-gray-500">Loading user data...</p></div>';
     const user = await fetchUserById(userId);
-    if (!user) { document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-12 text-red-500">User not found</div>'; return; }
+    if (!user) { document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-12 text-red-500"><i class="fas fa-exclamation-triangle text-4xl mb-3"></i><p>User not found</p></div>'; return; }
     currentUser = user;
     document.getElementById('userName').innerText = currentUser.username || 'User';
     document.getElementById('userEmail').innerText = currentUser.email || '';
@@ -415,49 +462,19 @@ async function initDashboard() {
     updateUserPhoneArrays();
     const all = await fetchAllOtps();
     userOtps = all.filter(o => userPhoneLast3s.includes(o.phone_last3));
-    
-    // Set default date range (last 7 days)
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - 6);
+    const end = new Date(), start = new Date(); start.setDate(end.getDate() - 6);
     document.getElementById('startDate').value = start.toISOString().slice(0,10);
     document.getElementById('endDate').value = end.toISOString().slice(0,10);
-    
     document.getElementById('countrySelect').onchange = e => { if (e.target.value) displayNumbers(e.target.value); };
     document.getElementById('fetchBtn').onclick = fetchPastOtps;
     document.getElementById('resetFilterBtn').onclick = resetFilter;
-    
-    renderTodayOtps(); 
-    updateTodayStats(); 
-    fetchPastOtps(); // This will apply the default date range
-    loadUserNumbersUI();
-    document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-8 text-gray-400">Select a country to view numbers</div>';
+    renderTodayOtps(); updateTodayStats(); fetchPastOtps(); loadUserNumbersUI();
+    document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fas fa-globe-africa text-4xl mb-3 opacity-50"></i><p>Select a country to view numbers</p></div>';
     loadSavedPage();
-    showToast(`✅ Welcome ${currentUser.username}!`);
-    
-    updateResetTimer();
-    setInterval(updateResetTimer, 1000);
-    setInterval(checkDateChange, 60000);
+    showToast(`Welcome ${currentUser.username}!`);
+    updateResetTimer(); setInterval(updateResetTimer, 1000); setInterval(checkDateChange, 60000);
 }
-
-function setupNavigation() {
-    ['allocation','today','total','past'].forEach(p => {
-        document.querySelectorAll(`[data-page="${p}"]`).forEach(link => {
-            link.onclick = (e) => {
-                e.preventDefault();
-                ['allocation','today','total','past'].forEach(pg => document.getElementById(pg+'Page').classList.remove('active-page'));
-                document.getElementById(p+'Page').classList.add('active-page');
-                document.getElementById('dropdownMenu').classList.add('hidden-dropdown');
-                saveCurrentPage(p);
-                if (p === 'allocation') { loadUserNumbersUI(); if (document.getElementById('countrySelect').value) displayNumbers(document.getElementById('countrySelect').value); }
-                if (p === 'today') renderTodayOtps();
-                if (p === 'total') updateTodayStats();
-                if (p === 'past') fetchPastOtps();
-            };
-        });
-    });
-}
-
+function setupNavigation() { ['allocation','today','total','past'].forEach(p => { document.querySelectorAll(`[data-page="${p}"]`).forEach(link => { link.onclick = (e) => { e.preventDefault(); ['allocation','today','total','past'].forEach(pg => document.getElementById(pg+'Page').classList.remove('active-page')); document.getElementById(p+'Page').classList.add('active-page'); document.getElementById('dropdownMenu').classList.add('hidden-dropdown'); saveCurrentPage(p); if (p === 'allocation') { loadUserNumbersUI(); if (document.getElementById('countrySelect').value) displayNumbers(document.getElementById('countrySelect').value); } if (p === 'today') renderTodayOtps(); if (p === 'total') updateTodayStats(); if (p === 'past') fetchPastOtps(); }; }); }); }
 function setupDropdown() { const btn = document.getElementById('menuButton'), drop = document.getElementById('dropdownMenu'); if (btn) { btn.onclick = (e) => { e.stopPropagation(); drop.classList.toggle('hidden-dropdown'); }; document.addEventListener('click', () => drop.classList.add('hidden-dropdown')); } }
 document.addEventListener('DOMContentLoaded', async () => { setupNavigation(); setupDropdown(); await initDashboard(); });
 </script>
