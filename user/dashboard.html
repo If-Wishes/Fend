@@ -46,6 +46,10 @@
             from { top: -50px; opacity: 0; }
             to { top: 70px; opacity: 1; }
         }
+        .filter-active {
+            background-color: #dbeafe;
+            border-color: #3b82f6;
+        }
     </style>
 </head>
 <body class="bg-gray-50">
@@ -143,25 +147,53 @@
             </div>
         </div>
 
-        <!-- Past Records Page -->
+        <!-- Past Records Page - FIXED DATE FILTERING -->
         <div id="pastPage" class="page">
             <h1 class="text-2xl font-bold text-gray-900">📋 Past OTP Records</h1>
             <p class="text-gray-500 mt-1 mb-4">View OTP history by date range (all-time records)</p>
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label class="block text-sm font-medium text-gray-700 mb-2">Start Date</label><input type="date" id="startDate" class="w-full border rounded-xl px-4 py-2.5"></div>
-                    <div><label class="block text-sm font-medium text-gray-700 mb-2">End Date</label><input type="date" id="endDate" class="w-full border rounded-xl px-4 py-2.5"></div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">📅 Start Date</label>
+                        <input type="date" id="startDate" class="w-full border rounded-xl px-4 py-2.5 bg-gray-50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">📅 End Date</label>
+                        <input type="date" id="endDate" class="w-full border rounded-xl px-4 py-2.5 bg-gray-50">
+                    </div>
+                    <div class="flex items-end gap-2">
+                        <button id="fetchBtn" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl transition">
+                            <i class="fas fa-search mr-2"></i>Filter
+                        </button>
+                        <button id="resetFilterBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2.5 rounded-xl transition">
+                            <i class="fas fa-undo-alt mr-2"></i>Reset
+                        </button>
+                    </div>
                 </div>
-                <button id="fetchBtn" class="mt-4 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl transition">Fetch Records</button>
+                <div id="filterInfo" class="mt-3 text-xs text-gray-500 hidden">
+                    <i class="fas fa-filter mr-1"></i> Showing OTPs from <span id="filterStartDisplay"></span> to <span id="filterEndDisplay"></span>
+                </div>
             </div>
             <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
                 <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
-                    <h3 class="font-semibold text-gray-800">OTP Records</h3>
-                    <div class="text-sm"><span class="font-bold text-emerald-600" id="pastTotalEarnings">$0.00</span><span class="text-gray-500 ml-2">total earnings (selected range)</span></div>
+                    <h3 class="font-semibold text-gray-800"><i class="fas fa-list mr-2"></i>OTP Records</h3>
+                    <div class="text-sm">
+                        <span class="font-bold text-emerald-600" id="pastTotalEarnings">$0.00</span>
+                        <span class="text-gray-500 ml-2">total earnings (selected range)</span>
+                    </div>
                 </div>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm">
-                        <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left">Date</th><th class="px-6 py-3 text-left">Phone Number</th><th class="px-6 py-3 text-left">Service</th><th class="px-6 py-3 text-left">OTP Code</th><th class="px-6 py-3 text-left">Country</th><th class="px-6 py-3 text-left">Time</th></tr></thead>
+                        <thead class="bg-gray-50 sticky top-0">
+                            <tr>
+                                <th class="px-6 py-3 text-left">📅 Date</th>
+                                <th class="px-6 py-3 text-left">📞 Phone Number</th>
+                                <th class="px-6 py-3 text-left">⚙️ Service</th>
+                                <th class="px-6 py-3 text-left">🔐 OTP Code</th>
+                                <th class="px-6 py-3 text-left">🌍 Country</th>
+                                <th class="px-6 py-3 text-left">⏰ Time</th>
+                            </tr>
+                        </thead>
                         <tbody id="pastOtpTable" class="divide-y divide-gray-100"></tbody>
                     </table>
                 </div>
@@ -203,7 +235,6 @@ async function fetchAllOtps() {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/otp_logs?select=*&order=date.desc&limit=2000`, { headers: { 'apikey': SUPABASE_API_KEY } });
     return await r.json() || [];
 }
-function filterOtpsByUser() { if (!userPhoneLast3s.length) return []; return userOtps.filter(o => userPhoneLast3s.includes(o.phone_last3)); }
 function updateUserPhoneArrays() {
     userPhoneNumbers = []; userPhoneLast3s = [];
     userNumbers.forEach(i => { if (i.number) { userPhoneNumbers.push(i.number); const l3 = getLast3Digits(i.number); if (l3) userPhoneLast3s.push(l3); } });
@@ -246,7 +277,7 @@ function renderTodayOtps() {
     if (!tbody) return;
     if (!todayOtps.length) { tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); return; }
     if (empty) empty.classList.add('hidden');
-    tbody.innerHTML = todayOtps.map(o => { const m = userPhoneNumbers.find(n => getLast3Digits(n) === o.phone_last3); return `<tr class="otp-row border-b"><td class="px-6 py-3 font-mono">${escapeHtml(m ? maskPhoneNumber(m) : '***'+o.phone_last3)}</td><td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}</td><td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td><td class="px-6 py-3">${o.message_time ? new Date(o.message_time).toLocaleTimeString() : ''}</td></tr>`; }).join('');
+    tbody.innerHTML = todayOtps.map(o => { const m = userPhoneNumbers.find(n => getLast3Digits(n) === o.phone_last3); return `<tr class="otp-row border-b"><td class="px-6 py-3 font-mono">${escapeHtml(m ? maskPhoneNumber(m) : '***'+o.phone_last3)}<\/td><td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}<\/td><td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}<\/td><td class="px-6 py-3">${o.message_time ? new Date(o.message_time).toLocaleTimeString() : ''}<\/td><\/tr>`; }).join('');
 }
 
 function updateTodayStats() { 
@@ -255,16 +286,69 @@ function updateTodayStats() {
     document.getElementById('totalEarnings').textContent = `$${(todayCount * 0.005).toFixed(2)}`; 
 }
 
+// FIXED: Past OTP filtering function
 function fetchPastOtps() {
-    const s = document.getElementById('startDate').value, e = document.getElementById('endDate').value;
-    if (!s || !e) return;
-    const f = userOtps.filter(o => o.date >= s && o.date <= e);
-    const tbody = document.getElementById('pastOtpTable'), empty = document.getElementById('pastEmptyMsg'), earnSpan = document.getElementById('pastTotalEarnings');
+    let start = document.getElementById('startDate').value;
+    let end = document.getElementById('endDate').value;
+    
+    // Get all user's OTPs
+    let filtered = [...userOtps];
+    
+    // Apply date filter if both dates are selected
+    if (start && end) {
+        filtered = userOtps.filter(o => {
+            if (!o.date) return false;
+            return o.date >= start && o.date <= end;
+        });
+        
+        // Show filter info
+        document.getElementById('filterInfo').classList.remove('hidden');
+        document.getElementById('filterStartDisplay').innerText = start;
+        document.getElementById('filterEndDisplay').innerText = end;
+    } else {
+        document.getElementById('filterInfo').classList.add('hidden');
+    }
+    
+    const tbody = document.getElementById('pastOtpTable');
+    const emptyMsg = document.getElementById('pastEmptyMsg');
+    const earnSpan = document.getElementById('pastTotalEarnings');
+    
     if (!tbody) return;
-    if (!f.length) { tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); if (earnSpan) earnSpan.textContent = '$0.00'; return; }
-    if (empty) empty.classList.add('hidden');
-    if (earnSpan) earnSpan.textContent = `$${(f.length * 0.005).toFixed(2)}`;
-    tbody.innerHTML = f.map(o => { const m = userPhoneNumbers.find(n => getLast3Digits(n) === o.phone_last3); return `<tr class="hover:bg-gray-50 border-b"><td class="px-6 py-3 text-gray-600 text-xs">${o.date || ''}</td><td class="px-6 py-3 font-mono">${escapeHtml(m ? maskPhoneNumber(m) : '***'+o.phone_last3)}</td><td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}</td><td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}</td><td class="px-6 py-3">${escapeHtml(o.country || 'Unknown')}</td><td class="px-6 py-3 text-gray-500">${o.message_time ? new Date(o.message_time).toLocaleTimeString() : ''}</td></tr>`; }).join('');
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = '';
+        if (emptyMsg) emptyMsg.classList.remove('hidden');
+        if (earnSpan) earnSpan.textContent = '$0.00';
+        return;
+    }
+    
+    if (emptyMsg) emptyMsg.classList.add('hidden');
+    if (earnSpan) earnSpan.textContent = `$${(filtered.length * 0.005).toFixed(2)}`;
+    
+    tbody.innerHTML = filtered.map((o, index) => {
+        const m = userPhoneNumbers.find(n => getLast3Digits(n) === o.phone_last3);
+        const displayNumber = m ? maskPhoneNumber(m) : `***${o.phone_last3 || '???'}`;
+        const timeStr = o.message_time ? new Date(o.message_time).toLocaleTimeString() : (o.time || '');
+        
+        return `
+            <tr class="hover:bg-gray-50 border-b">
+                <td class="px-6 py-3 text-gray-600 text-xs whitespace-nowrap">${o.date || 'N/A'}<\/td>
+                <td class="px-6 py-3 font-mono text-sm">${escapeHtml(displayNumber)}<\/td>
+                <td class="px-6 py-3">${escapeHtml(o.service || 'Unknown')}<\/td>
+                <td class="px-6 py-3 font-bold text-emerald-600">${escapeHtml(o.otp)}<\/td>
+                <td class="px-6 py-3">${escapeHtml(o.country || 'Unknown')}<\/td>
+                <td class="px-6 py-3 text-gray-500 text-xs">${timeStr}<\/td>
+            <\/tr>
+        `;
+    }).join('');
+}
+
+// Reset filter function
+function resetFilter() {
+    document.getElementById('startDate').value = '';
+    document.getElementById('endDate').value = '';
+    document.getElementById('filterInfo').classList.add('hidden');
+    fetchPastOtps();
 }
 
 async function refreshAll() { 
@@ -331,12 +415,21 @@ async function initDashboard() {
     updateUserPhoneArrays();
     const all = await fetchAllOtps();
     userOtps = all.filter(o => userPhoneLast3s.includes(o.phone_last3));
-    const end = new Date(), start = new Date(); start.setDate(end.getDate() - 6);
+    
+    // Set default date range (last 7 days)
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 6);
     document.getElementById('startDate').value = start.toISOString().slice(0,10);
     document.getElementById('endDate').value = end.toISOString().slice(0,10);
+    
     document.getElementById('countrySelect').onchange = e => { if (e.target.value) displayNumbers(e.target.value); };
     document.getElementById('fetchBtn').onclick = fetchPastOtps;
-    renderTodayOtps(); updateTodayStats(); fetchPastOtps();
+    document.getElementById('resetFilterBtn').onclick = resetFilter;
+    
+    renderTodayOtps(); 
+    updateTodayStats(); 
+    fetchPastOtps(); // This will apply the default date range
     loadUserNumbersUI();
     document.getElementById('numbersDisplay').innerHTML = '<div class="text-center py-8 text-gray-400">Select a country to view numbers</div>';
     loadSavedPage();
