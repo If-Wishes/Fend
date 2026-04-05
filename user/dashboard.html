@@ -383,6 +383,9 @@ let userPhoneNumbers = [];
 let userPhoneLast3s = [];
 let userOtps = [];
 
+// Store numbers data for copy all functionality
+window.countryNumbersStore = {};
+
 function getTodayStr() { return new Date().toISOString().slice(0, 10); }
 function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[m] || m)); }
 function getCountryFlag(c) { const f = {'Nigeria':'🇳🇬','Uzbekistan':'🇺🇿','USA':'🇺🇸','UK':'🇬🇧','Jordan':'🇯🇴','Tajikistan':'🇹🇯','Myanmar':'🇲🇲','Hungary':'🇭🇺','Slovenia':'🇸🇮','Venezuela':'🇻🇪','India':'🇮🇳','Germany':'🇩🇪','France':'🇫🇷'}; return f[c] || '🌍'; }
@@ -420,11 +423,15 @@ function loadUserNumbersUI() {
     if (sel) sel.innerHTML = '<option value="">-- Select Country --</option>' + countries.map(c => `<option value="${c.country}">${getCountryFlag(c.country)} ${c.country} (${c.available}/${c.total} available)</option>`).join('');
 }
 
+// FIXED: displayNumbers with working copy all button
 function displayNumbers(country) {
     const processed = processAllocatedNumbers(userNumbers);
     const countryData = processed.find(g => g.country === country);
     const div = document.getElementById('numbersDisplay');
-    if (!countryData || !countryData.numbers.length) { div.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fas fa-phone-slash text-4xl mb-3 opacity-50"></i><p>No numbers for this country</p></div>'; return; }
+    if (!countryData || !countryData.numbers.length) { 
+        div.innerHTML = '<div class="text-center py-12 text-gray-400"><i class="fas fa-phone-slash text-4xl mb-3 opacity-50"></i><p>No numbers for this country</p></div>'; 
+        return; 
+    }
     
     const usedLast3s = new Set(userOtps.map(o => o.phone_last3));
     const availableNumbers = countryData.numbers.filter(n => !usedLast3s.has(getLast3Digits(n)));
@@ -434,8 +441,23 @@ function displayNumbers(country) {
         return;
     }
     
-    // Generate numbers HTML with copy all button
-    const numbersList = availableNumbers.map(n => `<div class="number-card flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-emerald-50 transition"><span class="font-mono text-sm text-gray-700">📞 ${escapeHtml(n)}</span><button onclick="copyToClipboard('${escapeHtml(n)}')" class="text-emerald-600 hover:text-emerald-800 text-sm"><i class="far fa-copy"></i> Copy</button></div>`).join('');
+    // Store numbers for this country in global store
+    const countryKey = country.replace(/\s/g, '_');
+    window.countryNumbersStore[countryKey] = availableNumbers;
+    
+    // Generate numbers HTML
+    let numbersHtml = '';
+    availableNumbers.forEach(n => {
+        const escapedNum = escapeHtml(n).replace(/'/g, "\\'");
+        numbersHtml += `
+            <div class="number-card flex justify-between items-center p-3 bg-gray-50 rounded-lg hover:bg-emerald-50 transition">
+                <span class="font-mono text-sm text-gray-700">📞 ${escapeHtml(n)}</span>
+                <button onclick="copyToClipboard('${escapedNum}')" class="text-emerald-600 hover:text-emerald-800 text-sm">
+                    <i class="far fa-copy"></i> Copy
+                </button>
+            </div>
+        `;
+    });
     
     div.innerHTML = `
         <div class="border border-green-100 rounded-xl overflow-hidden">
@@ -444,12 +466,12 @@ function displayNumbers(country) {
                     <span class="font-semibold text-gray-700">${getCountryFlag(country)} ${country}</span>
                     <span class="text-xs font-normal text-gray-500 ml-2">(${availableNumbers.length} available)</span>
                 </div>
-                <button onclick="copyAllNumbers('${country}', ${JSON.stringify(availableNumbers)})" class="copy-all-btn bg-emerald-100 hover:bg-emerald-600 text-emerald-700 hover:text-white px-3 py-1.5 rounded-lg text-sm transition">
+                <button onclick="copyAllNumbers('${country.replace(/'/g, "\\'")}', '${countryKey}')" class="copy-all-btn bg-emerald-100 hover:bg-emerald-600 text-emerald-700 hover:text-white px-3 py-1.5 rounded-lg text-sm transition">
                     <i class="fas fa-copy mr-1"></i> Copy All
                 </button>
             </div>
             <div class="divide-y divide-gray-100 p-2 space-y-2">
-                ${numbersList}
+                ${numbersHtml}
             </div>
         </div>
     `;
@@ -457,15 +479,39 @@ function displayNumbers(country) {
 
 // Copy single number to clipboard
 function copyToClipboard(text) {
-    navigator.clipboard.writeText(text);
-    showToast(`Copied: ${text.slice(-10)}`);
+    navigator.clipboard.writeText(text).then(() => {
+        showToast(`Copied: ${text.slice(-10)}`);
+    }).catch(() => {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast(`Copied: ${text.slice(-10)}`);
+    });
 }
 
 // Copy all numbers for a country
-function copyAllNumbers(country, numbers) {
+function copyAllNumbers(country, countryKey) {
+    const numbers = window.countryNumbersStore[countryKey];
+    if (!numbers || numbers.length === 0) {
+        showToast(`No numbers to copy for ${country}`);
+        return;
+    }
+    
     const numbersList = numbers.join('\n');
-    navigator.clipboard.writeText(numbersList);
-    showToast(`📋 Copied ${numbers.length} numbers from ${country}`);
+    navigator.clipboard.writeText(numbersList).then(() => {
+        showToast(`📋 Copied ${numbers.length} numbers from ${country}`);
+    }).catch(() => {
+        const textarea = document.createElement('textarea');
+        textarea.value = numbersList;
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        showToast(`📋 Copied ${numbers.length} numbers from ${country}`);
+    });
 }
 
 function renderTodayOtps() {
