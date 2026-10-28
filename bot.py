@@ -349,8 +349,8 @@ if __name__ == "__main__":
     # EDIT YOUR DETAILS HERE 👇
     # ==========================================
     USERNAME = "5786"            # Your SMS Portal Username
-    PASSWORD = "9089872288:AAH6plkYsJjhL2xwQuOF55-AT-aS_4LWYf0"           # Your SMS Portal Password
-    BOT_TOKEN = "9089872288"       # Your Real Telegram Bot Token (e.g. 123456:ABC...)
+    PASSWORD = "1134amabdu"           # Your SMS Portal Password
+    BOT_TOKEN = "9089872288:AAH6plkYsJjhL2xwQuOF55-AT-aS_4LWYf0"       # Your Real Telegram Bot Token (e.g. 123456:ABC...)
     CHAT_ID = "-1004408204768"          # Your Real Telegram Chat ID (e.g. -100123...)
     # ==========================================
 
