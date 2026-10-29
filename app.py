@@ -13,7 +13,6 @@ from bs4 import BeautifulSoup
 # CONFIGURATION
 # ==========================================
 BOT_TOKEN = "9136746567:AAEwSv5_eycbVM-sRm2n3-L-Gn1TDf8f_Xg"  # Replace with your real token
-BOT_USERNAME = "feederer_bot"   # Without the @ symbol
 BASE_URL = "https://mysmsportal.com"
 ALLOCATE_QTY = 20
 DB_FILE = "users.json"
@@ -67,11 +66,10 @@ def answer_callback(callback_id, text):
     except:
         pass
 
-def edit_message(chat_id, message_id, text, reply_markup=None):
-    payload = {'chat_id': chat_id, 'message_id': message_id, 'text': text}
-    if reply_markup: payload['reply_markup'] = json.dumps(reply_markup)
+def delete_message(chat_id, message_id):
+    payload = {'chat_id': chat_id, 'message_id': message_id}
     try:
-        requests.post(f"{api_url}/editMessageText", data=payload, timeout=10)
+        requests.post(f"{api_url}/deleteMessage", data=payload, timeout=10)
     except:
         pass
 
@@ -209,10 +207,21 @@ def handle_message(msg):
     user_id = str(msg['from']['id'])
     db = load_db()
 
+    # PRIVATE CHAT LOGIC
     if chat_type == 'private':
         if text.startswith('/start'):
             login_states[chat_id] = {"step": "waiting_username"}
             send_message(chat_id, "👋 Welcome! Let's link your account.\n\n👉 Please enter your **Username**:", parse_mode="Markdown")
+            return
+
+        # NEW UNLINK COMMAND
+        if text.startswith('/unlink'):
+            if user_id in db:
+                del db[user_id]
+                save_db(db)
+                send_message(chat_id, "🔓 **Account Unlinked!**\n\nYou have successfully unlinked your account. To use the bot again, please send `/start` to link.", parse_mode="Markdown")
+            else:
+                send_message(chat_id, "⚠️ You don't have a linked account.")
             return
 
         if chat_id in login_states:
@@ -229,21 +238,22 @@ def handle_message(msg):
                 if verify_client_credentials(username, password):
                     db[user_id] = {"username": username}
                     save_db(db)
-                    send_message(chat_id, f"✅ Account linked successfully!\n\nNow go to the group and tag me to allocate numbers.", parse_mode="Markdown")
+                    send_message(chat_id, f"✅ Account linked successfully!\n\nNow go to the group and type `/add_numbers` to allocate numbers.", parse_mode="Markdown")
                 else:
                     send_message(chat_id, "❌ Incorrect username or password. Please type /start to try again.")
                 del login_states[chat_id]
         return
 
+    # GROUP CHAT LOGIC
     if chat_type in ['group', 'supergroup']:
-        if f"@{BOT_USERNAME}" in text or text.startswith('/start'):
+        if text.startswith('/add_numbers'):
             if user_id not in db:
-                link_markup = {"inline_keyboard": [[{"text": "🔗 Link Account", "url": f"https://t.me/{BOT_USERNAME}?start=link"}]]}
+                link_markup = {"inline_keyboard": [[{"text": "🔗 Link Account", "url": f"https://t.me/{requests.get(f'{api_url}/getMe').json()['result']['username']}?start=link"}]]}
                 send_message(chat_id, f"⚠️ Hello {msg['from']['first_name']}, you need to link your account first.\n\nClick the button below to link in private.", reply_markup=link_markup)
                 return
             
             client_name = db[user_id]['username']
-            send_message(chat_id, f"⏳ Fetching available ranges...", parse_mode="Markdown")
+            send_message(chat_id, f"⏳ Fetching available ranges...")
             
             ranges = get_live_ranges(client_name)
             if not ranges:
@@ -282,7 +292,7 @@ def handle_callback(cb):
         range_name = data.split("|")[1]
         client_name = db[user_id]['username']
         
-        edit_message(chat_id, message_id, f"⏳ Processing allocation for {range_name}...")
+        delete_message(chat_id, message_id)
         
         last_alloc_str = db[user_id].get('last_alloc_time')
         if last_alloc_str:
@@ -330,9 +340,6 @@ def bot_polling():
 # MAIN ENTRY POINT
 # ==========================================
 if __name__ == "__main__":
-    # Start the bot logic in a background thread
     threading.Thread(target=bot_polling, daemon=True).start()
-    
-    # Start the Flask web server for Render
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
