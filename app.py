@@ -214,7 +214,6 @@ def handle_message(msg):
             send_message(chat_id, "👋 Welcome! Let's link your account.\n\n👉 Please enter your **Username**:", parse_mode="Markdown")
             return
 
-        # NEW UNLINK COMMAND
         if text.startswith('/unlink'):
             if user_id in db:
                 del db[user_id]
@@ -236,7 +235,8 @@ def handle_message(msg):
                 
                 send_message(chat_id, "⏳ Verifying with portal...")
                 if verify_client_credentials(username, password):
-                    db[user_id] = {"username": username}
+                    # Initialize empty dict for range limits
+                    db[user_id] = {"username": username, "limits": {}}
                     save_db(db)
                     send_message(chat_id, f"✅ Account linked successfully!\n\nNow go to the group and type `/add_numbers` to allocate numbers.", parse_mode="Markdown")
                 else:
@@ -294,23 +294,27 @@ def handle_callback(cb):
         
         delete_message(chat_id, message_id)
         
-        last_alloc_str = db[user_id].get('last_alloc_time')
+        # CHECK RATE LIMIT SPECIFIC TO THIS RANGE
+        user_limits = db[user_id].get('limits', {})
+        last_alloc_str = user_limits.get(range_name)
+        
         if last_alloc_str:
             last_alloc_time = datetime.fromisoformat(last_alloc_str)
             if datetime.now() < last_alloc_time + timedelta(hours=1):
                 time_left = (last_alloc_time + timedelta(hours=1)) - datetime.now()
                 mins_left = int(time_left.total_seconds() // 60)
                 answer_callback(cb_id, f"⚠️ Rate Limit! Please wait {mins_left} minutes.")
-                send_message(chat_id, f"⚠️ **Rate Limit Reached!**\n\nYou can only allocate 20 numbers per hour. Please wait **{mins_left} minutes**.", parse_mode="Markdown")
+                send_message(chat_id, f"⚠️ **Rate Limit Reached!**\n\nYou can only allocate 20 numbers from **{range_name}** per hour. Please wait **{mins_left} minutes** or choose a different range.", parse_mode="Markdown")
                 return
 
         answer_callback(cb_id, f"⏳ Allocating...")
         success, message = perform_allocation(client_name, range_name)
         
         if success:
-            db[user_id]['last_alloc_time'] = datetime.now().isoformat()
+            # Save the time for THIS specific range
+            db[user_id]['limits'][range_name] = datetime.now().isoformat()
             save_db(db)
-            send_message(chat_id, f"🏷️ {range_name}\n\n{message}\n\n⏳ *Next allocation available in 1 hour.*", parse_mode="Markdown")
+            send_message(chat_id, f"🏷️ {range_name}\n\n{message}\n\n⏳ *Next allocation for this range available in 1 hour.*", parse_mode="Markdown")
         else:
             send_message(chat_id, f"🏷️ {range_name}\n\n{message}", parse_mode="Markdown")
 
