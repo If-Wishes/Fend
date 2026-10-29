@@ -232,7 +232,7 @@ Panel - Mediatel"""
             keyboard.append([{"text": f"📋 Copy OTP ({otp})", "copy_text": {"text": otp}}])
         
         # Add the group link button
-        keyboard.append([{"text": "➕ Add Number", "url": "https://t.me/YOUR_GROUP_LINK"}])
+        keyboard.append([{"text": "➕ Add Number", "url": "https://t.me/+IZ0-S-sBDD9iOGJk"}])
         
         return json.dumps({"inline_keyboard": keyboard})
     
