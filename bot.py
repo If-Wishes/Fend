@@ -6,6 +6,7 @@ from bs4 import BeautifulSoup
 import hashlib
 import html
 import json
+import re
 from collections import deque
 import os
 
@@ -14,17 +15,15 @@ import os
 # ==========================================
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
-        # Respond with 200 OK to any request so Render knows it's alive
         self.send_response(200)
         self.send_header("Content-type", "text/html")
         self.end_headers()
-        self.wfile.write(b"A.MUNTAQA NUMBER BOT is running!")
+        self.wfile.write(b"Bot is running!")
 
     def log_message(self, format, *args):
-        pass  # Silent mode
+        pass
 
 def run_web_server():
-    # Render defaults to port 10000, but checks the PORT env variable
     port = int(os.environ.get("PORT", 10000))
     server = HTTPServer(("0.0.0.0", port), HealthCheckHandler)
     server.serve_forever()
@@ -56,11 +55,9 @@ class SMSPortal:
         return "User name and password needed" not in response.text
     
     def mask_number(self, number):
-        if not number:
-            return "Unknown"
+        if not number: return "Unknown"
         number = number.strip()
-        if len(number) <= 8:
-            return number
+        if len(number) <= 8: return number
         return f"{number[:5]}{'*' * (len(number) - 8)}{number[-3:]}"
     
     def submit_form_and_get_table2(self, form, form_action, form_method, form_data):
@@ -80,13 +77,11 @@ class SMSPortal:
             else:
                 response = self.session.get(submit_url, params=form_data, timeout=30)
             
-            if response.status_code != 200:
-                return []
+            if response.status_code != 200: return []
             
             soup = BeautifulSoup(response.text, 'html.parser')
             tables = soup.find_all('table')
-            if len(tables) < 2:
-                return []
+            if len(tables) < 2: return []
             
             table = tables[1]
             rows = table.find_all('tr')
@@ -106,88 +101,57 @@ class SMSPortal:
                     message_hash = hashlib.md5(message_string.encode()).hexdigest()
                     
                     messages.append({
-                        'hash': message_hash,
-                        'date_time': date_time,
-                        'range': range_name,
-                        'country': country,
-                        'sender': sender,
-                        'receiver': receiver,
-                        'message': message_body
+                        'hash': message_hash, 'date_time': date_time, 'range': range_name,
+                        'country': country, 'sender': sender, 'receiver': receiver, 'message': message_body
                     })
             return messages
         except Exception:
             return []
     
     def get_all_forms_and_submit(self, html_content):
-        if not html_content:
-            return []
-        
+        if not html_content: return []
         soup = BeautifulSoup(html_content, 'html.parser')
         forms = soup.find_all('form')
-        if not forms:
-            return []
+        if not forms: return []
         
         all_messages = []
         for form in forms:
             form_action = form.get('action', '')
             form_method = form.get('method', 'POST').upper()
-            
-            base_form_data = {}
-            for inp in form.find_all('input', type='hidden'):
-                name = inp.get('name')
-                value = inp.get('value', '')
-                if name:
-                    base_form_data[name] = value
+            base_form_data = {inp.get('name'): inp.get('value', '') for inp in form.find_all('input', type='hidden') if inp.get('name')}
             
             selects = form.find_all('select')
             if selects:
                 for select in selects:
                     select_name = select.get('name')
                     if select_name:
-                        options = select.find_all('option')
-                        for option in options:
+                        for option in select.find_all('option'):
                             opt_value = option.get('value', '')
                             if opt_value:
                                 form_data = base_form_data.copy()
                                 form_data[select_name] = opt_value
-                                
                                 submit_btn = form.find(['button', 'input'], type='submit')
-                                if submit_btn:
-                                    btn_name = submit_btn.get('name')
-                                    btn_value = submit_btn.get('value', 'Submit')
-                                    if btn_name:
-                                        form_data[btn_name] = btn_value
-                                
-                                messages = self.submit_form_and_get_table2(form, form_action, form_method, form_data)
-                                all_messages.extend(messages)
+                                if submit_btn and submit_btn.get('name'):
+                                    form_data[submit_btn.get('name')] = submit_btn.get('value', 'Submit')
+                                all_messages.extend(self.submit_form_and_get_table2(form, form_action, form_method, form_data))
             else:
                 submit_btn = form.find(['button', 'input'], type='submit')
-                if submit_btn:
-                    btn_name = submit_btn.get('name')
-                    btn_value = submit_btn.get('value', 'Submit')
-                    if btn_name:
-                        base_form_data[btn_name] = btn_value
-                
-                messages = self.submit_form_and_get_table2(form, form_action, form_method, base_form_data)
-                all_messages.extend(messages)
-        
+                if submit_btn and submit_btn.get('name'):
+                    base_form_data[submit_btn.get('name')] = submit_btn.get('value', 'Submit')
+                all_messages.extend(self.submit_form_and_get_table2(form, form_action, form_method, base_form_data))
         return all_messages
     
     def get_all_messages_from_all_forms(self):
         summary_url = f"{self.base_url}/index.php?opt=shw_sum"
         response = self.session.get(summary_url, timeout=30)
-        
-        if response.status_code != 200:
-            return []
+        if response.status_code != 200: return []
         
         all_messages = []
         soup = BeautifulSoup(response.text, 'html.parser')
         tables = soup.find_all('table')
         
         if len(tables) >= 2:
-            table = tables[1]
-            rows = table.find_all('tr')
-            for row in rows[1:]:
+            for row in tables[1].find_all('tr')[1:]:
                 cells = row.find_all('td')
                 if len(cells) >= 5:
                     date_time = cells[0].get_text(strip=True)
@@ -197,21 +161,14 @@ class SMSPortal:
                     message_body = cells[4].get_text(strip=True)
                     
                     country = range_name.split('-')[0].strip() if '-' in range_name else "Unknown"
-                    message_string = f"{date_time}_{receiver}_{message_body}"
-                    message_hash = hashlib.md5(message_string.encode()).hexdigest()
+                    message_hash = hashlib.md5(f"{date_time}_{receiver}_{message_body}".encode()).hexdigest()
                     
                     all_messages.append({
-                        'hash': message_hash,
-                        'date_time': date_time,
-                        'range': range_name,
-                        'country': country,
-                        'sender': sender,
-                        'receiver': receiver,
-                        'message': message_body
+                        'hash': message_hash, 'date_time': date_time, 'range': range_name,
+                        'country': country, 'sender': sender, 'receiver': receiver, 'message': message_body
                     })
         
-        form_messages = self.get_all_forms_and_submit(response.text)
-        all_messages.extend(form_messages)
+        all_messages.extend(self.get_all_forms_and_submit(response.text))
         
         seen = set()
         unique_messages = []
@@ -223,6 +180,16 @@ class SMSPortal:
         unique_messages.sort(key=lambda x: x['date_time'], reverse=True)
         return unique_messages
     
+    def get_otp(self, message):
+        """Extract numeric OTP from the message body"""
+        if not message: return None
+        # Find all continuous numbers of length 4 to 8 (typical OTP lengths)
+        matches = re.findall(r'\b\d{4,8}\b', message)
+        if matches:
+            # Return the last found number (usually the OTP is at the end)
+            return matches[-1]
+        return None
+
     def format_telegram_message(self, message, is_old=False):
         prefix = "📜 OLD MESSAGE" if is_old else "📨 New SMS Received 🏳️"
         
@@ -255,20 +222,21 @@ class SMSPortal:
 ━━━━━━━━━━━━━━━━━━━━━━
 Panel - Mediatel"""
     
-    def build_developer_keyboard(self):
-        keyboard = {
-            "inline_keyboard": [
-                [
-                    {
-                        "text": "Developer",
-                        "url": "https://t.me/prince_ACTIVE1"
-                    }
-                ]
-            ]
-        }
-        return json.dumps(keyboard)
+    def build_keyboard(self, message_text):
+        """Build inline keyboard with Copy OTP and Add Number buttons"""
+        keyboard = []
+        
+        # Check if there is an OTP in the message
+        otp = self.get_otp(message_text)
+        if otp:
+            keyboard.append([{"text": f"📋 Copy OTP ({otp})", "copy_text": {"text": otp}}])
+        
+        # Add the group link button
+        keyboard.append([{"text": "➕ Add Number", "url": "https://t.me/YOUR_GROUP_LINK"}])
+        
+        return json.dumps({"inline_keyboard": keyboard})
     
-    def send_to_telegram(self, bot_token, chat_id, message, reply_markup=None):
+    def send_to_telegram(self, bot_token, chat_id, message, raw_sms_text=None):
         url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
         payload = {
             'chat_id': chat_id,
@@ -277,8 +245,9 @@ Panel - Mediatel"""
             'disable_web_page_preview': True
         }
         
-        if reply_markup:
-            payload['reply_markup'] = reply_markup
+        # Build dynamic keyboard based on the SMS content
+        if raw_sms_text:
+            payload['reply_markup'] = self.build_keyboard(raw_sms_text)
         
         try:
             response = requests.post(url, data=payload, timeout=10)
@@ -288,16 +257,14 @@ Panel - Mediatel"""
     
     def send_old_messages(self, bot_token, chat_id, count=5):
         all_messages = self.get_all_messages_from_all_forms()
-        if not all_messages:
-            return 0
+        if not all_messages: return 0
         
         last_5_messages = all_messages[:count] if len(all_messages) >= count else all_messages
         sent_count = 0
-        keyboard = self.build_developer_keyboard()
         
         for msg in last_5_messages:
             formatted_msg = self.format_telegram_message(msg, is_old=True)
-            if self.send_to_telegram(bot_token, chat_id, formatted_msg, reply_markup=keyboard):
+            if self.send_to_telegram(bot_token, chat_id, formatted_msg, raw_sms_text=msg['message']):
                 sent_count += 1
                 self.seen_hashes.add(msg['hash'])
             time.sleep(0.5)
@@ -309,7 +276,6 @@ Panel - Mediatel"""
     
     def monitor_all_forms_forever(self, bot_token, chat_id):
         message_buffer = []
-        keyboard = self.build_developer_keyboard()
         
         all_messages = self.get_all_messages_from_all_forms()
         for msg in all_messages:
@@ -333,7 +299,7 @@ Panel - Mediatel"""
                             message_buffer.sort(key=lambda x: x['date_time'])
                             for msg in message_buffer:
                                 formatted_msg = self.format_telegram_message(msg, is_old=False)
-                                self.send_to_telegram(bot_token, chat_id, formatted_msg, reply_markup=keyboard)
+                                self.send_to_telegram(bot_token, chat_id, formatted_msg, raw_sms_text=msg['message'])
                             message_buffer.clear()
                             last_hash = current_hash
                 
@@ -348,24 +314,22 @@ if __name__ == "__main__":
     # ==========================================
     # EDIT YOUR DETAILS HERE 👇
     # ==========================================
-    USERNAME = "5786"            # Your SMS Portal Username
-    PASSWORD = "1134amabdu"           # Your SMS Portal Password
-    BOT_TOKEN = "9089872288:AAH6plkYsJjhL2xwQuOF55-AT-aS_4LWYf0"       # Your Real Telegram Bot Token (e.g. 123456:ABC...)
-    CHAT_ID = "-1004408204768"          # Your Real Telegram Chat ID (e.g. -100123...)
+    USERNAME = "5786"
+    PASSWORD = "1134amabdu"
+    BOT_TOKEN = "9089872288:AAH6plkYsJjhL2xwQuOF55-AT-aS_4LWYf0"
+    CHAT_ID = "-1004408204768"
+    
+    # 👇 PUT YOUR GROUP LINK HERE 👇
+    GROUP_LINK = "https://t.me/+IZ0-S-sBDD9iOGJk" 
     # ==========================================
 
-    # Start the dummy web server in a background thread
-    # (Required for Render Free Tier)
     threading.Thread(target=run_web_server, daemon=True).start()
 
-    # Start the bot
     portal = SMSPortal(USERNAME, PASSWORD)
     
     if portal.login():
         portal.send_old_messages(BOT_TOKEN, CHAT_ID, count=5)
         portal.monitor_all_forms_forever(BOT_TOKEN, CHAT_ID)
     else:
-        # Keep the web server alive even if login fails
-        # to prevent Render from crashing the app
         while True:
             time.sleep(60)
