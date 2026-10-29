@@ -1,0 +1,338 @@
+import os
+import json
+import time
+import threading
+import re
+from datetime import datetime, timedelta
+
+from flask import Flask
+import requests
+from bs4 import BeautifulSoup
+
+# ==========================================
+# CONFIGURATION
+# ==========================================
+BOT_TOKEN = "9136746567:AAEwSv5_eycbVM-sRm2n3-L-Gn1TDf8f_Xg"  # Replace with your real token
+BOT_USERNAME = "feederer_bot"   # Without the @ symbol
+BASE_URL = "https://mysmsportal.com"
+ALLOCATE_QTY = 20
+DB_FILE = "users.json"
+
+ADMIN_USERNAME = "5786"
+ADMIN_PASSWORD = "1134amabdu"
+
+api_url = f"https://api.telegram.org/bot{BOT_TOKEN}"
+login_states = {}
+
+# ==========================================
+# FLASK WEB SERVER (For Render)
+# ==========================================
+app = Flask(__name__)
+
+@app.route('/')
+def health_check():
+    return "Bot is running", 200
+
+# ==========================================
+# DATABASE
+# ==========================================
+def load_db():
+    if os.path.exists(DB_FILE):
+        try:
+            with open(DB_FILE, 'r') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_db(data):
+    with open(DB_FILE, 'w') as f:
+        json.dump(data, f)
+
+# ==========================================
+# TELEGRAM API HELPERS
+# ==========================================
+def send_message(chat_id, text, reply_markup=None, parse_mode=None):
+    payload = {'chat_id': chat_id, 'text': text}
+    if reply_markup: payload['reply_markup'] = json.dumps(reply_markup)
+    if parse_mode: payload['parse_mode'] = parse_mode
+    try:
+        requests.post(f"{api_url}/sendMessage", data=payload, timeout=10)
+    except:
+        pass
+
+def answer_callback(callback_id, text):
+    try:
+        requests.post(f"{api_url}/answerCallbackQuery", data={'callback_query_id': callback_id, 'text': text}, timeout=10)
+    except:
+        pass
+
+def edit_message(chat_id, message_id, text, reply_markup=None):
+    payload = {'chat_id': chat_id, 'message_id': message_id, 'text': text}
+    if reply_markup: payload['reply_markup'] = json.dumps(reply_markup)
+    try:
+        requests.post(f"{api_url}/editMessageText", data=payload, timeout=10)
+    except:
+        pass
+
+# ==========================================
+# PORTAL LOGIC
+# ==========================================
+def get_admin_session():
+    session = requests.Session()
+    session.headers.update({'User-Agent': 'Mozilla/5.0', 'Content-Type': 'application/x-www-form-urlencoded'})
+    session.post(f"{BASE_URL}/index.php?login=1", data={'user': ADMIN_USERNAME, 'password': ADMIN_PASSWORD}, timeout=15)
+    return session
+
+def verify_client_credentials(username, password):
+    session = get_admin_session()
+    res = session.get(f"{BASE_URL}/index.php?opt=shw_mge", timeout=15)
+    soup = BeautifulSoup(res.text, 'html.parser')
+    page_text = soup.get_text(separator=' ', strip=True)
+    
+    match = re.search(r'PASSWORD UPDATE (.*?) Add new client', page_text)
+    if match:
+        data_block = match.group(1)
+        pattern = r'(5786\d{3})\s+([A-Za-z0-9\s\.\-\_]+?)\s+([A-Za-z0-9@\.\!\#\$\%\^\&\*\(\)\-\_]+)'
+        matches = re.findall(pattern, data_block)
+        for m in matches:
+            if m[1].strip().lower() == username.lower() and m[2].strip() == password:
+                return True
+    return False
+
+def get_live_ranges(client_name):
+    session = get_admin_session()
+    allocate_url = f"{BASE_URL}/index.php?opt=shw_all_v2"
+    res = session.get(allocate_url, timeout=15)
+    soup = BeautifulSoup(res.text, 'html.parser')
+    
+    target_select = None
+    target_form = None
+    for select in soup.find_all('select'):
+        options = select.find_all('option')
+        if options and "select client" in options[0].get_text().lower():
+            target_select = select
+            target_form = select.find_parent('form')
+            break
+            
+    if not target_select: return []
+
+    selected_val = None
+    for opt in target_select.find_all('option'):
+        if opt.get_text(strip=True).lower() == client_name.lower():
+            selected_val = opt.get('value', '')
+            break
+            
+    if not selected_val: return []
+
+    form_data = {inp.get('name'): inp.get('value', '') for inp in target_form.find_all('input') if inp.get('name')}
+    form_data[target_select.get('name')] = selected_val
+    submit_btn = target_form.find(['button', 'input'], type='submit')
+    if submit_btn: form_data[submit_btn.get('name')] = submit_btn.get('value', 'Select')
+    
+    res_ranges = session.post(allocate_url, data=form_data, timeout=15)
+    soup_ranges = BeautifulSoup(res_ranges.text, 'html.parser')
+    
+    target_table = next((t for t in soup_ranges.find_all('table') if "HOW MANY" in t.get_text().upper()), None)
+    if not target_table: return []
+
+    ranges = []
+    for tr in target_table.find_all('tr'):
+        cells = tr.find_all(['td', 'th'])
+        if len(cells) >= 6 and "HOW MANY" not in tr.get_text().upper():
+            ranges.append({'name': cells[0].get_text(strip=True)})
+    return ranges
+
+def perform_allocation(client_name, range_name):
+    session = get_admin_session()
+    allocate_url = f"{BASE_URL}/index.php?opt=shw_all_v2"
+    res = session.get(allocate_url, timeout=15)
+    soup = BeautifulSoup(res.text, 'html.parser')
+    
+    target_select = None
+    target_form = None
+    for select in soup.find_all('select'):
+        if "select client" in select.find_all('option')[0].get_text().lower():
+            target_select = select
+            target_form = select.find_parent('form')
+            break
+
+    selected_val = next((opt.get('value') for opt in target_select.find_all('option') if opt.get_text(strip=True).lower() == client_name.lower()), None)
+    if not selected_val: return False, "Client not found"
+
+    form_data = {inp.get('name'): inp.get('value', '') for inp in target_form.find_all('input') if inp.get('name')}
+    form_data[target_select.get('name')] = selected_val
+    submit_btn = target_form.find(['button', 'input'], type='submit')
+    if submit_btn: form_data[submit_btn.get('name')] = submit_btn.get('value', 'Select')
+    
+    res_ranges = session.post(allocate_url, data=form_data, timeout=15)
+    soup_ranges = BeautifulSoup(res_ranges.text, 'html.parser')
+    
+    target_table = next((t for t in soup_ranges.find_all('table') if "HOW MANY" in t.get_text().upper()), None)
+    if not target_table: return False, "Ranges table not found"
+
+    selected_range = None
+    for tr in target_table.find_all('tr'):
+        cells = tr.find_all(['td', 'th'])
+        if len(cells) >= 6 and "HOW MANY" not in tr.get_text().upper():
+            if cells[0].get_text(strip=True) == range_name:
+                selected_range = {'allocated': cells[3].get_text(strip=True), 'form': tr.find('form')}
+                break
+
+    if not selected_range: return False, "Range not found"
+
+    payload = {inp.get('name'): inp.get('value', '') for inp in selected_range['form'].find_all('input', type='hidden') if inp.get('name')}
+    payload['quantity'] = str(ALLOCATE_QTY)
+    action = selected_range['form'].get('action', '')
+    post_url = f"{BASE_URL}/{action}" if action else allocate_url
+
+    final_res = session.post(post_url, data=payload, timeout=15)
+    final_soup = BeautifulSoup(final_res.text, 'html.parser')
+    
+    updated_table = next((t for t in final_soup.find_all('table') if "HOW MANY" in t.get_text().upper()), None)
+    if updated_table:
+        for tr in updated_table.find_all('tr'):
+            cells = tr.find_all(['td', 'th'])
+            if len(cells) >= 6 and "HOW MANY" not in tr.get_text().upper():
+                if cells[0].get_text(strip=True) == range_name:
+                    if int(cells[3].get_text(strip=True)) > int(selected_range['allocated']):
+                        return True, f"✅ Success! Allocated {ALLOCATE_QTY} numbers."
+    return False, "❌ Failed! The count did not increase."
+
+# ==========================================
+# BOT HANDLERS
+# ==========================================
+def handle_message(msg):
+    chat_id = msg['chat']['id']
+    chat_type = msg['chat']['type']
+    text = msg.get('text', '')
+    user_id = str(msg['from']['id'])
+    db = load_db()
+
+    if chat_type == 'private':
+        if text.startswith('/start'):
+            login_states[chat_id] = {"step": "waiting_username"}
+            send_message(chat_id, "👋 Welcome! Let's link your account.\n\n👉 Please enter your **Username**:", parse_mode="Markdown")
+            return
+
+        if chat_id in login_states:
+            state = login_states[chat_id]['step']
+            if state == "waiting_username":
+                login_states[chat_id]['username'] = text
+                login_states[chat_id]['step'] = "waiting_password"
+                send_message(chat_id, "🔑 Got it. Now enter your **Password**:", parse_mode="Markdown")
+            elif state == "waiting_password":
+                username = login_states[chat_id]['username']
+                password = text
+                
+                send_message(chat_id, "⏳ Verifying with portal...")
+                if verify_client_credentials(username, password):
+                    db[user_id] = {"username": username}
+                    save_db(db)
+                    send_message(chat_id, f"✅ Account linked successfully!\n\nNow go to the group and tag me to allocate numbers.", parse_mode="Markdown")
+                else:
+                    send_message(chat_id, "❌ Incorrect username or password. Please type /start to try again.")
+                del login_states[chat_id]
+        return
+
+    if chat_type in ['group', 'supergroup']:
+        if f"@{BOT_USERNAME}" in text or text.startswith('/start'):
+            if user_id not in db:
+                link_markup = {"inline_keyboard": [[{"text": "🔗 Link Account", "url": f"https://t.me/{BOT_USERNAME}?start=link"}]]}
+                send_message(chat_id, f"⚠️ Hello {msg['from']['first_name']}, you need to link your account first.\n\nClick the button below to link in private.", reply_markup=link_markup)
+                return
+            
+            client_name = db[user_id]['username']
+            send_message(chat_id, f"⏳ Fetching available ranges...", parse_mode="Markdown")
+            
+            ranges = get_live_ranges(client_name)
+            if not ranges:
+                send_message(chat_id, "❌ No ranges available or error fetching data.")
+                return
+                
+            keyboard = []
+            current_row = []
+            for i, r in enumerate(ranges):
+                btn_text = f"{i+1}️⃣ {r['name']}"
+                callback_data = f"alloc|{r['name']}"
+                current_row.append({"text": btn_text, "callback_data": callback_data})
+                if len(current_row) == 2:
+                    keyboard.append(current_row)
+                    current_row = []
+            if current_row:
+                keyboard.append(current_row)
+                
+            markup = {"inline_keyboard": keyboard}
+            text_table = f"🏷️ **Available Ranges**\n━━━━━━━━━━━━━━━━━━━━━━\nClick a range below to allocate 20 numbers:"
+            send_message(chat_id, text_table, reply_markup=markup, parse_mode="Markdown")
+
+def handle_callback(cb):
+    cb_id = cb['id']
+    chat_id = cb['message']['chat']['id']
+    message_id = cb['message']['message_id']
+    user_id = str(cb['from']['id'])
+    data = cb['data']
+    
+    db = load_db()
+    if user_id not in db:
+        answer_callback(cb_id, "❌ You need to link your account first!")
+        return
+
+    if data.startswith("alloc|"):
+        range_name = data.split("|")[1]
+        client_name = db[user_id]['username']
+        
+        edit_message(chat_id, message_id, f"⏳ Processing allocation for {range_name}...")
+        
+        last_alloc_str = db[user_id].get('last_alloc_time')
+        if last_alloc_str:
+            last_alloc_time = datetime.fromisoformat(last_alloc_str)
+            if datetime.now() < last_alloc_time + timedelta(hours=1):
+                time_left = (last_alloc_time + timedelta(hours=1)) - datetime.now()
+                mins_left = int(time_left.total_seconds() // 60)
+                answer_callback(cb_id, f"⚠️ Rate Limit! Please wait {mins_left} minutes.")
+                send_message(chat_id, f"⚠️ **Rate Limit Reached!**\n\nYou can only allocate 20 numbers per hour. Please wait **{mins_left} minutes**.", parse_mode="Markdown")
+                return
+
+        answer_callback(cb_id, f"⏳ Allocating...")
+        success, message = perform_allocation(client_name, range_name)
+        
+        if success:
+            db[user_id]['last_alloc_time'] = datetime.now().isoformat()
+            save_db(db)
+            send_message(chat_id, f"🏷️ {range_name}\n\n{message}\n\n⏳ *Next allocation available in 1 hour.*", parse_mode="Markdown")
+        else:
+            send_message(chat_id, f"🏷️ {range_name}\n\n{message}", parse_mode="Markdown")
+
+# ==========================================
+# BOT POLLING LOOP
+# ==========================================
+def bot_polling():
+    last_update_id = None
+    while True:
+        try:
+            params = {'timeout': 15, 'offset': last_update_id}
+            res = requests.get(f"{api_url}/getUpdates", params=params, timeout=20).json()
+            
+            if res.get('ok'):
+                for update in res['result']:
+                    last_update_id = update['update_id'] + 1
+                    if 'message' in update:
+                        handle_message(update['message'])
+                    elif 'callback_query' in update:
+                        handle_callback(update['callback_query'])
+        except requests.exceptions.ReadTimeout:
+            pass
+        except Exception:
+            time.sleep(2)
+
+# ==========================================
+# MAIN ENTRY POINT
+# ==========================================
+if __name__ == "__main__":
+    # Start the bot logic in a background thread
+    threading.Thread(target=bot_polling, daemon=True).start()
+    
+    # Start the Flask web server for Render
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
