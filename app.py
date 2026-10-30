@@ -16,7 +16,6 @@ BOT_TOKEN = "9136746567:AAEwSv5_eycbVM-sRm2n3-L-Gn1TDf8f_Xg"  # Replace with you
 BASE_URL = "https://mysmsportal.com"
 ALLOCATE_QTY = 50         # 50 numbers
 RATE_LIMIT_HOURS = 2      # 2 hours limit
-DEVELOPER_LINK = "https://t.me/prince_ACTIVE1"
 
 ADMIN_USERNAME = "5786"
 ADMIN_PASSWORD = "1134amabdu"
@@ -42,15 +41,10 @@ def health_check():
 # ==========================================
 # TELEGRAM API HELPERS
 # ==========================================
-def get_developer_markup():
-    return {"inline_keyboard": [[{"text": "👨‍💻 Developer", "url": DEVELOPER_LINK}]]}
-
 def send_message(chat_id, text, reply_markup=None, parse_mode=None):
     payload = {'chat_id': chat_id, 'text': text}
     if reply_markup:
         payload['reply_markup'] = json.dumps(reply_markup)
-    else:
-        payload['reply_markup'] = json.dumps(get_developer_markup())
         
     if parse_mode: payload['parse_mode'] = parse_mode
     try:
@@ -220,26 +214,72 @@ def handle_message(msg):
     # 1. GROUP CHAT: Trigger private prompt
     if chat_type in ['group', 'supergroup']:
         if text.startswith('/add_numbers'):
-            private_link = f"https://t.me/{bot_username}?start=add"
+            # THE FIX: Remove the command part and strip spaces
+            username_input = text.replace('/add_numbers', '').strip()
+            
+            # If they didn't provide a username after the command, ask for it
+            if not username_input:
+                send_message(chat_id, "⚠️ Please provide a username.\nUsage: `/add_numbers YourUsername`", parse_mode="Markdown")
+                return
+                
+            private_link = f"https://t.me/{bot_username}?start=add_{username_input}"
             markup = {
                 "inline_keyboard": [
-                    [{"text": "🔒 Enter Username Privately", "url": private_link}],
-                    [{"text": "👨‍💻 Developer", "url": DEVELOPER_LINK}]
+                    [{"text": "🔒 Verify Username Privately", "url": private_link}]
                 ]
             }
             send_message(
                 chat_id, 
-                f"⚠️ {msg['from']['first_name']}, to keep your username hidden from the group, please click the button below to enter it in private.", 
+                f"⚠️ {msg['from']['first_name']}, click the button below to verify your username privately.", 
                 reply_markup=markup
             )
             return
 
-    # 2. PRIVATE CHAT: Enter username
+    # 2. PRIVATE CHAT: Enter username or via Deep Link
     if chat_type == 'private':
         if text.startswith('/start'):
-            login_states[chat_id] = "waiting_username"
-            send_message(chat_id, "👋 Welcome! Please enter your **Username** to fetch your available ranges:", parse_mode="Markdown")
-            return
+            # Check if the user came from the group with a username (e.g. /start add_AMUNTAQA ash)
+            if text.startswith('/start add_'):
+                # Extract the username from the deep link
+                username_input = text.replace('/start add_', '').strip()
+                send_message(chat_id, "⏳ Verifying username...")
+                
+                is_valid, result = verify_client_username(username_input)
+                if is_valid:
+                    client_name = result 
+                    user_profiles[user_id] = client_name 
+                    
+                    send_message(chat_id, f"✅ Username verified!")
+                    
+                    ranges = get_live_ranges(client_name)
+                    if not ranges:
+                        send_message(chat_id, "❌ No ranges available or error fetching data.")
+                        return
+                        
+                    keyboard = []
+                    current_row = []
+                    for i, r in enumerate(ranges):
+                        btn_text = f"{i+1}️⃣ {r['name']}"
+                        callback_data = f"alloc|{r['name']}"
+                        current_row.append({"text": btn_text, "callback_data": callback_data})
+                        if len(current_row) == 2:
+                            keyboard.append(current_row)
+                            current_row = []
+                    if current_row:
+                        keyboard.append(current_row)
+                    
+                    markup = {"inline_keyboard": keyboard}
+                    text_table = f"🏷️ **Available Ranges**\n━━━━━━━━━━━━━━━━━━━━━━\nClick a range below to allocate {ALLOCATE_QTY} numbers:"
+                    send_message(chat_id, text_table, reply_markup=markup, parse_mode="Markdown")
+                else:
+                    send_message(chat_id, f"{result}\n\nPlease type /start to try again.", parse_mode="Markdown")
+                return
+                
+            else:
+                # Normal start
+                login_states[chat_id] = "waiting_username"
+                send_message(chat_id, "👋 Welcome! Please enter your **Username** to fetch your available ranges:", parse_mode="Markdown")
+                return
 
         if chat_id in login_states and login_states[chat_id] == "waiting_username":
             username_input = text.strip()
@@ -269,7 +309,6 @@ def handle_message(msg):
                 if current_row:
                     keyboard.append(current_row)
                 
-                keyboard.append([{"text": "👨‍💻 Developer", "url": DEVELOPER_LINK}])
                 markup = {"inline_keyboard": keyboard}
                 text_table = f"🏷️ **Available Ranges**\n━━━━━━━━━━━━━━━━━━━━━━\nClick a range below to allocate {ALLOCATE_QTY} numbers:"
                 send_message(chat_id, text_table, reply_markup=markup, parse_mode="Markdown")
