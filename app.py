@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 # ==========================================
 # CONFIGURATION
 # ==========================================
-BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"  # Replace with your real token
+BOT_TOKEN = "9136746567:AAEwSv5_eycbVM-sRm2n3-L-Gn1TDf8f_Xg"  # Replace with your real token
 BASE_URL = "https://mysmsportal.com"
 ALLOCATE_QTY = 50         # 50 numbers
 RATE_LIMIT_HOURS = 2      # 2 hours limit
