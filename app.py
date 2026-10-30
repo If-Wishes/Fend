@@ -82,23 +82,29 @@ def verify_client_username(username):
             return False, "❌ Admin session failed."
 
         soup = BeautifulSoup(res.text, 'html.parser')
+        
+        # Flatten the HTML into plain text to bypass broken tables
         page_text = soup.get_text(separator=' ', strip=True)
         
+        # Find the block between "PASSWORD UPDATE" and "Add new client"
         match = re.search(r'PASSWORD UPDATE (.*?) Add new client', page_text)
         if match:
             data_block = match.group(1)
-            pattern = r'(5786\d{3})\s+([A-Za-z0-9\s\.\-\_]+?)\s+([A-Za-z0-9@\.\!\#\$\%\^\&\*\(\)\-\_]+)'
+            
+            # FIXED REGEX: Handles spaces in usernames perfectly
+            pattern = r'(5786\d{3})\s+(.*?)\s+([A-Za-z0-9@\.\!\#\$\%\^\&\*\(\)\-\_]+)(?=\s+5786\d{3}|\s*$)'
+            
             matches = re.findall(pattern, data_block)
             
             for m in matches:
-                db_name = m[1].strip()
+                db_name = m[1].strip()  # The username
                 if db_name.lower() == username.lower():
                     return True, db_name
                     
-            return False, "❌ Username not found."
+        return False, "❌ Username not found."
+            
     except Exception as e:
         return False, f"❌ Network Error: {e}"
-    return False, "❌ Unknown error."
 
 def get_live_ranges(client_name):
     session = get_admin_session()
@@ -214,10 +220,8 @@ def handle_message(msg):
     # 1. GROUP CHAT: Trigger private prompt
     if chat_type in ['group', 'supergroup']:
         if text.startswith('/add_numbers'):
-            # THE FIX: Remove the command part and strip spaces
             username_input = text.replace('/add_numbers', '').strip()
             
-            # If they didn't provide a username after the command, ask for it
             if not username_input:
                 send_message(chat_id, "⚠️ Please provide a username.\nUsage: `/add_numbers YourUsername`", parse_mode="Markdown")
                 return
@@ -238,9 +242,7 @@ def handle_message(msg):
     # 2. PRIVATE CHAT: Enter username or via Deep Link
     if chat_type == 'private':
         if text.startswith('/start'):
-            # Check if the user came from the group with a username (e.g. /start add_AMUNTAQA ash)
             if text.startswith('/start add_'):
-                # Extract the username from the deep link
                 username_input = text.replace('/start add_', '').strip()
                 send_message(chat_id, "⏳ Verifying username...")
                 
@@ -276,7 +278,6 @@ def handle_message(msg):
                 return
                 
             else:
-                # Normal start
                 login_states[chat_id] = "waiting_username"
                 send_message(chat_id, "👋 Welcome! Please enter your **Username** to fetch your available ranges:", parse_mode="Markdown")
                 return
