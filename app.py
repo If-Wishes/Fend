@@ -82,22 +82,16 @@ def verify_client_username(username):
             return False, "❌ Admin session failed."
 
         soup = BeautifulSoup(res.text, 'html.parser')
-        
-        # Flatten the HTML into plain text to bypass broken tables
         page_text = soup.get_text(separator=' ', strip=True)
         
-        # Find the block between "PASSWORD UPDATE" and "Add new client"
         match = re.search(r'PASSWORD UPDATE (.*?) Add new client', page_text)
         if match:
             data_block = match.group(1)
-            
-            # FIXED REGEX: Handles spaces in usernames perfectly
             pattern = r'(5786\d{3})\s+(.*?)\s+([A-Za-z0-9@\.\!\#\$\%\^\&\*\(\)\-\_]+)(?=\s+5786\d{3}|\s*$)'
-            
             matches = re.findall(pattern, data_block)
             
             for m in matches:
-                db_name = m[1].strip()  # The username
+                db_name = m[1].strip()
                 if db_name.lower() == username.lower():
                     return True, db_name
                     
@@ -220,67 +214,27 @@ def handle_message(msg):
     # 1. GROUP CHAT: Trigger private prompt
     if chat_type in ['group', 'supergroup']:
         if text.startswith('/add_numbers'):
-            username_input = text.replace('/add_numbers', '').strip()
-            
-            if not username_input:
-                send_message(chat_id, "⚠️ Please provide a username.\nUsage: `/add_numbers YourUsername`", parse_mode="Markdown")
-                return
-                
-            private_link = f"https://t.me/{bot_username}?start=add_{username_input}"
+            # Direct link to the bot's private chat
+            private_link = f"https://t.me/{bot_username}?start=add"
             markup = {
                 "inline_keyboard": [
-                    [{"text": "🔒 Verify Username Privately", "url": private_link}]
+                    [{"text": "🔒 Enter Username Privately", "url": private_link}]
                 ]
             }
             send_message(
                 chat_id, 
-                f"⚠️ {msg['from']['first_name']}, click the button below to verify your username privately.", 
+                f"⚠️ {msg['from']['first_name']}, to keep your username hidden from the group, please click the button below to enter it in private.", 
                 reply_markup=markup
             )
             return
 
-    # 2. PRIVATE CHAT: Enter username or via Deep Link
+    # 2. PRIVATE CHAT: Enter username
     if chat_type == 'private':
         if text.startswith('/start'):
-            if text.startswith('/start add_'):
-                username_input = text.replace('/start add_', '').strip()
-                send_message(chat_id, "⏳ Verifying username...")
-                
-                is_valid, result = verify_client_username(username_input)
-                if is_valid:
-                    client_name = result 
-                    user_profiles[user_id] = client_name 
-                    
-                    send_message(chat_id, f"✅ Username verified!")
-                    
-                    ranges = get_live_ranges(client_name)
-                    if not ranges:
-                        send_message(chat_id, "❌ No ranges available or error fetching data.")
-                        return
-                        
-                    keyboard = []
-                    current_row = []
-                    for i, r in enumerate(ranges):
-                        btn_text = f"{i+1}️⃣ {r['name']}"
-                        callback_data = f"alloc|{r['name']}"
-                        current_row.append({"text": btn_text, "callback_data": callback_data})
-                        if len(current_row) == 2:
-                            keyboard.append(current_row)
-                            current_row = []
-                    if current_row:
-                        keyboard.append(current_row)
-                    
-                    markup = {"inline_keyboard": keyboard}
-                    text_table = f"🏷️ **Available Ranges**\n━━━━━━━━━━━━━━━━━━━━━━\nClick a range below to allocate {ALLOCATE_QTY} numbers:"
-                    send_message(chat_id, text_table, reply_markup=markup, parse_mode="Markdown")
-                else:
-                    send_message(chat_id, f"{result}\n\nPlease type /start to try again.", parse_mode="Markdown")
-                return
-                
-            else:
-                login_states[chat_id] = "waiting_username"
-                send_message(chat_id, "👋 Welcome! Please enter your **Username** to fetch your available ranges:", parse_mode="Markdown")
-                return
+            # User clicked the "Enter Username Privately" button from the group
+            login_states[chat_id] = "waiting_username"
+            send_message(chat_id, "👋 Welcome! Please enter your **Username** to fetch your available ranges:", parse_mode="Markdown")
+            return
 
         if chat_id in login_states and login_states[chat_id] == "waiting_username":
             username_input = text.strip()
