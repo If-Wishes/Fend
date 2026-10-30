@@ -1,8 +1,8 @@
 import os
-import json
 import time
 import threading
 import re
+import json
 from datetime import datetime, timedelta
 
 from flask import Flask
@@ -12,16 +12,23 @@ from bs4 import BeautifulSoup
 # ==========================================
 # CONFIGURATION
 # ==========================================
-BOT_TOKEN = "9136746567:AAEwSv5_eycbVM-sRm2n3-L-Gn1TDf8f_Xg"  # Replace with your real token
+BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"  # Replace with your real token
 BASE_URL = "https://mysmsportal.com"
-ALLOCATE_QTY = 20
-DB_FILE = "users.json"
+ALLOCATE_QTY = 50         # 50 numbers
+RATE_LIMIT_HOURS = 2      # 2 hours limit
+DEVELOPER_LINK = "https://t.me/prince_ACTIVE1"
 
 ADMIN_USERNAME = "5786"
 ADMIN_PASSWORD = "1134amabdu"
 
 api_url = f"https://api.telegram.org/bot{BOT_TOKEN}"
-login_states = {}
+
+# ==========================================
+# IN-MEMORY STORAGE (Resets on restart)
+# ==========================================
+login_states = {}         # {chat_id: "waiting_username"}
+user_limits = {}          # {user_id: {range_name: timestamp}}
+user_profiles = {}        # {user_id: "username"} - Memory only
 
 # ==========================================
 # FLASK WEB SERVER (For Render)
@@ -33,27 +40,18 @@ def health_check():
     return "Bot is running", 200
 
 # ==========================================
-# DATABASE
-# ==========================================
-def load_db():
-    if os.path.exists(DB_FILE):
-        try:
-            with open(DB_FILE, 'r') as f:
-                return json.load(f)
-        except:
-            return {}
-    return {}
-
-def save_db(data):
-    with open(DB_FILE, 'w') as f:
-        json.dump(data, f)
-
-# ==========================================
 # TELEGRAM API HELPERS
 # ==========================================
+def get_developer_markup():
+    return {"inline_keyboard": [[{"text": "👨‍💻 Developer", "url": DEVELOPER_LINK}]]}
+
 def send_message(chat_id, text, reply_markup=None, parse_mode=None):
     payload = {'chat_id': chat_id, 'text': text}
-    if reply_markup: payload['reply_markup'] = json.dumps(reply_markup)
+    if reply_markup:
+        payload['reply_markup'] = json.dumps(reply_markup)
+    else:
+        payload['reply_markup'] = json.dumps(get_developer_markup())
+        
     if parse_mode: payload['parse_mode'] = parse_mode
     try:
         requests.post(f"{api_url}/sendMessage", data=payload, timeout=10)
@@ -82,21 +80,31 @@ def get_admin_session():
     session.post(f"{BASE_URL}/index.php?login=1", data={'user': ADMIN_USERNAME, 'password': ADMIN_PASSWORD}, timeout=15)
     return session
 
-def verify_client_credentials(username, password):
+def verify_client_username(username):
     session = get_admin_session()
-    res = session.get(f"{BASE_URL}/index.php?opt=shw_mge", timeout=15)
-    soup = BeautifulSoup(res.text, 'html.parser')
-    page_text = soup.get_text(separator=' ', strip=True)
-    
-    match = re.search(r'PASSWORD UPDATE (.*?) Add new client', page_text)
-    if match:
-        data_block = match.group(1)
-        pattern = r'(5786\d{3})\s+([A-Za-z0-9\s\.\-\_]+?)\s+([A-Za-z0-9@\.\!\#\$\%\^\&\*\(\)\-\_]+)'
-        matches = re.findall(pattern, data_block)
-        for m in matches:
-            if m[1].strip().lower() == username.lower() and m[2].strip() == password:
-                return True
-    return False
+    try:
+        res = session.get(f"{BASE_URL}/index.php?opt=shw_mge", timeout=15)
+        if "User name and password needed" in res.text:
+            return False, "❌ Admin session failed."
+
+        soup = BeautifulSoup(res.text, 'html.parser')
+        page_text = soup.get_text(separator=' ', strip=True)
+        
+        match = re.search(r'PASSWORD UPDATE (.*?) Add new client', page_text)
+        if match:
+            data_block = match.group(1)
+            pattern = r'(5786\d{3})\s+([A-Za-z0-9\s\.\-\_]+?)\s+([A-Za-z0-9@\.\!\#\$\%\^\&\*\(\)\-\_]+)'
+            matches = re.findall(pattern, data_block)
+            
+            for m in matches:
+                db_name = m[1].strip()
+                if db_name.lower() == username.lower():
+                    return True, db_name
+                    
+            return False, "❌ Username not found."
+    except Exception as e:
+        return False, f"❌ Network Error: {e}"
+    return False, "❌ Unknown error."
 
 def get_live_ranges(client_name):
     session = get_admin_session()
@@ -205,76 +213,71 @@ def handle_message(msg):
     chat_type = msg['chat']['type']
     text = msg.get('text', '')
     user_id = str(msg['from']['id'])
-    db = load_db()
+    
+    bot_info = requests.get(f'{api_url}/getMe').json()
+    bot_username = bot_info['result']['username']
 
-    # PRIVATE CHAT LOGIC
-    if chat_type == 'private':
-        if text.startswith('/start'):
-            login_states[chat_id] = {"step": "waiting_username"}
-            send_message(chat_id, "👋 Welcome! Let's link your account.\n\n👉 Please enter your **Username**:", parse_mode="Markdown")
-            return
-
-        if text.startswith('/unlink'):
-            if user_id in db:
-                del db[user_id]
-                save_db(db)
-                send_message(chat_id, "🔓 **Account Unlinked!**\n\nYou have successfully unlinked your account. To use the bot again, please send `/start` to link.", parse_mode="Markdown")
-            else:
-                send_message(chat_id, "⚠️ You don't have a linked account.")
-            return
-
-        if chat_id in login_states:
-            state = login_states[chat_id]['step']
-            if state == "waiting_username":
-                login_states[chat_id]['username'] = text
-                login_states[chat_id]['step'] = "waiting_password"
-                send_message(chat_id, "🔑 Got it. Now enter your **Password**:", parse_mode="Markdown")
-            elif state == "waiting_password":
-                username = login_states[chat_id]['username']
-                password = text
-                
-                send_message(chat_id, "⏳ Verifying with portal...")
-                if verify_client_credentials(username, password):
-                    # Initialize empty dict for range limits
-                    db[user_id] = {"username": username, "limits": {}}
-                    save_db(db)
-                    send_message(chat_id, f"✅ Account linked successfully!\n\nNow go to the group and type `/add_numbers` to allocate numbers.", parse_mode="Markdown")
-                else:
-                    send_message(chat_id, "❌ Incorrect username or password. Please type /start to try again.")
-                del login_states[chat_id]
-        return
-
-    # GROUP CHAT LOGIC
+    # 1. GROUP CHAT: Trigger private prompt
     if chat_type in ['group', 'supergroup']:
         if text.startswith('/add_numbers'):
-            if user_id not in db:
-                link_markup = {"inline_keyboard": [[{"text": "🔗 Link Account", "url": f"https://t.me/{requests.get(f'{api_url}/getMe').json()['result']['username']}?start=link"}]]}
-                send_message(chat_id, f"⚠️ Hello {msg['from']['first_name']}, you need to link your account first.\n\nClick the button below to link in private.", reply_markup=link_markup)
-                return
+            private_link = f"https://t.me/{bot_username}?start=add"
+            markup = {
+                "inline_keyboard": [
+                    [{"text": "🔒 Enter Username Privately", "url": private_link}],
+                    [{"text": "👨‍💻 Developer", "url": DEVELOPER_LINK}]
+                ]
+            }
+            send_message(
+                chat_id, 
+                f"⚠️ {msg['from']['first_name']}, to keep your username hidden from the group, please click the button below to enter it in private.", 
+                reply_markup=markup
+            )
+            return
+
+    # 2. PRIVATE CHAT: Enter username
+    if chat_type == 'private':
+        if text.startswith('/start'):
+            login_states[chat_id] = "waiting_username"
+            send_message(chat_id, "👋 Welcome! Please enter your **Username** to fetch your available ranges:", parse_mode="Markdown")
+            return
+
+        if chat_id in login_states and login_states[chat_id] == "waiting_username":
+            username_input = text.strip()
+            send_message(chat_id, "⏳ Verifying username...")
             
-            client_name = db[user_id]['username']
-            send_message(chat_id, f"⏳ Fetching available ranges...")
-            
-            ranges = get_live_ranges(client_name)
-            if not ranges:
-                send_message(chat_id, "❌ No ranges available or error fetching data.")
-                return
+            is_valid, result = verify_client_username(username_input)
+            if is_valid:
+                client_name = result 
+                user_profiles[user_id] = client_name 
                 
-            keyboard = []
-            current_row = []
-            for i, r in enumerate(ranges):
-                btn_text = f"{i+1}️⃣ {r['name']}"
-                callback_data = f"alloc|{r['name']}"
-                current_row.append({"text": btn_text, "callback_data": callback_data})
-                if len(current_row) == 2:
+                send_message(chat_id, f"✅ Username verified!")
+                
+                ranges = get_live_ranges(client_name)
+                if not ranges:
+                    send_message(chat_id, "❌ No ranges available or error fetching data.")
+                    return
+                    
+                keyboard = []
+                current_row = []
+                for i, r in enumerate(ranges):
+                    btn_text = f"{i+1}️⃣ {r['name']}"
+                    callback_data = f"alloc|{r['name']}"
+                    current_row.append({"text": btn_text, "callback_data": callback_data})
+                    if len(current_row) == 2:
+                        keyboard.append(current_row)
+                        current_row = []
+                if current_row:
                     keyboard.append(current_row)
-                    current_row = []
-            if current_row:
-                keyboard.append(current_row)
                 
-            markup = {"inline_keyboard": keyboard}
-            text_table = f"🏷️ **Available Ranges**\n━━━━━━━━━━━━━━━━━━━━━━\nClick a range below to allocate 20 numbers:"
-            send_message(chat_id, text_table, reply_markup=markup, parse_mode="Markdown")
+                keyboard.append([{"text": "👨‍💻 Developer", "url": DEVELOPER_LINK}])
+                markup = {"inline_keyboard": keyboard}
+                text_table = f"🏷️ **Available Ranges**\n━━━━━━━━━━━━━━━━━━━━━━\nClick a range below to allocate {ALLOCATE_QTY} numbers:"
+                send_message(chat_id, text_table, reply_markup=markup, parse_mode="Markdown")
+            else:
+                send_message(chat_id, f"{result}\n\nPlease send /start to try again.", parse_mode="Markdown")
+            
+            del login_states[chat_id]
+        return
 
 def handle_callback(cb):
     cb_id = cb['id']
@@ -283,38 +286,36 @@ def handle_callback(cb):
     user_id = str(cb['from']['id'])
     data = cb['data']
     
-    db = load_db()
-    if user_id not in db:
-        answer_callback(cb_id, "❌ You need to link your account first!")
-        return
-
     if data.startswith("alloc|"):
         range_name = data.split("|")[1]
-        client_name = db[user_id]['username']
+        
+        if user_id not in user_profiles:
+            answer_callback(cb_id, "❌ Session expired. Please type /start.")
+            return
+            
+        client_name = user_profiles[user_id]
         
         delete_message(chat_id, message_id)
         
-        # CHECK RATE LIMIT SPECIFIC TO THIS RANGE
-        user_limits = db[user_id].get('limits', {})
-        last_alloc_str = user_limits.get(range_name)
-        
+        if user_id not in user_limits:
+            user_limits[user_id] = {}
+            
+        last_alloc_str = user_limits[user_id].get(range_name)
         if last_alloc_str:
             last_alloc_time = datetime.fromisoformat(last_alloc_str)
-            if datetime.now() < last_alloc_time + timedelta(hours=1):
-                time_left = (last_alloc_time + timedelta(hours=1)) - datetime.now()
+            if datetime.now() < last_alloc_time + timedelta(hours=RATE_LIMIT_HOURS):
+                time_left = (last_alloc_time + timedelta(hours=RATE_LIMIT_HOURS)) - datetime.now()
                 mins_left = int(time_left.total_seconds() // 60)
                 answer_callback(cb_id, f"⚠️ Rate Limit! Please wait {mins_left} minutes.")
-                send_message(chat_id, f"⚠️ **Rate Limit Reached!**\n\nYou can only allocate 20 numbers from **{range_name}** per hour. Please wait **{mins_left} minutes** or choose a different range.", parse_mode="Markdown")
+                send_message(chat_id, f"⚠️ **Rate Limit Reached!**\n\nYou can only allocate {ALLOCATE_QTY} numbers from **{range_name}** every {RATE_LIMIT_HOURS} hours. Please wait **{mins_left} minutes** or choose a different range.", parse_mode="Markdown")
                 return
 
         answer_callback(cb_id, f"⏳ Allocating...")
         success, message = perform_allocation(client_name, range_name)
         
         if success:
-            # Save the time for THIS specific range
-            db[user_id]['limits'][range_name] = datetime.now().isoformat()
-            save_db(db)
-            send_message(chat_id, f"🏷️ {range_name}\n\n{message}\n\n⏳ *Next allocation for this range available in 1 hour.*", parse_mode="Markdown")
+            user_limits[user_id][range_name] = datetime.now().isoformat()
+            send_message(chat_id, f"🏷️ {range_name}\n\n{message}\n\n⏳ *Next allocation for this range available in {RATE_LIMIT_HOURS} hours.*", parse_mode="Markdown")
         else:
             send_message(chat_id, f"🏷️ {range_name}\n\n{message}", parse_mode="Markdown")
 
