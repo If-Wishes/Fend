@@ -12,7 +12,7 @@ import os
 from datetime import datetime
 
 # ==========================================
-# 1. THE WEB SERVER (Satisfies Render's Port Requirement)
+# 1. THE WEB SERVER
 # ==========================================
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -298,7 +298,7 @@ Panel - Mediatel"""
                 time.sleep(0.005)
 
 # ==========================================
-# 3. CHOICE SMS MONITOR (NEW)
+# 3. CHOICE SMS MONITOR (FIXED DUPLICATES)
 # ==========================================
 CHOICE_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -311,6 +311,7 @@ choice_sesskey = None
 choice_last_sesskey_fetch = 0
 choice_server_date = None
 choice_seen_messages = set()
+recently_sent = deque(maxlen=50) # Memory buffer to prevent duplicates
 
 def choice_solve_captcha(html_text):
     text = re.sub(r"<[^>]+>", " ", html_text)
@@ -452,7 +453,7 @@ def choice_send_to_telegram(bot_token, chat_id, message, raw_sms_text=None):
         pass
 
 def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, post_url, report_url):
-    global choice_sesskey, choice_server_date, choice_seen_messages
+    global choice_sesskey, choice_server_date, choice_seen_messages, recently_sent
     time.sleep(3) 
     session = None
     while not session:
@@ -460,23 +461,19 @@ def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, 
         if not session:
             time.sleep(10)
 
-    # 1. Fetch the last 100 messages to populate the seen list
     messages = choice_fetch_messages(session, base_url, report_url, limit=100)
     
     if messages:
-        # 2. Send the last 5 (simulate old messages)
         last_5 = messages[:5]
-        # Reverse to send oldest of the 5 first
         for msg in reversed(last_5):
             formatted = choice_format_message(msg, is_old=True)
             choice_send_to_telegram(bot_token, chat_id, formatted, raw_sms_text=msg['sms'])
-            time.sleep(1) # Small delay between messages
+            time.sleep(1)
+            recently_sent.append((msg["timestamp"], msg["sms"]))
             
-        # 3. Mark ALL 100 as seen so they don't trigger "NEW" again
         for msg in messages:
             choice_seen_messages.add((msg["timestamp"], msg["sms"]))
 
-    # 4. Start the live watcher loop
     while True:
         try:
             messages = choice_fetch_messages(session, base_url, report_url, limit=10)
@@ -488,8 +485,12 @@ def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, 
             if messages:
                 for msg in reversed(messages):
                     fingerprint = (msg["timestamp"], msg["sms"])
-                    if fingerprint not in choice_seen_messages:
+                    
+                    # DOUBLE CHECK: Don't send if it's already in the recent buffer
+                    if fingerprint not in choice_seen_messages and fingerprint not in recently_sent:
                         choice_seen_messages.add(fingerprint)
+                        recently_sent.append(fingerprint)
+                        
                         formatted = choice_format_message(msg, is_old=False)
                         choice_send_to_telegram(bot_token, chat_id, formatted, raw_sms_text=msg['sms'])
             time.sleep(2) 
@@ -505,27 +506,21 @@ if __name__ == "__main__":
     # ==========================================
     # EDIT YOUR DETAILS HERE 👇
     # ==========================================
-    # Mediatel Login
     MEDIATEL_USERNAME = "5786"
     MEDIATEL_PASSWORD = "1134amabdu"
     
-    # Choice SMS Login
     CHOICE_USERNAME = "Joker5968"
     CHOICE_PASSWORD = "Joker5968"
     
-    # Bot & Group
     BOT_TOKEN = "9089872288:AAH6plkYsJjhL2xwQuOF55-AT-aS_4LWYf0"
     MEDIATEL_CHAT_ID = "-1004408204768"
-    CHOICE_CHAT_ID = "-1004408204768"  # Change if you want Choice in a different group
+    CHOICE_CHAT_ID = "-1004408204768" 
     
-    # 👇 PUT YOUR GROUP LINK HERE 👇
     GROUP_LINK = "https://t.me/+IZ0-S-sBDD9iOGJk"
     # ==========================================
 
-    # Start web server
     threading.Thread(target=run_web_server, daemon=True).start()
 
-    # Start Mediatel Monitor
     mediatel_portal = SMSPortal(MEDIATEL_USERNAME, MEDIATEL_PASSWORD)
     if mediatel_portal.login():
         threading.Thread(
@@ -536,7 +531,6 @@ if __name__ == "__main__":
             daemon=True
         ).start()
     
-    # Start Choice SMS Monitor
     threading.Thread(
         target=choice_monitor,
         args=(
@@ -550,6 +544,5 @@ if __name__ == "__main__":
         daemon=True
     ).start()
 
-    # Keep main thread alive
     while True:
         time.sleep(60)
