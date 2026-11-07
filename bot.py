@@ -9,6 +9,7 @@ import json
 import re
 from collections import deque
 import os
+from datetime import datetime
 
 # ==========================================
 # 1. THE WEB SERVER (Satisfies Render's Port Requirement)
@@ -29,7 +30,7 @@ def run_web_server():
     server.serve_forever()
 
 # ==========================================
-# 2. THE SMS BOT LOGIC
+# 2. THE SMS BOT LOGIC (MEDIATEL)
 # ==========================================
 class SMSPortal:
     def __init__(self, username, password):
@@ -181,12 +182,9 @@ class SMSPortal:
         return unique_messages
     
     def get_otp(self, message):
-        """Extract numeric OTP from the message body"""
         if not message: return None
-        # Find all continuous numbers of length 4 to 8 (typical OTP lengths)
         matches = re.findall(r'\b\d{4,8}\b', message)
         if matches:
-            # Return the last found number (usually the OTP is at the end)
             return matches[-1]
         return None
 
@@ -223,17 +221,11 @@ class SMSPortal:
 Panel - Mediatel"""
     
     def build_keyboard(self, message_text):
-        """Build inline keyboard with Copy OTP and Add Number buttons"""
         keyboard = []
-        
-        # Check if there is an OTP in the message
         otp = self.get_otp(message_text)
         if otp:
             keyboard.append([{"text": f"📋 Copy OTP ({otp})", "copy_text": {"text": otp}}])
-        
-        # Add the group link button
-        keyboard.append([{"text": "➕ Add Number", "url": "https://t.me/+IZ0-S-sBDD9iOGJk"}])
-        
+        keyboard.append([{"text": "➕ Add Number", "url": GROUP_LINK}])
         return json.dumps({"inline_keyboard": keyboard})
     
     def send_to_telegram(self, bot_token, chat_id, message, raw_sms_text=None):
@@ -245,7 +237,6 @@ Panel - Mediatel"""
             'disable_web_page_preview': True
         }
         
-        # Build dynamic keyboard based on the SMS content
         if raw_sms_text:
             payload['reply_markup'] = self.build_keyboard(raw_sms_text)
         
@@ -276,7 +267,6 @@ Panel - Mediatel"""
     
     def monitor_all_forms_forever(self, bot_token, chat_id):
         message_buffer = []
-        
         all_messages = self.get_all_messages_from_all_forms()
         for msg in all_messages:
             self.seen_hashes.add(msg['hash'])
@@ -308,28 +298,258 @@ Panel - Mediatel"""
                 time.sleep(0.005)
 
 # ==========================================
-# 3. MAIN EXECUTION
+# 3. CHOICE SMS MONITOR (NEW)
+# ==========================================
+CHOICE_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                  "AppleWebKit/537.36 (KHTML, like Gecko) "
+                  "Chrome/120.0.0.0 Safari/537.36",
+    "Connection": "keep-alive",
+}
+
+choice_sesskey = None
+choice_last_sesskey_fetch = 0
+choice_server_date = None
+choice_seen_messages = set()
+
+def choice_solve_captcha(html_text):
+    text = re.sub(r"<[^>]+>", " ", html_text)
+    text = text.replace("&plus;", "+").replace("&#43;", "+")
+    m = re.search(r"What\s+is\s+(\d+)\s*\+\s*(\d+)", text, re.I)
+    return str(int(m.group(1)) + int(m.group(2))) if m else None
+
+def choice_login(username, password, base_url, login_url, post_url):
+    session = requests.Session()
+    session.headers.update(CHOICE_HEADERS)
+    try:
+        r = session.get(login_url, timeout=15)
+        answer = choice_solve_captcha(r.text)
+        if not answer: return None
+        payload = {"username": username, "password": password, "capt": answer}
+        lr = session.post(post_url, data=payload, allow_redirects=True, timeout=15)
+        if "dashboard" not in lr.url.lower() and "/agent/" not in lr.url.lower(): return None
+        return session
+    except:
+        return None
+
+def choice_get_session_info(session, report_url):
+    global choice_sesskey, choice_last_sesskey_fetch, choice_server_date
+    if time.time() - choice_last_sesskey_fetch < 600 and choice_sesskey:
+        return choice_sesskey
+    try:
+        r = session.get(report_url, timeout=15)
+        match = re.search(r"sesskey=([a-f0-9]+)", r.text)
+        if match:
+            choice_sesskey = match.group(1)
+            choice_last_sesskey_fetch = time.time()
+        date_match = re.search(r'value="(\d{4}-\d{2}-\d{2})\s+\d{2}:\d{2}:\d{2}"', r.text)
+        if date_match:
+            choice_server_date = date_match.group(1)
+    except:
+        pass
+    return choice_sesskey
+
+def choice_fetch_messages(session, base_url, report_url, limit=100):
+    global choice_sesskey, choice_server_date
+    try:
+        current_sesskey = choice_get_session_info(session, report_url)
+        if not current_sesskey:
+            return None 
+
+        if not choice_server_date:
+            choice_server_date = datetime.now().strftime("%Y-%m-%d")
+
+        start_date = f"{choice_server_date} 00:00:00"
+        end_date = f"{choice_server_date} 23:59:59"
+
+        url = f"{base_url}/ints/agent/res/data_smscdr.php"
+        params = {
+            "fdate1": start_date, "fdate2": end_date, 
+            "frange": "", "fclient": "", "fnum": "", "fcli": "",
+            "fgdate": "", "fgmonth": "", "fgrange": "", "fgclient": "", "fgnumber": "", "fgcli": "",
+            "fg": "0", "sesskey": current_sesskey, "sEcho": "1", "iDisplayStart": "0",
+            "iDisplayLength": str(limit), "iSortCol_0": "0", "sSortDir_0": "desc",
+            "_": str(int(time.time() * 1000))
+        }
+        headers = {
+            **CHOICE_HEADERS,
+            "X-Requested-With": "XMLHttpRequest",
+            "Referer": report_url,
+            "Accept": "application/json, text/javascript, */*; q=0.01",
+            "Cache-Control": "no-cache", "Pragma": "no-cache"
+        }
+        data_resp = session.get(url, params=params, headers=headers, timeout=10)
+        if data_resp.status_code != 200: return []
+
+        data = data_resp.json()
+        rows = data.get("aaData", [])
+        messages = []
+        for row in rows:
+            if not row or not row[0] or not re.match(r"\d{4}-\d{2}-\d{2}", str(row[0])):
+                continue
+            try:
+                msg_time = datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S")
+                messages.append({
+                    "number": row[2], "cli": row[3], "range": row[1], "sms": row[5], "timestamp": msg_time 
+                })
+            except:
+                pass
+        messages.sort(key=lambda x: x["timestamp"], reverse=True)
+        return messages
+    except:
+        return []
+
+def choice_mask_number(num):
+    num = str(num).strip()
+    if len(num) > 7:
+        return num[:4] + "*" * (len(num) - 7) + num[-3:]
+    return num
+
+def choice_format_message(msg, is_old=False):
+    t_str = msg["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
+    masked_num = choice_mask_number(msg["number"])
+    message_lines = str(msg['sms']).split('\n')
+    quoted_lines = '\n'.join(
+        f"<blockquote>{html.escape(line)}</blockquote>"
+        for line in message_lines if line.strip() != ""
+    )
+    
+    prefix = "📜 OLD MESSAGE" if is_old else "📨 New SMS Received 🏳️"
+    
+    return f"""🏷️ <b>CHOICE PANEL</b> 🏷️
+━━━━━━━━━━━━━━━━━━━━━━
+{prefix}
+━━━━━━━━━━━━━━━━━━━━━━
+<blockquote>📱 Number: {masked_num}</blockquote>
+<blockquote>📌 Sender: ❓ {msg['cli']}</blockquote>
+<blockquote>📅 Date/Time: {t_str}</blockquote>
+<blockquote>🌐 Range: {msg['range']}</blockquote>
+━━━━━━━━━━━━━━━━━━━━━━
+💬 Message:
+{quoted_lines}
+━━━━━━━━━━━━━━━━━━━━━━
+Panel - Choice"""
+
+def choice_send_to_telegram(bot_token, chat_id, message, raw_sms_text=None):
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {
+        'chat_id': chat_id,
+        'text': message,
+        'parse_mode': 'HTML',
+        'disable_web_page_preview': True
+    }
+    if raw_sms_text:
+        keyboard = []
+        otp_matches = re.findall(r'\b\d{4,8}\b', str(raw_sms_text))
+        if otp_matches:
+            keyboard.append([{"text": f"📋 Copy OTP ({otp_matches[-1]})", "copy_text": {"text": otp_matches[-1]}}])
+        keyboard.append([{"text": "➕ Add Number", "url": GROUP_LINK}])
+        payload['reply_markup'] = json.dumps({"inline_keyboard": keyboard})
+    
+    try:
+        requests.post(url, data=payload, timeout=10)
+    except:
+        pass
+
+def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, post_url, report_url):
+    global choice_sesskey, choice_server_date, choice_seen_messages
+    time.sleep(3) 
+    session = None
+    while not session:
+        session = choice_login(username, password, base_url, login_url, post_url)
+        if not session:
+            time.sleep(10)
+
+    # 1. Fetch the last 100 messages to populate the seen list
+    messages = choice_fetch_messages(session, base_url, report_url, limit=100)
+    
+    if messages:
+        # 2. Send the last 5 (simulate old messages)
+        last_5 = messages[:5]
+        # Reverse to send oldest of the 5 first
+        for msg in reversed(last_5):
+            formatted = choice_format_message(msg, is_old=True)
+            choice_send_to_telegram(bot_token, chat_id, formatted, raw_sms_text=msg['sms'])
+            time.sleep(1) # Small delay between messages
+            
+        # 3. Mark ALL 100 as seen so they don't trigger "NEW" again
+        for msg in messages:
+            choice_seen_messages.add((msg["timestamp"], msg["sms"]))
+
+    # 4. Start the live watcher loop
+    while True:
+        try:
+            messages = choice_fetch_messages(session, base_url, report_url, limit=10)
+            if messages is None:
+                session = choice_login(username, password, base_url, login_url, post_url)
+                if not session: time.sleep(10)
+                continue
+
+            if messages:
+                for msg in reversed(messages):
+                    fingerprint = (msg["timestamp"], msg["sms"])
+                    if fingerprint not in choice_seen_messages:
+                        choice_seen_messages.add(fingerprint)
+                        formatted = choice_format_message(msg, is_old=False)
+                        choice_send_to_telegram(bot_token, chat_id, formatted, raw_sms_text=msg['sms'])
+            time.sleep(2) 
+        except requests.exceptions.ConnectionError:
+            time.sleep(5)
+        except Exception:
+            time.sleep(5)
+
+# ==========================================
+# 4. MAIN EXECUTION
 # ==========================================
 if __name__ == "__main__":
     # ==========================================
     # EDIT YOUR DETAILS HERE 👇
     # ==========================================
-    USERNAME = "5786"
-    PASSWORD = "1134amabdu"
+    # Mediatel Login
+    MEDIATEL_USERNAME = "5786"
+    MEDIATEL_PASSWORD = "1134amabdu"
+    
+    # Choice SMS Login
+    CHOICE_USERNAME = "Joker5968"
+    CHOICE_PASSWORD = "Joker5968"
+    
+    # Bot & Group
     BOT_TOKEN = "9089872288:AAH6plkYsJjhL2xwQuOF55-AT-aS_4LWYf0"
-    CHAT_ID = "-1004408204768"
+    MEDIATEL_CHAT_ID = "-1004408204768"
+    CHOICE_CHAT_ID = "-1004408204768"  # Change if you want Choice in a different group
     
     # 👇 PUT YOUR GROUP LINK HERE 👇
-    GROUP_LINK = "https://t.me/+IZ0-S-sBDD9iOGJk" 
+    GROUP_LINK = "https://t.me/+IZ0-S-sBDD9iOGJk"
     # ==========================================
 
+    # Start web server
     threading.Thread(target=run_web_server, daemon=True).start()
 
-    portal = SMSPortal(USERNAME, PASSWORD)
+    # Start Mediatel Monitor
+    mediatel_portal = SMSPortal(MEDIATEL_USERNAME, MEDIATEL_PASSWORD)
+    if mediatel_portal.login():
+        threading.Thread(
+            target=lambda: (
+                mediatel_portal.send_old_messages(BOT_TOKEN, MEDIATEL_CHAT_ID, count=5),
+                mediatel_portal.monitor_all_forms_forever(BOT_TOKEN, MEDIATEL_CHAT_ID)
+            ),
+            daemon=True
+        ).start()
     
-    if portal.login():
-        portal.send_old_messages(BOT_TOKEN, CHAT_ID, count=5)
-        portal.monitor_all_forms_forever(BOT_TOKEN, CHAT_ID)
-    else:
-        while True:
-            time.sleep(60)
+    # Start Choice SMS Monitor
+    threading.Thread(
+        target=choice_monitor,
+        args=(
+            BOT_TOKEN, CHOICE_CHAT_ID, 
+            CHOICE_USERNAME, CHOICE_PASSWORD,
+            "http://51.77.52.79", 
+            "http://51.77.52.79/ints/", 
+            "http://51.77.52.79/ints/signin", 
+            "http://51.77.52.79/ints/agent/SMSCDRReports"
+        ),
+        daemon=True
+    ).start()
+
+    # Keep main thread alive
+    while True:
+        time.sleep(60)
