@@ -12,7 +12,7 @@ import os
 from datetime import datetime
 
 # ==========================================
-# 1. THE WEB SERVER (Satisfies Render's Port Requirement)
+# 1. THE WEB SERVER
 # ==========================================
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -30,17 +30,68 @@ def run_web_server():
     server.serve_forever()
 
 # ==========================================
-# 2. THE SMS BOT LOGIC (MEDIATEL) - ORIGINAL CODE
+# UNIVERSAL SAFE TELEGRAM SENDER
 # ==========================================
+def send_telegram_safe(bot_token, chat_id, message, raw_sms_text=None):
+    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
+    payload = {
+        'chat_id': chat_id,
+        'text': message,
+        'parse_mode': 'HTML',
+        'disable_web_page_preview': True
+    }
+    
+    if raw_sms_text:
+        keyboard = []
+        otp_matches = re.findall(r'\b\d{4,8}\b', str(raw_sms_text))
+        if otp_matches:
+            keyboard.append([{"text": f"📋 Copy OTP ({otp_matches[-1]})", "copy_text": {"text": otp_matches[-1]}}])
+        keyboard.append([{"text": "➕ Add Number", "url": GROUP_LINK}])
+        payload['reply_markup'] = json.dumps({"inline_keyboard": keyboard})
+    
+    while True:
+        try:
+            res = requests.post(url, data=payload, timeout=10)
+            if res.status_code == 200:
+                return True
+            
+            if res.status_code == 429:
+                retry_after = res.json().get('parameters', {}).get('retry_after', 5)
+                print(f"⚠️ Telegram rate limit hit. Waiting {retry_after} seconds...")
+                time.sleep(retry_after + 1)
+                continue
+                
+            return False
+            
+        except Exception:
+            time.sleep(3)
+            continue
+
+# ==========================================
+# SHARED HASH STORAGE HELPERS
+# ==========================================
+def load_hashes(filename, hash_set):
+    if os.path.exists(filename):
+        with open(filename, "r") as f:
+            for line in f:
+                hash_set.add(line.strip())
+
+def save_hash(filename, h):
+    with open(filename, "a") as f:
+        f.write(f"{h}\n")
+
+# ==========================================
+# 2. MEDIATEL BOT LOGIC
+# ==========================================
+mediatel_seen_hashes = set()
+
 class SMSPortal:
     def __init__(self, username, password):
         self.session = requests.Session()
         self.username = username
         self.password = password
         self.base_url = "https://mysmsportal.com"
-        self.seen_hashes = set()
         self.running = True
-        self.message_queue = deque()
         self.bot_name = "A.MUNTAQA NUMBER BOT"
         
     def login(self):
@@ -61,97 +112,17 @@ class SMSPortal:
         if len(number) <= 8: return number
         return f"{number[:5]}{'*' * (len(number) - 8)}{number[-3:]}"
     
-    def submit_form_and_get_table2(self, form, form_action, form_method, form_data):
+    def get_all_messages(self):
         try:
-            if form_action:
-                if form_action.startswith('/'):
-                    submit_url = f"{self.base_url}{form_action}"
-                elif form_action.startswith('http'):
-                    submit_url = form_action
-                else:
-                    submit_url = f"{self.base_url}/{form_action}"
-            else:
-                submit_url = f"{self.base_url}/index.php?opt=shw_sum"
-            
-            if form_method == 'POST':
-                response = self.session.post(submit_url, data=form_data, timeout=30)
-            else:
-                response = self.session.get(submit_url, params=form_data, timeout=30)
-            
+            summary_url = f"{self.base_url}/index.php?opt=shw_sum"
+            response = self.session.get(summary_url, timeout=30)
             if response.status_code != 200: return []
             
             soup = BeautifulSoup(response.text, 'html.parser')
             tables = soup.find_all('table')
             if len(tables) < 2: return []
-            
-            table = tables[1]
-            rows = table.find_all('tr')
+
             messages = []
-            
-            for row in rows[1:]:
-                cells = row.find_all('td')
-                if len(cells) >= 5:
-                    date_time = cells[0].get_text(strip=True)
-                    range_name = cells[1].get_text(strip=True)
-                    sender = cells[2].get_text(strip=True)
-                    receiver = cells[3].get_text(strip=True)
-                    message_body = cells[4].get_text(strip=True)
-                    
-                    country = range_name.split('-')[0].strip() if '-' in range_name else "Unknown"
-                    message_string = f"{date_time}_{receiver}_{message_body}"
-                    message_hash = hashlib.md5(message_string.encode()).hexdigest()
-                    
-                    messages.append({
-                        'hash': message_hash, 'date_time': date_time, 'range': range_name,
-                        'country': country, 'sender': sender, 'receiver': receiver, 'message': message_body
-                    })
-            return messages
-        except Exception:
-            return []
-    
-    def get_all_forms_and_submit(self, html_content):
-        if not html_content: return []
-        soup = BeautifulSoup(html_content, 'html.parser')
-        forms = soup.find_all('form')
-        if not forms: return []
-        
-        all_messages = []
-        for form in forms:
-            form_action = form.get('action', '')
-            form_method = form.get('method', 'POST').upper()
-            base_form_data = {inp.get('name'): inp.get('value', '') for inp in form.find_all('input', type='hidden') if inp.get('name')}
-            
-            selects = form.find_all('select')
-            if selects:
-                for select in selects:
-                    select_name = select.get('name')
-                    if select_name:
-                        for option in select.find_all('option'):
-                            opt_value = option.get('value', '')
-                            if opt_value:
-                                form_data = base_form_data.copy()
-                                form_data[select_name] = opt_value
-                                submit_btn = form.find(['button', 'input'], type='submit')
-                                if submit_btn and submit_btn.get('name'):
-                                    form_data[submit_btn.get('name')] = submit_btn.get('value', 'Submit')
-                                all_messages.extend(self.submit_form_and_get_table2(form, form_action, form_method, form_data))
-            else:
-                submit_btn = form.find(['button', 'input'], type='submit')
-                if submit_btn and submit_btn.get('name'):
-                    base_form_data[submit_btn.get('name')] = submit_btn.get('value', 'Submit')
-                all_messages.extend(self.submit_form_and_get_table2(form, form_action, form_method, base_form_data))
-        return all_messages
-    
-    def get_all_messages_from_all_forms(self):
-        summary_url = f"{self.base_url}/index.php?opt=shw_sum"
-        response = self.session.get(summary_url, timeout=30)
-        if response.status_code != 200: return []
-        
-        all_messages = []
-        soup = BeautifulSoup(response.text, 'html.parser')
-        tables = soup.find_all('table')
-        
-        if len(tables) >= 2:
             for row in tables[1].find_all('tr')[1:]:
                 cells = row.find_all('td')
                 if len(cells) >= 5:
@@ -164,33 +135,18 @@ class SMSPortal:
                     country = range_name.split('-')[0].strip() if '-' in range_name else "Unknown"
                     message_hash = hashlib.md5(f"{date_time}_{receiver}_{message_body}".encode()).hexdigest()
                     
-                    all_messages.append({
+                    messages.append({
                         'hash': message_hash, 'date_time': date_time, 'range': range_name,
                         'country': country, 'sender': sender, 'receiver': receiver, 'message': message_body
                     })
-        
-        all_messages.extend(self.get_all_forms_and_submit(response.text))
-        
-        seen = set()
-        unique_messages = []
-        for msg in all_messages:
-            if msg['hash'] not in seen:
-                seen.add(msg['hash'])
-                unique_messages.append(msg)
-        
-        unique_messages.sort(key=lambda x: x['date_time'], reverse=True)
-        return unique_messages
+            
+            messages.sort(key=lambda x: x['date_time'], reverse=True)
+            return messages
+        except Exception:
+            return []
     
-    def get_otp(self, message):
-        if not message: return None
-        matches = re.findall(r'\b\d{4,8}\b', message)
-        if matches:
-            return matches[-1]
-        return None
-
     def format_telegram_message(self, message, is_old=False):
         prefix = "📜 OLD MESSAGE" if is_old else "📨 New SMS Received 🏳️"
-        
         country = html.escape(message['country'])
         masked_receiver = html.escape(self.mask_number(message['receiver']))
         sender = html.escape(message['sender'])
@@ -198,14 +154,9 @@ class SMSPortal:
         range_ = html.escape(message['range'])
         
         message_lines = message['message'].split('\n')
-        quoted_lines = '\n'.join(
-            f"<blockquote>{html.escape(line)}</blockquote>"
-            for line in message_lines if line.strip() != ""
-        )
+        quoted_lines = '\n'.join(f"<blockquote>{html.escape(line)}</blockquote>" for line in message_lines if line.strip() != "")
         
-        brand = f"🏷️ <b>{self.bot_name}</b> 🏷️"
-        
-        return f"""{brand}
+        return f"""🏷️ <b>{self.bot_name}</b> 🏷️
 ━━━━━━━━━━━━━━━━━━━━━━
 {prefix}
 ━━━━━━━━━━━━━━━━━━━━━━
@@ -220,92 +171,41 @@ class SMSPortal:
 ━━━━━━━━━━━━━━━━━━━━━━
 Panel - Mediatel"""
     
-    def build_keyboard(self, message_text):
-        keyboard = []
-        otp = self.get_otp(message_text)
-        if otp:
-            keyboard.append([{"text": f"📋 Copy OTP ({otp})", "copy_text": {"text": otp}}])
-        keyboard.append([{"text": "➕ Add Number", "url": GROUP_LINK}])
-        return json.dumps({"inline_keyboard": keyboard})
-    
-    def send_to_telegram(self, bot_token, chat_id, message, raw_sms_text=None):
-        url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-        payload = {
-            'chat_id': chat_id,
-            'text': message,
-            'parse_mode': 'HTML',
-            'disable_web_page_preview': True
-        }
+    def monitor_forever(self, bot_token, chat_id):
+        global mediatel_seen_hashes
+        load_hashes("mediatel_sent.txt", mediatel_seen_hashes)
         
-        if raw_sms_text:
-            payload['reply_markup'] = self.build_keyboard(raw_sms_text)
-        
-        try:
-            response = requests.post(url, data=payload, timeout=10)
-            return response.status_code == 200
-        except Exception:
-            return False
-    
-    def send_old_messages(self, bot_token, chat_id, count=5):
-        all_messages = self.get_all_messages_from_all_forms()
-        if not all_messages: return 0
-        
-        last_5_messages = all_messages[:count] if len(all_messages) >= count else all_messages
-        sent_count = 0
-        
-        for msg in last_5_messages:
-            formatted_msg = self.format_telegram_message(msg, is_old=True)
-            if self.send_to_telegram(bot_token, chat_id, formatted_msg, raw_sms_text=msg['message']):
-                sent_count += 1
-                self.seen_hashes.add(msg['hash'])
-            time.sleep(0.5)
-        
-        for msg in all_messages:
-            self.seen_hashes.add(msg['hash'])
-        
-        return sent_count
-    
-    def monitor_all_forms_forever(self, bot_token, chat_id):
-        message_buffer = []
-        all_messages = self.get_all_messages_from_all_forms()
-        for msg in all_messages:
-            self.seen_hashes.add(msg['hash'])
-        
-        last_hash = all_messages[0]['hash'] if all_messages else None
-        
+        # Mark existing messages as seen on startup to prevent spamming old ones
+        initial_msgs = self.get_all_messages()
+        for msg in initial_msgs:
+            if msg['hash'] not in mediatel_seen_hashes:
+                mediatel_seen_hashes.add(msg['hash'])
+                save_hash("mediatel_sent.txt", msg['hash'])
+
         while self.running:
             try:
-                fresh_messages = self.get_all_messages_from_all_forms()
-                
-                if fresh_messages:
-                    current_hash = fresh_messages[0]['hash']
-                    if current_hash != last_hash:
-                        for msg in fresh_messages:
-                            if msg['hash'] not in self.seen_hashes:
-                                self.seen_hashes.add(msg['hash'])
-                                message_buffer.append(msg)
+                fresh_messages = self.get_all_messages()
+                for msg in reversed(fresh_messages):
+                    if msg['hash'] not in mediatel_seen_hashes:
+                        formatted_msg = self.format_telegram_message(msg, is_old=False)
                         
-                        if message_buffer:
-                            message_buffer.sort(key=lambda x: x['date_time'])
-                            for msg in message_buffer:
-                                formatted_msg = self.format_telegram_message(msg, is_old=False)
-                                self.send_to_telegram(bot_token, chat_id, formatted_msg, raw_sms_text=msg['message'])
-                                # 👇 ADDED 1 SECOND DELAY HERE TO PREVENT OTP DUPLICATES 👇
-                                time.sleep(1) 
-                            message_buffer.clear()
-                            last_hash = current_hash
+                        # Send and WAIT for confirmation before marking as seen
+                        success = send_telegram_safe(bot_token, chat_id, formatted_msg, raw_sms_text=msg['message'])
+                        
+                        if success:
+                            mediatel_seen_hashes.add(msg['hash'])
+                            save_hash("mediatel_sent.txt", msg['hash'])
+                            time.sleep(3) # 3 second strict delay between messages
                 
-                time.sleep(0.5)
+                time.sleep(1)
             except Exception:
-                time.sleep(0.005)
+                time.sleep(5)
 
 # ==========================================
 # 3. CHOICE SMS MONITOR
 # ==========================================
 CHOICE_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) "
-                  "Chrome/120.0.0.0 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Connection": "keep-alive",
 }
 
@@ -313,16 +213,6 @@ choice_sesskey = None
 choice_last_sesskey_fetch = 0
 choice_server_date = None
 choice_seen_hashes = set()
-
-def choice_load_hashes():
-    if os.path.exists("choice_sent.txt"):
-        with open("choice_sent.txt", "r") as f:
-            for line in f:
-                choice_seen_hashes.add(line.strip())
-
-def choice_save_hash(h):
-    with open("choice_sent.txt", "a") as f:
-        f.write(f"{h}\n")
 
 def choice_solve_captcha(html_text):
     text = re.sub(r"<[^>]+>", " ", html_text)
@@ -421,10 +311,7 @@ def choice_format_message(msg, is_old=False):
     t_str = msg["timestamp"].strftime("%Y-%m-%d %H:%M:%S")
     masked_num = choice_mask_number(msg["number"])
     message_lines = str(msg['sms']).split('\n')
-    quoted_lines = '\n'.join(
-        f"<blockquote>{html.escape(line)}</blockquote>"
-        for line in message_lines if line.strip() != ""
-    )
+    quoted_lines = '\n'.join(f"<blockquote>{html.escape(line)}</blockquote>" for line in message_lines if line.strip() != "")
     
     prefix = "📜 OLD MESSAGE" if is_old else "📨 New SMS Received 🏳️"
     
@@ -442,32 +329,11 @@ def choice_format_message(msg, is_old=False):
 ━━━━━━━━━━━━━━━━━━━━━━
 Panel - Choice"""
 
-def choice_send_to_telegram(bot_token, chat_id, message, raw_sms_text=None):
-    url = f"https://api.telegram.org/bot{bot_token}/sendMessage"
-    payload = {
-        'chat_id': chat_id,
-        'text': message,
-        'parse_mode': 'HTML',
-        'disable_web_page_preview': True
-    }
-    if raw_sms_text:
-        keyboard = []
-        otp_matches = re.findall(r'\b\d{4,8}\b', str(raw_sms_text))
-        if otp_matches:
-            keyboard.append([{"text": f"📋 Copy OTP ({otp_matches[-1]})", "copy_text": {"text": otp_matches[-1]}}])
-        keyboard.append([{"text": "➕ Add Number", "url": GROUP_LINK}])
-        payload['reply_markup'] = json.dumps({"inline_keyboard": keyboard})
-    
-    try:
-        requests.post(url, data=payload, timeout=10)
-    except:
-        pass
-
 def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, post_url, report_url):
     global choice_sesskey, choice_server_date, choice_seen_hashes
     time.sleep(3) 
     
-    choice_load_hashes()
+    load_hashes("choice_sent.txt", choice_seen_hashes)
     
     session = None
     while not session:
@@ -475,29 +341,17 @@ def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, 
         if not session:
             time.sleep(10)
 
+    # Mark existing messages as seen on startup
     messages = choice_fetch_messages(session, base_url, report_url, limit=100)
-    
     if messages:
-        last_5 = messages[:5]
-        for msg in reversed(last_5):
-            fingerprint = f"{msg['timestamp']}_{msg['number']}_{msg['sms']}"
-            msg_hash = hashlib.md5(fingerprint.encode()).hexdigest()
-            
-            if msg_hash not in choice_seen_hashes:
-                choice_seen_hashes.add(msg_hash)
-                choice_save_hash(msg_hash)
-                
-                formatted = choice_format_message(msg, is_old=True)
-                choice_send_to_telegram(bot_token, chat_id, formatted, raw_sms_text=msg['sms'])
-                time.sleep(1)
-            
         for msg in messages:
             fingerprint = f"{msg['timestamp']}_{msg['number']}_{msg['sms']}"
             msg_hash = hashlib.md5(fingerprint.encode()).hexdigest()
             if msg_hash not in choice_seen_hashes:
                 choice_seen_hashes.add(msg_hash)
-                choice_save_hash(msg_hash)
+                save_hash("choice_sent.txt", msg_hash)
 
+    # Live loop
     while True:
         try:
             messages = choice_fetch_messages(session, base_url, report_url, limit=10)
@@ -512,12 +366,16 @@ def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, 
                     msg_hash = hashlib.md5(fingerprint.encode()).hexdigest()
                     
                     if msg_hash not in choice_seen_hashes:
-                        choice_seen_hashes.add(msg_hash)
-                        choice_save_hash(msg_hash)
-                        
                         formatted = choice_format_message(msg, is_old=False)
-                        choice_send_to_telegram(bot_token, chat_id, formatted, raw_sms_text=msg['sms'])
-                        time.sleep(1)
+                        
+                        # Send and WAIT for confirmation before marking as seen
+                        success = send_telegram_safe(bot_token, chat_id, formatted, raw_sms_text=msg['sms'])
+                        
+                        if success:
+                            choice_seen_hashes.add(msg_hash)
+                            save_hash("choice_sent.txt", msg_hash)
+                            time.sleep(3) # 3 second strict delay between messages
+                            
             time.sleep(2) 
         except requests.exceptions.ConnectionError:
             time.sleep(5)
@@ -545,10 +403,8 @@ if __name__ == "__main__":
     mediatel_portal = SMSPortal(MEDIATEL_USERNAME, MEDIATEL_PASSWORD)
     if mediatel_portal.login():
         threading.Thread(
-            target=lambda: (
-                mediatel_portal.send_old_messages(BOT_TOKEN, MEDIATEL_CHAT_ID, count=5),
-                mediatel_portal.monitor_all_forms_forever(BOT_TOKEN, MEDIATEL_CHAT_ID)
-            ),
+            target=mediatel_portal.monitor_forever,
+            args=(BOT_TOKEN, MEDIATEL_CHAT_ID),
             daemon=True
         ).start()
     
