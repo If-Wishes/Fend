@@ -12,7 +12,7 @@ import os
 from datetime import datetime
 
 # ==========================================
-# 1. THE WEB SERVER
+# 1. THE WEB SERVER (Satisfies Render's Port Requirement)
 # ==========================================
 class HealthCheckHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -30,7 +30,7 @@ def run_web_server():
     server.serve_forever()
 
 # ==========================================
-# 2. THE SMS BOT LOGIC (MEDIATEL)
+# 2. THE SMS BOT LOGIC (MEDIATEL) - ORIGINAL CODE
 # ==========================================
 class SMSPortal:
     def __init__(self, username, password):
@@ -290,6 +290,8 @@ Panel - Mediatel"""
                             for msg in message_buffer:
                                 formatted_msg = self.format_telegram_message(msg, is_old=False)
                                 self.send_to_telegram(bot_token, chat_id, formatted_msg, raw_sms_text=msg['message'])
+                                # 👇 ADDED 1 SECOND DELAY HERE TO PREVENT OTP DUPLICATES 👇
+                                time.sleep(1) 
                             message_buffer.clear()
                             last_hash = current_hash
                 
@@ -298,7 +300,7 @@ Panel - Mediatel"""
                 time.sleep(0.005)
 
 # ==========================================
-# 3. CHOICE SMS MONITOR (FIXED DUPLICATES)
+# 3. CHOICE SMS MONITOR
 # ==========================================
 CHOICE_HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -465,7 +467,6 @@ def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, 
     global choice_sesskey, choice_server_date, choice_seen_hashes
     time.sleep(3) 
     
-    # Load previously saved hashes
     choice_load_hashes()
     
     session = None
@@ -484,11 +485,11 @@ def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, 
             
             if msg_hash not in choice_seen_hashes:
                 choice_seen_hashes.add(msg_hash)
-                choice_save_hash(msg_hash) # Save to disk
+                choice_save_hash(msg_hash)
                 
                 formatted = choice_format_message(msg, is_old=True)
                 choice_send_to_telegram(bot_token, chat_id, formatted, raw_sms_text=msg['sms'])
-                time.sleep(1) # 1 second delay to prevent rate limits
+                time.sleep(1)
             
         for msg in messages:
             fingerprint = f"{msg['timestamp']}_{msg['number']}_{msg['sms']}"
@@ -512,11 +513,11 @@ def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, 
                     
                     if msg_hash not in choice_seen_hashes:
                         choice_seen_hashes.add(msg_hash)
-                        choice_save_hash(msg_hash) # Save to disk
+                        choice_save_hash(msg_hash)
                         
                         formatted = choice_format_message(msg, is_old=False)
                         choice_send_to_telegram(bot_token, chat_id, formatted, raw_sms_text=msg['sms'])
-                        time.sleep(1) # 1 second delay to prevent rate limits
+                        time.sleep(1)
             time.sleep(2) 
         except requests.exceptions.ConnectionError:
             time.sleep(5)
@@ -527,9 +528,6 @@ def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, 
 # 4. MAIN EXECUTION
 # ==========================================
 if __name__ == "__main__":
-    # ==========================================
-    # EDIT YOUR DETAILS HERE 👇
-    # ==========================================
     MEDIATEL_USERNAME = "5786"
     MEDIATEL_PASSWORD = "1134amabdu"
     
@@ -541,7 +539,6 @@ if __name__ == "__main__":
     CHOICE_CHAT_ID = "-1004408204768" 
     
     GROUP_LINK = "https://t.me/+IZ0-S-sBDD9iOGJk"
-    # ==========================================
 
     threading.Thread(target=run_web_server, daemon=True).start()
 
