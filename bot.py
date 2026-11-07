@@ -310,8 +310,17 @@ CHOICE_HEADERS = {
 choice_sesskey = None
 choice_last_sesskey_fetch = 0
 choice_server_date = None
-choice_seen_messages = set()
-recently_sent = deque(maxlen=50) # Memory buffer to prevent duplicates
+choice_seen_hashes = set()
+
+def choice_load_hashes():
+    if os.path.exists("choice_sent.txt"):
+        with open("choice_sent.txt", "r") as f:
+            for line in f:
+                choice_seen_hashes.add(line.strip())
+
+def choice_save_hash(h):
+    with open("choice_sent.txt", "a") as f:
+        f.write(f"{h}\n")
 
 def choice_solve_captcha(html_text):
     text = re.sub(r"<[^>]+>", " ", html_text)
@@ -453,8 +462,12 @@ def choice_send_to_telegram(bot_token, chat_id, message, raw_sms_text=None):
         pass
 
 def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, post_url, report_url):
-    global choice_sesskey, choice_server_date, choice_seen_messages, recently_sent
+    global choice_sesskey, choice_server_date, choice_seen_hashes
     time.sleep(3) 
+    
+    # Load previously saved hashes
+    choice_load_hashes()
+    
     session = None
     while not session:
         session = choice_login(username, password, base_url, login_url, post_url)
@@ -466,13 +479,23 @@ def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, 
     if messages:
         last_5 = messages[:5]
         for msg in reversed(last_5):
-            formatted = choice_format_message(msg, is_old=True)
-            choice_send_to_telegram(bot_token, chat_id, formatted, raw_sms_text=msg['sms'])
-            time.sleep(1)
-            recently_sent.append((msg["timestamp"], msg["sms"]))
+            fingerprint = f"{msg['timestamp']}_{msg['number']}_{msg['sms']}"
+            msg_hash = hashlib.md5(fingerprint.encode()).hexdigest()
+            
+            if msg_hash not in choice_seen_hashes:
+                choice_seen_hashes.add(msg_hash)
+                choice_save_hash(msg_hash) # Save to disk
+                
+                formatted = choice_format_message(msg, is_old=True)
+                choice_send_to_telegram(bot_token, chat_id, formatted, raw_sms_text=msg['sms'])
+                time.sleep(1) # 1 second delay to prevent rate limits
             
         for msg in messages:
-            choice_seen_messages.add((msg["timestamp"], msg["sms"]))
+            fingerprint = f"{msg['timestamp']}_{msg['number']}_{msg['sms']}"
+            msg_hash = hashlib.md5(fingerprint.encode()).hexdigest()
+            if msg_hash not in choice_seen_hashes:
+                choice_seen_hashes.add(msg_hash)
+                choice_save_hash(msg_hash)
 
     while True:
         try:
@@ -484,15 +507,16 @@ def choice_monitor(bot_token, chat_id, username, password, base_url, login_url, 
 
             if messages:
                 for msg in reversed(messages):
-                    fingerprint = (msg["timestamp"], msg["sms"])
+                    fingerprint = f"{msg['timestamp']}_{msg['number']}_{msg['sms']}"
+                    msg_hash = hashlib.md5(fingerprint.encode()).hexdigest()
                     
-                    # DOUBLE CHECK: Don't send if it's already in the recent buffer
-                    if fingerprint not in choice_seen_messages and fingerprint not in recently_sent:
-                        choice_seen_messages.add(fingerprint)
-                        recently_sent.append(fingerprint)
+                    if msg_hash not in choice_seen_hashes:
+                        choice_seen_hashes.add(msg_hash)
+                        choice_save_hash(msg_hash) # Save to disk
                         
                         formatted = choice_format_message(msg, is_old=False)
                         choice_send_to_telegram(bot_token, chat_id, formatted, raw_sms_text=msg['sms'])
+                        time.sleep(1) # 1 second delay to prevent rate limits
             time.sleep(2) 
         except requests.exceptions.ConnectionError:
             time.sleep(5)
