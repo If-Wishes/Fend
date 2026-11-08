@@ -191,7 +191,7 @@ class SMSPortal:
         return None
 
     def format_telegram_message(self, message, is_old=False):
-        prefix = "ðŸ“œ OLD MESSAGE" if is_old else "ðŸ“¨ New SMS Received ðŸ³ï¸"
+        prefix = "📜 OLD MESSAGE" if is_old else "📨 New SMS Received 🏳️"
         
         country = html.escape(message['country'])
         masked_receiver = html.escape(self.mask_number(message['receiver']))
@@ -205,21 +205,21 @@ class SMSPortal:
             for line in message_lines if line.strip() != ""
         )
         
-        brand = f"ðŸ·ï¸ <b>{self.bot_name}</b> ðŸ·ï¸"
+        brand = f"🏷️ <b>{self.bot_name}</b> 🏷️"
         
         return f"""{brand}
-â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
+━━━━━━━━━━━━━━━━━━━━━━
 {prefix}
-â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
-<blockquote>ðŸŒ Country: ðŸ³ï¸ {country}</blockquote>
-<blockquote>ðŸ“± Number: {masked_receiver}</blockquote>
-<blockquote>ðŸ“Œ Sender: â“ {sender}</blockquote>
-<blockquote>ðŸ“… Date/Time: {date_time}</blockquote>
-<blockquote>ðŸŒ Range: {range_}</blockquote>
-â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
-ðŸ’¬ Message:
+━━━━━━━━━━━━━━━━━━━━━━
+<blockquote>🌍 Country: 🏳️ {country}</blockquote>
+<blockquote>📱 Number: {masked_receiver}</blockquote>
+<blockquote>📌 Sender: ❓ {sender}</blockquote>
+<blockquote>📅 Date/Time: {date_time}</blockquote>
+<blockquote>🌐 Range: {range_}</blockquote>
+━━━━━━━━━━━━━━━━━━━━━━
+💬 Message:
 {quoted_lines}
-â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”â”
+━━━━━━━━━━━━━━━━━━━━━━
 Panel - Mediatel"""
     
     def build_keyboard(self, message_text):
@@ -229,10 +229,10 @@ Panel - Mediatel"""
         # Check if there is an OTP in the message
         otp = self.get_otp(message_text)
         if otp:
-            keyboard.append([{"text": f"ðŸ“‹ Copy OTP ({otp})", "copy_text": {"text": otp}}])
+            keyboard.append([{"text": f"📋 Copy OTP ({otp})", "copy_text": {"text": otp}}])
         
         # Add the group link button
-        keyboard.append([{"text": "âž• Add Number", "url": "https://t.me/+IZ0-S-sBDD9iOGJk"}])
+        keyboard.append([{"text": "➕ Add Number", "url": "https://t.me/+IZ0-S-sBDD9iOGJk"}])
         
         return json.dumps({"inline_keyboard": keyboard})
     
@@ -312,14 +312,14 @@ Panel - Mediatel"""
 # ==========================================
 if __name__ == "__main__":
     # ==========================================
-    # EDIT YOUR DETAILS HERE ðŸ‘‡
+    # EDIT YOUR DETAILS HERE 👇
     # ==========================================
     USERNAME = "5786"
     PASSWORD = "1134amabdu"
     BOT_TOKEN = "9089872288:AAH6plkYsJjhL2xwQuOF55-AT-aS_4LWYf0"
     CHAT_ID = "-1004408204768"
     
-    # ðŸ‘‡ PUT YOUR GROUP LINK HERE ðŸ‘‡
+    # 👇 PUT YOUR GROUP LINK HERE 👇
     GROUP_LINK = "https://t.me/+IZ0-S-sBDD9iOGJk" 
     # ==========================================
 
